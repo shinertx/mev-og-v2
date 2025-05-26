@@ -44,7 +44,7 @@ def record_kill_event(origin: str) -> None:
     source = "env" if os.getenv(ENV_VAR) == "1" else "file" if _flag_file().exists() else "unknown"
     event = {
         "kill_event": True,
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(datetime.UTC).isoformat(),
         "triggered_by": source,
         "origin_module": origin,
     }
