@@ -1,16 +1,22 @@
+"""Kill switch utilities for halting transaction execution."""
+
 import json
 import os
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 ENV_VAR = "KILL_SWITCH"
 
 
 def _flag_file() -> Path:
+    """Return path to the kill switch flag file."""
+
     return Path(os.getenv("KILL_SWITCH_FLAG_FILE", "/flags/kill_switch.txt"))
 
 
 def _log_file() -> Path:
+    """Return path to the kill switch log file."""
+
     return Path(os.getenv("KILL_SWITCH_LOG_FILE", "/logs/kill_log.json"))
 
 

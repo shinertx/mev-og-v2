@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Manual kill switch trigger script
 # Purpose: allow operators or DRP to enable/disable the system kill switch.
@@ -34,7 +34,7 @@ TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 log_event() {
     mkdir -p "$(dirname "$LOG_FILE")"
-    printf '{"timestamp":"%s","mode":"%s","user":"%s","origin":"manual"}\n' "$TIMESTAMP" "$1" "$USER_NAME" >> "$LOG_FILE"
+    printf '{"timestamp":"%s","mode":"%s","user":"%s","flag_file":"%s"}\n' "$TIMESTAMP" "$1" "$USER_NAME" "$FLAG_FILE" >> "$LOG_FILE"
 }
 
 if [[ $DRY -eq 1 ]]; then

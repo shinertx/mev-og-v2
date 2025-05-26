@@ -41,6 +41,8 @@ class NonceManager:
     # Internal helpers
     # ------------------------------------------------------------------
     def _load_cache(self) -> None:
+        """Load nonce cache from disk."""
+
         if self.cache_path.exists():
             try:
                 data = json.loads(self.cache_path.read_text())
@@ -51,15 +53,21 @@ class NonceManager:
             self.cache_path.write_text("{}")
 
     def _save_cache(self) -> None:
+        """Persist nonce cache to disk."""
+
         with self.cache_path.open("w") as fh:
             json.dump(self._nonces, fh)
 
     def _fetch_onchain_nonce(self, address: str) -> int:
+        """Fetch the current on-chain nonce for ``address``."""
+
         if self.web3 is None or not hasattr(self.web3, "eth"):
             return 0
         return int(self.web3.eth.get_transaction_count(address))
 
     def _log(self, source: str, address: str, on_chain_nonce: Optional[int], local_nonce: Optional[int], tx_id: str = "") -> None:
+        """Write a structured nonce event to the log."""
+
         entry = {
             "tx_id": tx_id,
             "address": address,
@@ -108,10 +116,14 @@ class NonceManager:
             self._log("reset", address, on_chain, None, tx_id)
 
     def snapshot(self, path: str) -> None:
+        """Write nonce snapshot to ``path``."""
+
         with self._nonce_lock, open(path, "w") as fh:
             json.dump(self._nonces, fh)
 
     def restore(self, path: str) -> None:
+        """Restore nonce snapshot from ``path``."""
+
         with open(path, "r") as fh:
             data = json.load(fh)
         with self._nonce_lock:
