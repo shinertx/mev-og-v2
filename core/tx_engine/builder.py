@@ -24,8 +24,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .kill_switch import kill_switch_triggered
+from .kill_switch import kill_switch_triggered, record_kill_event
 from .nonce_manager import NonceManager
+from core.logger import log_error
 
 # simple HexBytes implementation
 class HexBytes(bytes):
@@ -92,6 +93,7 @@ class TransactionBuilder:
 
         tx_id = signed_tx.hex()
         if kill_switch_triggered():
+            record_kill_event("TransactionBuilder")
             entry = {
                 "tx_id": tx_id,
                 "from_address": from_address,
@@ -105,6 +107,12 @@ class TransactionBuilder:
                 "risk_level": risk_level,
             }
             self._log(entry)
+            log_error(
+                "TransactionBuilder",
+                "Kill switch active",
+                tx_id=tx_id,
+                strategy_id=strategy_id,
+            )
             raise RuntimeError("Kill switch active")
 
         # decode transaction for gas estimation
@@ -119,6 +127,13 @@ class TransactionBuilder:
         except Exception as exc:  # estimation failed
             estimated_gas = None
             gas_error = str(exc)
+            log_error(
+                "TransactionBuilder",
+                gas_error,
+                event="gas_estimate",
+                tx_id=tx_id,
+                strategy_id=strategy_id,
+            )
 
         if estimated_gas is None:
             entry = {
@@ -134,6 +149,13 @@ class TransactionBuilder:
                 "risk_level": risk_level,
             }
             self._log(entry)
+            log_error(
+                "TransactionBuilder",
+                gas_error or "unknown",
+                event="gas_estimate_failed",
+                tx_id=tx_id,
+                strategy_id=strategy_id,
+            )
             raise RuntimeError(f"Gas estimation failed: {gas_error}")
 
         gas_with_margin = int(estimated_gas * 1.2)
@@ -183,6 +205,14 @@ class TransactionBuilder:
                         "risk_level": risk_level,
                         "attempt": attempt,
                     }
+                )
+                log_error(
+                    "TransactionBuilder",
+                    str(exc),
+                    event="send_failed",
+                    tx_id=tx_id,
+                    strategy_id=strategy_id,
+                    attempt=attempt,
                 )
                 time.sleep(0.5 * attempt)
 

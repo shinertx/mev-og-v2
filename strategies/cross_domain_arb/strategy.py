@@ -34,6 +34,7 @@ except Exception:  # pragma: no cover - allow missing dependency
 
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager
+from core.logger import log_error
 
 from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
@@ -93,6 +94,7 @@ def _send_alert(payload: Dict[str, object]) -> None:
         requests.post(url, json=payload, timeout=5)
     except Exception as exc:  # pragma: no cover - network
         logging.warning("webhook failed: %s", exc)
+        log_error(STRATEGY_ID, f"webhook failed: {exc}", event="webhook_fail")
 
 
 @dataclass
@@ -181,6 +183,7 @@ class CrossDomainArb:
                 data = self.feed.fetch_price(cfg.pool, cfg.domain)
             except Exception as exc:  # pragma: no cover - dependency errors
                 logging.warning("price fetch failed: %s", exc)
+                log_error(STRATEGY_ID, str(exc), event="price_fetch")
                 METRICS["fails"] += 1
                 return None
             price_data[label] = data
@@ -189,6 +192,7 @@ class CrossDomainArb:
 
         if any(d.block_age > int(os.getenv("PRICE_FRESHNESS_SEC", "30")) for d in price_data.values()):
             logging.warning("stale price detected")
+            log_error(STRATEGY_ID, "stale price detected", event="stale_price")
             METRICS["fails"] += 1
             return None
 
