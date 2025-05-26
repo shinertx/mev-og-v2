@@ -64,6 +64,16 @@ class TransactionBuilder:
 
         with self.log_file.open("a") as fh:
             fh.write(json.dumps(entry) + "\n")
+        if entry.get("error"):
+            log_error(
+                "TransactionBuilder",
+                str(entry["error"]),
+                event=entry.get("event", entry.get("status", "log")),
+                tx_id=entry.get("tx_id", ""),
+                strategy_id=entry.get("strategy_id", ""),
+                mutation_id=entry.get("mutation_id", ""),
+                risk_level=entry.get("risk_level", ""),
+            )
 
     def snapshot(self, path: str) -> None:
         """Persist nonce state to ``path`` for DRP."""
@@ -101,6 +111,7 @@ class TransactionBuilder:
                 "tx_hash": None,
                 "kill_triggered": True,
                 "status": "killed",
+                "event": "killed",
                 "error": None,
                 "strategy_id": strategy_id,
                 "mutation_id": mutation_id,
@@ -143,6 +154,7 @@ class TransactionBuilder:
                 "tx_hash": None,
                 "kill_triggered": False,
                 "status": "gas_estimate_failed",
+                "event": "gas_estimate_failed",
                 "error": gas_error,
                 "strategy_id": strategy_id,
                 "mutation_id": mutation_id,
@@ -179,6 +191,7 @@ class TransactionBuilder:
                         "tx_hash": tx_hash.hex() if hasattr(tx_hash, "hex") else tx_hash,
                         "kill_triggered": False,
                         "status": status,
+                        "event": status,
                         "error": None,
                         "strategy_id": strategy_id,
                         "mutation_id": mutation_id,
@@ -199,6 +212,7 @@ class TransactionBuilder:
                         "tx_hash": None,
                         "kill_triggered": False,
                         "status": status,
+                        "event": "send_failed",
                         "error": str(exc),
                         "strategy_id": strategy_id,
                         "mutation_id": mutation_id,

@@ -1,3 +1,5 @@
+"""Tests for TransactionBuilder and associated kill switch logic."""
+
 import os
 import json
 from pathlib import Path

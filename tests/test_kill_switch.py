@@ -1,3 +1,5 @@
+"""Tests for the kill switch environment and file triggers."""
+
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 import json
 import os

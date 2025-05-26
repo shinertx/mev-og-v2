@@ -132,3 +132,4 @@ If import fails during test, comment it but do not inline logic.
 - v2.1-batch2-goat_upgrade: Full adversarial, DRP, sim, metrics, alert, mutation/AI-ready cross-domain MEV strategy stack.
 
 - v3.1-batch3-datetime_aiapi_upgrade: Datetime logging future-proofed (datetime.now(datetime.UTC)), AI audit agent can now call OpenAI API live.
+- v3.4-batch123-fullfix: Compliance sweep across all modules, unified error logging, updated tests and fork simulation script.

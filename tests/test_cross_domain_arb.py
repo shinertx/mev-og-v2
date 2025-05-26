@@ -1,6 +1,9 @@
+"""Tests for the CrossDomainArb strategy."""
+
 import json
 import logging
 import os
+import tempfile
 from pathlib import Path
 import sys
 
@@ -93,8 +96,12 @@ def test_price_feed_error():
     strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
     strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
     strat.tx_builder.send_transaction = lambda *a, **k: b"hash"
-    result = strat.run_once()
-    assert result is None
+    with tempfile.TemporaryDirectory() as td:
+        err = Path(td) / "errors.log"
+        os.environ["ERROR_LOG_FILE"] = str(err)
+        result = strat.run_once()
+        assert result is None
+        assert err.read_text().strip()
 
 
 def test_no_false_positive_on_flip():
@@ -127,8 +134,12 @@ def test_stale_block_warning(caplog):
     strat.tx_builder.send_transaction = lambda *a, **k: b"hash"
     strat.feed.fetch_price = lambda p, d: stale
     caplog.set_level(logging.WARNING)
-    result = strat.run_once()
-    assert result is None
+    with tempfile.TemporaryDirectory() as td:
+        err = Path(td) / "errors.log"
+        os.environ["ERROR_LOG_FILE"] = str(err)
+        result = strat.run_once()
+        assert result is None
+        assert err.read_text().strip()
     assert any("stale" in rec.message for rec in caplog.records)
 
 
