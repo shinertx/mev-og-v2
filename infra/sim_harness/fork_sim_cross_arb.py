@@ -1,13 +1,17 @@
 """Fork simulation for cross-domain arbitrage detection."""
 
 import os
+import sys
 import time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from strategies.cross_domain_arb.strategy import CrossDomainArb, PoolConfig
 
 try:  # pragma: no cover
     from web3 import Web3
+    from web3.middleware import geth_poa_middleware
 except Exception:  # pragma: no cover
     raise SystemExit("web3 required for fork simulation")
 
@@ -25,7 +29,6 @@ POOLS = {
 
 def main() -> None:  # pragma: no cover
     w3 = Web3(Web3.HTTPProvider(RPC_ETH))
-    from web3.middleware import geth_poa_middleware
     w3.middleware_onion.add(geth_poa_middleware)
     if w3.eth.block_number < FORK_BLOCK:
         raise SystemExit("RPC must be forked at or after block %s" % FORK_BLOCK)
