@@ -15,6 +15,7 @@ Simulation/test hooks and kill conditions:
 
 from __future__ import annotations
 
+import os
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from statistics import mean
@@ -59,6 +60,7 @@ def record_alert() -> None:
 # ----------------------------------------------------------------------
 
 class _Handler(BaseHTTPRequestHandler):
+    """Serve metrics data for Prometheus scraping."""
     def do_GET(self) -> None:  # pragma: no cover - trivial
         if self.path != "/metrics":
             self.send_response(404)
@@ -85,8 +87,16 @@ class _Handler(BaseHTTPRequestHandler):
 class MetricsServer:
     """Background metrics HTTP server."""
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 8000) -> None:
-        self.server = HTTPServer((host, port), _Handler)
+    def __init__(self, host: str = "0.0.0.0", port: int | None = None) -> None:
+        port = int(os.getenv("METRICS_PORT", port or 8000))
+        try:
+            self.server = HTTPServer((host, port), _Handler)
+        except OSError as exc:  # pragma: no cover - runtime check
+            if "Address already in use" in str(exc):
+                raise OSError(
+                    f"Port {port} already in use. Set METRICS_PORT or pass --port."
+                ) from exc
+            raise
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
 
     def start(self) -> None:
@@ -95,3 +105,22 @@ class MetricsServer:
     def stop(self) -> None:
         self.server.shutdown()
         self.thread.join()
+
+
+if __name__ == "__main__":  # pragma: no cover - manual startup
+    import argparse
+    import time
+
+    parser = argparse.ArgumentParser(description="Start metrics HTTP server")
+    parser.add_argument("--port", type=int, default=None, help="Port to bind")
+    args = parser.parse_args()
+
+    srv = MetricsServer(port=args.port)
+    srv.start()
+    host, port = srv.server.server_address
+    print(f"Metrics server running on {host}:{port}")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        srv.stop()

@@ -6,6 +6,11 @@ transaction using TransactionBuilder. Requires web3 and a forking provider
 """
 
 import os
+import sys
+
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager
@@ -13,6 +18,7 @@ from core.tx_engine.kill_switch import kill_switch_triggered
 
 try:
     from web3 import Web3
+    from web3.middleware import geth_poa_middleware
 except ImportError:  # pragma: no cover - only executed when web3 is installed
     raise SystemExit("web3 is required for fork simulation")
 
@@ -23,7 +29,7 @@ RPC_URL = os.environ.get("MAINNET_RPC", "http://localhost:8545")
 
 def main():
     w3 = Web3(Web3.HTTPProvider(RPC_URL))
-    w3.middleware_onion.inject(Web3.middleware.geth_poa_middleware, layer=0)
+    w3.middleware_onion.add(geth_poa_middleware)
     nonce_manager = NonceManager(w3)
     builder = TransactionBuilder(w3, nonce_manager)
 
