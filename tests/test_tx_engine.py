@@ -39,14 +39,14 @@ class DummyWeb3:
 
 def test_gas_estimation_and_nonce(tmp_path):
     web3 = DummyWeb3()
-    nm = NonceManager(web3)
+    nm = NonceManager(web3, cache_file=str(tmp_path / "nonce.json"))
     builder = TransactionBuilder(web3, nm, log_path=tmp_path / "log.json")
 
     tx = HexBytes(b"\x01\x02")
     result = builder.send_transaction(tx, "0xabc")
     assert result.startswith(b"hash")
     # nonce should increment
-    assert nm.get_next_nonce("0xabc") == 1
+    assert nm.get_nonce("0xabc") == 1
 
     # log written
     log_lines = Path(tmp_path / "log.json").read_text().strip().split("\n")
@@ -57,9 +57,9 @@ def test_gas_estimation_and_nonce(tmp_path):
 
 def test_kill_switch(tmp_path, monkeypatch):
     web3 = DummyWeb3()
-    nm = NonceManager(web3)
+    nm = NonceManager(web3, cache_file=str(tmp_path / "nonce.json"))
     builder = TransactionBuilder(web3, nm, log_path=tmp_path / "log.json")
-    monkeypatch.setenv("KILL_SWITCH_ACTIVE", "1")
+    monkeypatch.setenv("KILL_SWITCH", "1")
     with pytest.raises(RuntimeError):
         builder.send_transaction(HexBytes(b"\x01"), "0xdef")
-    monkeypatch.delenv("KILL_SWITCH_ACTIVE")
+    monkeypatch.delenv("KILL_SWITCH")
