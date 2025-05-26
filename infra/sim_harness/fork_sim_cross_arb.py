@@ -25,7 +25,8 @@ POOLS = {
 
 def main() -> None:  # pragma: no cover
     w3 = Web3(Web3.HTTPProvider(RPC_ETH))
-    w3.middleware_onion.inject(Web3.middleware.geth_poa_middleware, layer=0)
+    from web3.middleware import geth_poa_middleware
+    w3.middleware_onion.add(geth_poa_middleware)
     if w3.eth.block_number < FORK_BLOCK:
         raise SystemExit("RPC must be forked at or after block %s" % FORK_BLOCK)
     strategy = CrossDomainArb(POOLS)
