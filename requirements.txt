@@ -1,0 +1,6 @@
+web3
+pytest
+requests
+hexbytes
+pydantic
+(and any others your code imports)
