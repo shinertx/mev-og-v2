@@ -1,11 +1,7 @@
 """Tests for strategy scoring and pruning utilities."""
 
-<<<<<<< HEAD
 import sys
 import pathlib
-=======
-import sys, pathlib
->>>>>>> 08463589b36fe30ca5373bfc83ad4f47056a2779
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from ai.mutator import score_strategies, prune_strategies

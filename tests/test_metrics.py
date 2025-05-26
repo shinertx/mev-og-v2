@@ -1,11 +1,7 @@
 """Tests for Prometheus metrics server."""
 
-<<<<<<< HEAD
 import sys
 import pathlib
-=======
-import sys, pathlib
->>>>>>> 08463589b36fe30ca5373bfc83ad4f47056a2779
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import urllib.request
