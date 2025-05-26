@@ -20,7 +20,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from statistics import mean
@@ -131,7 +131,7 @@ class CrossDomainArb:
     # ------------------------------------------------------------------
     def _record(self, domain: str, data: PriceData, opportunity: bool, spread: float, action: str = "", tx_id: str = "") -> None:
         entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "domain": domain,
             "price": data.price,
             "opportunity": opportunity,
