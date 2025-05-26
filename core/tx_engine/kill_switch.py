@@ -1,0 +1,56 @@
+import json
+import os
+from pathlib import Path
+from datetime import datetime
+
+ENV_VAR = "KILL_SWITCH"
+
+
+def _flag_file() -> Path:
+    return Path(os.getenv("KILL_SWITCH_FLAG_FILE", "/flags/kill_switch.txt"))
+
+
+def _log_file() -> Path:
+    return Path(os.getenv("KILL_SWITCH_LOG_FILE", "/logs/kill_log.json"))
+
+
+def flag_file() -> Path:
+    """Public accessor for current flag file path."""
+    return _flag_file()
+
+
+def log_file() -> Path:
+    """Public accessor for current log file path."""
+    return _log_file()
+
+
+def init_kill_switch() -> None:
+    """Initialize kill switch logging and directories."""
+    lf = _log_file()
+    lf.parent.mkdir(parents=True, exist_ok=True)
+    if not lf.exists():
+        lf.touch()
+
+
+def kill_switch_triggered() -> bool:
+    """Check if kill switch is active via environment or flag file."""
+    env_active = os.getenv(ENV_VAR) == "1"
+    file_active = _flag_file().exists()
+    return env_active or file_active
+
+
+def record_kill_event(origin: str) -> None:
+    """Append a structured kill event to the log file."""
+    source = "env" if os.getenv(ENV_VAR) == "1" else "file" if _flag_file().exists() else "unknown"
+    event = {
+        "kill_event": True,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "triggered_by": source,
+        "origin_module": origin,
+    }
+    lf = _log_file()
+    with lf.open("a") as f:
+        json.dump(event, f)
+        f.write("\n")
+
+
