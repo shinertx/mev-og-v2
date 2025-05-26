@@ -21,6 +21,8 @@ import logging
 import time
 from typing import Any, Dict
 
+from core.logger import log_error
+
 # Warn if block age exceeds this threshold (seconds)
 PRICE_FRESHNESS_SEC = int(os.getenv("PRICE_FRESHNESS_SEC", "30"))
 
@@ -113,17 +115,29 @@ class UniswapV3Feed:
     def fetch_price(self, pool: str, domain: str) -> PriceData:
         """Return price for ``pool`` on ``domain``."""
         w3 = self._get_web3(domain)
-        contract: Contract = w3.eth.contract(address=pool, abi=UNISWAP_V3_POOL_ABI)
-        slot0 = contract.functions.slot0().call()
-        sqrt_price_x96 = slot0[0]
-        token0 = contract.functions.token0().call()
-        token1 = contract.functions.token1().call()
-        dec0 = self._get_token_decimals(w3, token0)
-        dec1 = self._get_token_decimals(w3, token1)
-        price = (sqrt_price_x96 ** 2) / (2 ** 192)
-        price *= 10 ** (dec0 - dec1)
-        block = w3.eth.get_block("latest")
+        try:
+            contract: Contract = w3.eth.contract(address=pool, abi=UNISWAP_V3_POOL_ABI)
+            slot0 = contract.functions.slot0().call()
+            sqrt_price_x96 = slot0[0]
+            token0 = contract.functions.token0().call()
+            token1 = contract.functions.token1().call()
+            dec0 = self._get_token_decimals(w3, token0)
+            dec1 = self._get_token_decimals(w3, token1)
+            price = (sqrt_price_x96 ** 2) / (2 ** 192)
+            price *= 10 ** (dec0 - dec1)
+            block = w3.eth.get_block("latest")
+        except Exception as exc:
+            log_error("UniswapV3Feed", str(exc), event="fetch_price", pool=pool, domain=domain)
+            raise
         block_age = int(time.time()) - block.timestamp
         if block_age > PRICE_FRESHNESS_SEC:
             logging.warning("stale price data: %s sec old on %s", block_age, domain)
+            log_error(
+                "UniswapV3Feed",
+                "stale price",
+                event="stale_price",
+                pool=pool,
+                domain=domain,
+                block_age=block_age,
+            )
         return PriceData(price=float(price), pool=pool, block=block.number, timestamp=block.timestamp, block_age=block_age)

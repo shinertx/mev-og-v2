@@ -1,3 +1,5 @@
+"""Integration tests for kill_switch.sh script."""
+
 import json
 import os
 import subprocess

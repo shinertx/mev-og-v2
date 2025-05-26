@@ -93,8 +93,13 @@ class StructuredLogger:
         for hook in list(_HOOKS):
             try:
                 hook(entry)
-            except Exception:
-                pass
+            except Exception as exc:
+                # log hook errors but do not interrupt logging
+                log_error(
+                    self.module,
+                    f"hook error: {exc}",
+                    event="hook_fail",
+                )
         if error:
             log_error(
                 self.module,
