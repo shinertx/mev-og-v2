@@ -1,6 +1,5 @@
 """Tests for TransactionBuilder and associated kill switch logic."""
 
-import os
 import json
 from pathlib import Path
 import sys
@@ -11,7 +10,6 @@ import pytest
 
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager
-from core.tx_engine.kill_switch import kill_switch_triggered
 
 
 class DummyEth:

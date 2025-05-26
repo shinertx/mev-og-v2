@@ -1,9 +1,9 @@
 """Unit tests for the AuditAgent logic and online audit path."""
 
-import sys, pathlib
+import sys
+import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-import json
 from pathlib import Path
 
 from ai.audit_agent import AuditAgent

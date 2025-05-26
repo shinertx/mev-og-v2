@@ -1,0 +1,60 @@
+# Main configuration template for MEV The OG
+network: "mainnet"    # Network to operate on: "mainnet", "sepolia", etc.
+mode: "test"          # "test" or "live"
+dashboard:
+  port: 8501          # Port for the dashboard (optional)
+
+rpc:
+  mainnet:
+    primary: "https://eth-mainnet.alchemyapi.io/v2/your-api-key"
+    fallback: "https://mainnet.infura.io/v3/your-infura-key"
+  sepolia:
+    primary: "https://eth-sepolia.g.alchemy.com/v2/your-api-key"
+
+risk:
+  max_drawdown_pct: 5      # Stop trading if drawdown > 5%
+  max_loss_usd: 200        # Stop if USD loss > 200
+  max_trade_size_usd: 100  # Max single trade size
+  rolling_window_hours: 24 # Window for loss tracking
+  scale_increment_usd: 10
+  per_alpha:
+    cross_chain:
+      max_loss_usd: 100
+      max_trade_size_usd: 50
+
+alpha:
+  enabled: ["cross_chain", "l2_sandwich"]   # List of enabled strategies
+  params:
+    cross_chain:
+      min_profit_usd: 20
+      max_slippage: 0.003
+    l2_sandwich:
+      gas_boost: true
+      sandwich_depth: 2
+
+notifier:
+  telegram:
+    enabled: true
+    chat_id: "123456789"   # Your Telegram chat ID (do not store the token here)
+    founder_chat_id: "123456789"  # Founder Telegram ID for critical alerts
+  email: "founder@example.com"
+  notify_on: ["error", "trade", "kill_switch"]
+
+kill_switch_max_errors: 3
+kill_switch_enabled: true
+
+signer:
+  type: "local"           # "local" or "cloud_kms"
+  endpoint: "http://localhost:8000"   # If using a local signer service
+  key_id: "prod-mev-bot-key"          # If using cloud KMS
+
+contracts:
+  sepolia_uniswap_router: "0xrouter"
+  weth_sepolia: "0xweth"
+  usdc_sepolia: "0xusdc"
+
+evm_dex_router_abi_path: "router_abi.json"
+database_path: "data/bot_state.db"
+native_token_price_usd: 3500.0
+
+# Add more config sections as needed for future strategies

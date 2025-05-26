@@ -1,10 +1,10 @@
 """Unit tests for StructuredLogger behavior."""
 
-import sys, pathlib
+import sys
+import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import json
-from pathlib import Path
 from datetime import datetime
 
 from core.logger import StructuredLogger, register_hook
