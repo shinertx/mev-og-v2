@@ -8,8 +8,10 @@ from datetime import datetime
 from core.logger import StructuredLogger, register_hook
 
 
-def test_structured_logging(tmp_path):
+def test_structured_logging(tmp_path, monkeypatch):
     log_file = tmp_path / "log.json"
+    err_file = tmp_path / "errors.log"
+    monkeypatch.setenv("ERROR_LOG_FILE", str(err_file))
     logger = StructuredLogger("test_mod", log_file=str(log_file))
     captured = []
 
@@ -18,7 +20,12 @@ def test_structured_logging(tmp_path):
 
     register_hook(hook)
     logger.log(
-        "event", tx_id="1", strategy_id="s", mutation_id="m", risk_level="low"
+        "event",
+        tx_id="1",
+        strategy_id="s",
+        mutation_id="m",
+        risk_level="low",
+        error="boom",
     )
 
     data = [json.loads(l) for l in log_file.read_text().splitlines()]
@@ -28,3 +35,9 @@ def test_structured_logging(tmp_path):
     ts = data[0]["timestamp"]
     dt = datetime.fromisoformat(ts)
     assert dt.tzinfo is not None
+
+    err_lines = err_file.read_text().splitlines()
+    assert err_lines
+    err = json.loads(err_lines[0])
+    assert err["error"] == "boom"
+    assert err["module"] == "test_mod"

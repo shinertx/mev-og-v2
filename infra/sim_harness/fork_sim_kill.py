@@ -1,3 +1,5 @@
+"""Simulates forked mainnet kill switch testing for MEV-OG."""
+
 import sys
 from pathlib import Path
 
