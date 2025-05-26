@@ -108,10 +108,12 @@ class PoolConfig:
 class CrossDomainArb:
     """Detect price spreads across domains."""
 
-    def __init__(self, pools: Dict[str, PoolConfig], threshold: float = 0.003) -> None:
+    DEFAULT_THRESHOLD = 0.003
+
+    def __init__(self, pools: Dict[str, PoolConfig], threshold: float | None = None) -> None:
         self.feed = UniswapV3Feed()
         self.pools = pools
-        self.threshold = threshold
+        self.threshold = threshold if threshold is not None else self.DEFAULT_THRESHOLD
         self.last_prices: Dict[str, float] = {}
 
         # transaction execution setup
@@ -223,3 +225,17 @@ class CrossDomainArb:
             METRICS["fails"] += 1
 
         return opp
+
+    # ------------------------------------------------------------------
+    def mutate(self, params: Dict[str, object]) -> None:
+        """Apply parameter mutations for auto-tuning.
+
+        Currently supports updating the ``threshold`` used for spread detection.
+        All errors are logged to ``logs/errors.log`` for offline audit.
+        """
+
+        if "threshold" in params:
+            try:
+                self.threshold = float(params["threshold"])
+            except Exception as exc:  # pragma: no cover - input validation
+                log_error(STRATEGY_ID, f"mutate threshold: {exc}", event="mutate_error")
