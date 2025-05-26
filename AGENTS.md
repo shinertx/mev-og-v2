@@ -99,6 +99,20 @@ No code is merged without forked-mainnet sim, chaos test, DRP snapshot/restore, 
   - State and logs must be exportable for audit/rollback (`scripts/export_state.sh`).
   - Major audit recommendations must be appended to this file for traceability.
 
+## CI/CD & Canary Deploy
+
+- GitHub Actions workflow `main.yml` runs lint, type check, tests, fork simulation,
+  DRP dry run and offline audit on every PR and push.
+- New batches are automatically tagged `canary-<sha>-<date>` and verified with the
+  same suite.
+- Promotion to production requires all checks to pass and `FOUNDER_APPROVED=1`.
+
+## DRP One-Click Rollback
+
+- `scripts/rollback.sh` restores logs, keys and active strategies from the most
+  recent export archive.
+- Rollback events append to `logs/rollback.log` and `logs/errors.log`.
+
 ---
 
 ## Log Schema/Telemetry
@@ -140,3 +154,4 @@ No code is merged without forked-mainnet sim, chaos test, DRP snapshot/restore, 
 - v3.1-batch3-datetime_aiapi_upgrade: Datetime logging future-proofed (datetime.now(datetime.UTC)), AI audit agent can now call OpenAI API live.
 - v3.4-batch123-fullfix: Compliance sweep across all modules, unified error logging, updated tests and fork simulation script.
 - v4.0-batch4-ai_mutation_promotion: AI-driven self-mutation loop with founder-gated promotion and continuous audit.
+- v5.0-batch5-cicd_canary_drp: CI workflow, canary tagging and DRP rollback added.

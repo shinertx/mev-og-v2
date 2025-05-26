@@ -51,7 +51,14 @@ if [[ $MODE == "clean" ]]; then
 fi
 
 # export mode
-if tar -czf "$EXPORT_DIR/$ARCHIVE" logs state 2>/dev/null; then
+ITEMS=()
+for d in logs state active keys; do
+    if [[ -e "$d" ]]; then
+        ITEMS+=("$d")
+    fi
+done
+if [[ ${#ITEMS[@]} -gt 0 ]]; then
+    tar -czf "$EXPORT_DIR/$ARCHIVE" "${ITEMS[@]}"
     echo "Export created at $EXPORT_DIR/$ARCHIVE"
 else
     echo "Warning: nothing to export" >&2
