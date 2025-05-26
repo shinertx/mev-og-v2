@@ -1,5 +1,9 @@
 """Tests for TransactionBuilder and associated kill switch logic."""
 
+<<<<<<< HEAD
+=======
+import os
+>>>>>>> 08463589b36fe30ca5373bfc83ad4f47056a2779
 import json
 from pathlib import Path
 import sys
@@ -10,6 +14,10 @@ import pytest
 
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager
+<<<<<<< HEAD
+=======
+from core.tx_engine.kill_switch import kill_switch_triggered
+>>>>>>> 08463589b36fe30ca5373bfc83ad4f47056a2779
 
 
 class DummyEth:

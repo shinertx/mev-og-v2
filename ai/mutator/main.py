@@ -24,7 +24,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 
 from core.logger import StructuredLogger, log_error
 from ai.audit_agent import AuditAgent
