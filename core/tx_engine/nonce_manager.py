@@ -20,6 +20,8 @@ from pathlib import Path
 import threading
 from typing import Dict, Optional, Any
 
+from core.logger import log_error
+
 
 class NonceManager:
     def __init__(
@@ -47,23 +49,29 @@ class NonceManager:
             try:
                 data = json.loads(self.cache_path.read_text())
                 self._nonces = {k: int(v) for k, v in data.items()}
-            except Exception:
+            except Exception as exc:
                 self._nonces = {}
+                log_error("NonceManager", f"load_cache failed: {exc}")
         else:
             self.cache_path.write_text("{}")
 
     def _save_cache(self) -> None:
         """Persist nonce cache to disk."""
-
-        with self.cache_path.open("w") as fh:
-            json.dump(self._nonces, fh)
+        try:
+            with self.cache_path.open("w") as fh:
+                json.dump(self._nonces, fh)
+        except Exception as exc:
+            log_error("NonceManager", f"save_cache failed: {exc}")
 
     def _fetch_onchain_nonce(self, address: str) -> int:
         """Fetch the current on-chain nonce for ``address``."""
-
         if self.web3 is None or not hasattr(self.web3, "eth"):
             return 0
-        return int(self.web3.eth.get_transaction_count(address))
+        try:
+            return int(self.web3.eth.get_transaction_count(address))
+        except Exception as exc:  # pragma: no cover - RPC failure
+            log_error("NonceManager", f"rpc nonce fetch failed: {exc}")
+            return 0
 
     def _log(self, source: str, address: str, on_chain_nonce: Optional[int], local_nonce: Optional[int], tx_id: str = "") -> None:
         """Write a structured nonce event to the log."""
