@@ -52,3 +52,20 @@ foundry anvil --fork-url $MAINNET_RPC --fork-block-number <block>
 
 # Run tests
 pytest -v
+```
+
+### Environment Configuration
+
+Set the following variables before running cross-domain arbitrage modules:
+
+```
+RPC_ETHEREUM_URL=<https://mainnet.ethereum.org>
+RPC_ARBITRUM_URL=<https://arbitrum.rpc>
+RPC_OPTIMISM_URL=<https://optimism.rpc>
+POOL_ETHEREUM=0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8
+POOL_ARBITRUM=0xb3f8e4262c5bfcc0a304143cfb33c7a9a64e0fe0
+POOL_OPTIMISM=0x85149247691df622eaf1a8bd0c4bd90d38a83a1f
+ARB_ALERT_WEBHOOK=<https://discord-or-telegram-webhook>
+```
+
+Update these values when integrating new assets or networks.
