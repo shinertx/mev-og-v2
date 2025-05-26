@@ -15,6 +15,7 @@ MEV-OG is an AI-native, adversarial crypto trading system built to compound $5K 
 - **Simulation/Test:** Foundry/Hardhat, Anvil forked-mainnet, chaos sim
 - **Monitoring:** Prometheus, Grafana, Discord/Telegram bot alerts
 - **AI/LLM:** Codex (codegen, mutation), GPT (audit, anomaly detection)
+- **Online Audit:** `AuditAgent.run_online_audit` uses OpenAI GPT when `OPENAI_API_KEY` is set
 - **Security:** Kill switch, circuit breakers, replay defense, key rotation
 - **Recovery:** DRP + 1-hour restore snapshot from logs/state
 

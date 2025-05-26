@@ -7,7 +7,7 @@ Module purpose and system role:
 
 Integration points and dependencies:
 - Expects a Web3-like object for RPC calls.
-- Writes cache to ``/state/nonce_cache.json`` and logs to ``logs/nonce_log.json``.
+ - Writes cache to ``state/nonce_cache.json`` and logs to ``logs/nonce_log.json``.
 
 Simulation/test hooks and kill conditions:
 - Designed for forked-mainnet simulation to validate nonce drift handling.
@@ -15,7 +15,7 @@ Simulation/test hooks and kill conditions:
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import threading
 from typing import Dict, Optional, Any
@@ -25,7 +25,7 @@ class NonceManager:
     def __init__(
         self,
         web3: Optional[Any] = None,
-        cache_file: str = "/state/nonce_cache.json",
+        cache_file: str = "state/nonce_cache.json",
         log_file: str = "logs/nonce_log.json",
     ) -> None:
         self.web3 = web3
@@ -73,7 +73,7 @@ class NonceManager:
             "address": address,
             "on_chain_nonce": on_chain_nonce,
             "local_nonce": local_nonce,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "source": source,
         }
         with self.log_path.open("a") as fh:
