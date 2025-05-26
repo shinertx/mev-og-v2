@@ -321,6 +321,16 @@ This is your doctrine—nothing goes live that isn’t “battle-proven.”
 Anything less is legacy.**
 
 
+
+## Optional Batches (GOAT Candidates)
+
+- `strategies/sandwich_attack`          # Cross-domain, L1→L2, intent-based sandwiches (2025 alpha)
+- `strategies/bridge_exploit`           # Async bridge arb, settlement race, liquidity manipulation
+- `strategies/nft_liquidation`          # NFT lending MEV (liquidations/auctions)
+- `strategies/l3_app_rollup_mev`        # L3 builder/sequencer MEV (emerging arms race)
+- `strategies/rwa_settlement`           # On-chain RWA/asset-backed MEV
+- `infra/real_world_execution`          # CEX/DEX hybrid arb, capital lock-in
+
 ---
 
 
