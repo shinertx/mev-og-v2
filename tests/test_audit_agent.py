@@ -20,3 +20,29 @@ def test_audit_summary(tmp_path):
     suggestions = agent.suggest_mutations(summary)
     assert suggestions
 
+
+def test_run_online_audit(monkeypatch):
+    responses = []
+
+    class FakeMsg:
+        def __init__(self, content):
+            self.content = content
+
+    class FakeResp:
+        def __init__(self, text):
+            self.choices = [type("C", (), {"message": FakeMsg(text)})]
+
+    class FakeChat:
+        @staticmethod
+        def create(model, messages):
+            responses.append((model, messages))
+            return FakeResp("ok")
+
+    monkeypatch.setitem(sys.modules, "openai", type("O", (), {"ChatCompletion": FakeChat}))
+    monkeypatch.setenv("OPENAI_API_KEY", "x")
+
+    agent = AuditAgent()
+    out = agent.run_online_audit("hi")
+    assert out == "ok"
+    assert responses
+

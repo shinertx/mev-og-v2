@@ -16,7 +16,7 @@ Simulation/test hooks and kill conditions:
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from pathlib import Path
 from typing import Any, Callable, Dict, List
@@ -56,7 +56,7 @@ class StructuredLogger:
         """Append log entry to file and send to hooks."""
 
         entry: Dict[str, Any] = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": event,
             "module": self.module,
             "tx_id": tx_id,

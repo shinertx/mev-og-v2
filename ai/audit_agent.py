@@ -25,7 +25,14 @@ LOGGER = StructuredLogger("audit_agent")
 
 
 class AuditAgent:
-    """Simple log-based audit analysis."""
+    """Simple log-based audit analysis.
+
+    The agent can operate entirely offline using :meth:`run_audit` and
+    :meth:`suggest_mutations`.  For online verification, the
+    :meth:`run_online_audit` method submits a prompt to OpenAI's API using the
+    ``OPENAI_API_KEY`` environment variable and returns the model response as a
+    string.
+    """
 
     def __init__(self, repo_root: str | None = None) -> None:
         self.repo_root = Path(repo_root or Path(__file__).resolve().parents[1])
@@ -77,3 +84,29 @@ class AuditAgent:
             suggestions=suggestions,
         )
         return suggestions
+
+    # ------------------------------------------------------------------
+    def run_online_audit(self, prompt: str) -> str:
+        """Submit ``prompt`` to OpenAI and return the text response."""
+
+        import openai  # imported here to simplify testing/mocking
+
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY not set")
+
+        openai.api_key = api_key
+        resp = openai.ChatCompletion.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        message = resp.choices[0].message.content  # type: ignore[assignment]
+        LOGGER.log(
+            "online_audit",
+            strategy_id="audit",
+            mutation_id=os.getenv("MUTATION_ID", "dev"),
+            risk_level="low",
+            prompt=prompt,
+            response=message,
+        )
+        return message

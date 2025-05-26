@@ -3,6 +3,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import json
 from pathlib import Path
+from datetime import datetime
 
 from core.logger import StructuredLogger, register_hook
 
@@ -24,3 +25,6 @@ def test_structured_logging(tmp_path):
     assert data[0]["module"] == "test_mod"
     assert data[0]["event"] == "event"
     assert captured and captured[0]["tx_id"] == "1"
+    ts = data[0]["timestamp"]
+    dt = datetime.fromisoformat(ts)
+    assert dt.tzinfo is not None
