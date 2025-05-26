@@ -104,9 +104,31 @@ Codex must never inline or stub functionality from another module (e.g. kill_swi
 
 If import fails during test, comment it but do not inline logic.
 
+## Optional Batches (GOAT Candidates)
+
+- `strategies/sandwich_attack`          # Cross-domain, L1→L2, intent-based sandwiches (2025 alpha)
+- `strategies/bridge_exploit`           # Async bridge arb, settlement race, liquidity manipulation
+- `strategies/nft_liquidation`          # NFT lending MEV (liquidations/auctions)
+- `strategies/l3_app_rollup_mev`        # L3 builder/sequencer MEV (emerging arms race)
+- `strategies/rwa_settlement`           # On-chain RWA/asset-backed MEV
+- `infra/real_world_execution`          # CEX/DEX hybrid arb, capital lock-in
+
+
 - `v1.1-batch1-kill_switch`: Codex now produces:
   - Kill switch check from `.env` or flag file
   - Logs kill events to `/logs/kill_log.json`
   - Sim harness + unit test for env/file triggers
 
 
+- `v1.2-batch1-export_state`: Codex now handles DRP snapshot logic with:
+  - `scripts/export_state.sh`: exports logs, strategies, and keys
+  - DRY-RUN and CLEAN modes
+  - Structured export log JSON with timestamp
+
+- `v1.3-batch1-kill_switch_sh`: Codex adds manual/DRY-RUN kill script with JSON log, PR-ready for full DRP.
+
+- v1.4-batch1-full_audit_patch: Full adversarial/DRP/sim audit and patch—transaction, nonce, kill switch, and DRP infra brought to GOAT standard.
+
+- v2.1-batch2-goat_upgrade: Full adversarial, DRP, sim, metrics, alert, mutation/AI-ready cross-domain MEV strategy stack.
+
+- v3.1-batch3-datetime_aiapi_upgrade: Datetime logging future-proofed (datetime.now(datetime.UTC)), AI audit agent can now call OpenAI API live.
