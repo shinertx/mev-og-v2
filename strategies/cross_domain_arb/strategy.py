@@ -54,6 +54,7 @@ METRICS = {
 
 
 class _MetricsHandler(BaseHTTPRequestHandler):
+    """HTTP handler serving in-memory metrics."""
     def do_GET(self) -> None:  # pragma: no cover - simple server
         if self.path != "/metrics":
             self.send_response(404)
@@ -99,6 +100,7 @@ def _send_alert(payload: Dict[str, object]) -> None:
 
 @dataclass
 class PoolConfig:
+    """Configuration for a Uniswap pool on a given domain."""
     pool: str
     domain: str
 
