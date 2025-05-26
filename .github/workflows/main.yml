@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      FOUNDER_APPROVED: ${{ secrets.FOUNDER_APPROVED }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt mypy ruff
+      - name: Lint
+        run: ruff check .
+      - name: Type check
+        run: mypy .
+      - name: Run tests
+        run: pytest -v
+      - name: Fork simulation
+        run: bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
+      - name: DRP dry run
+        run: bash scripts/export_state.sh --dry-run
+      - name: Offline audit
+        run: python ai/audit_agent.py --mode=offline --logs logs/cross_domain_arb.json
+      - name: Tag canary
+        run: |
+          TAG="canary-${{ github.sha }}-$(date +%Y%m%d)"
+          git tag "$TAG"
+      - name: Canary tests
+        run: |
+          ruff check .
+          mypy .
+          pytest -v
+          bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
+          bash scripts/export_state.sh --dry-run
+          python ai/audit_agent.py --mode=offline --logs logs/cross_domain_arb.json
+      - name: Promote
+        if: env.FOUNDER_APPROVED == '1'
+        run: echo "Founder approval received. Ready for production." 
