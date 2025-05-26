@@ -19,7 +19,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
-from core.logger import StructuredLogger
+from core.logger import StructuredLogger, log_error
 
 LOGGER = StructuredLogger("audit_agent")
 
@@ -54,6 +54,7 @@ class AuditAgent:
                 events.extend(json.loads(l) for l in lines if l.strip())
             except Exception as exc:
                 LOGGER.log("log_read_error", strategy_id=p, error=str(exc), risk_level="low")
+                log_error("audit_agent", str(exc), event="log_read_error", strategy_id=str(p))
         failures = [e for e in events if e.get("error")]
         summary = {
             "total_events": len(events),

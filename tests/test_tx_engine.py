@@ -59,7 +59,15 @@ def test_kill_switch(tmp_path, monkeypatch):
     web3 = DummyWeb3()
     nm = NonceManager(web3, cache_file=str(tmp_path / "nonce.json"))
     builder = TransactionBuilder(web3, nm, log_path=tmp_path / "log.json")
+    kill_log = tmp_path / "kill.json"
+    err_log = tmp_path / "errors.log"
     monkeypatch.setenv("KILL_SWITCH", "1")
+    monkeypatch.setenv("KILL_SWITCH_LOG_FILE", str(kill_log))
+    monkeypatch.setenv("ERROR_LOG_FILE", str(err_log))
     with pytest.raises(RuntimeError):
         builder.send_transaction(HexBytes(b"\x01"), "0xdef")
+    entries = [json.loads(l) for l in kill_log.read_text().splitlines()]
+    assert entries[-1]["origin_module"] == "TransactionBuilder"
+    err_lines = err_log.read_text().splitlines()
+    assert err_lines
     monkeypatch.delenv("KILL_SWITCH")
