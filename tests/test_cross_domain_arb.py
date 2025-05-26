@@ -180,6 +180,14 @@ def test_multiple_opportunities(tmp_path):
     assert Path(os.environ["CROSS_ARB_TX_POST"]).exists()
 
 
+def test_mutate_hook(tmp_path):
+    pools = {"eth": PoolConfig("0xpool", "ethereum")}
+    strat = CrossDomainArb(pools, threshold=0.01)
+    assert strat.threshold == 0.01
+    strat.mutate({"threshold": 0.02})
+    assert strat.threshold == 0.02
+
+
 def test_drp_snapshots(tmp_path):
     pools = {"eth": PoolConfig("0xpool", "ethereum")}
     strat = CrossDomainArb(pools, threshold=0.0)

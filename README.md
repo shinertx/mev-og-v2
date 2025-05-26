@@ -28,6 +28,8 @@ MEV-OG is an AI-native, adversarial crypto trading system built to compound $5K 
 | `strategies/cross_domain_arb` | 🚧 In progress | Cross-rollup + L1-L2 arbitrage execution bot |
 | `infra/sim_harness` | ✅ | Simulates forks, chaos, and tx latency/failure |
 | `ai/mutator` | ✅ | Self-prunes, mutates, and re-tunes strategies |
+| `ai/mutator/main.py` | ✅ | Orchestrates AI mutation cycles and audit-driven promotion |
+| `ai/promote.py` | ✅ | Handles founder-gated promotion and rollback |
 | `core/tx_engine` | 🚧 | Gas/timing-safe tx builder with kill switch logic |
 
 ---
@@ -53,6 +55,8 @@ foundry anvil --fork-url $MAINNET_RPC --fork-block-number <block>
 
 # Run tests
 pytest -v
+# Run a mutation cycle
+python ai/mutator/main.py --logs-dir logs
 ```
 
 ### Environment Configuration

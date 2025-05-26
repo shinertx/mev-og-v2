@@ -22,6 +22,10 @@ This file is the single source of truth for mutation, validation, and integratio
     - logs to `logs/<strategy>.json`
     - errors to `logs/errors.log`
     - metrics to Prometheus-compatible endpoint
+- Mutation cycles are run via `ai/mutator/main.py` and require founder approval
+  (`FOUNDER_APPROVED=1`) before any live promotion.
+- Every cycle must export an audit trail and DRP snapshot using
+  `scripts/export_state.sh`.
 
 ---
 
@@ -135,3 +139,4 @@ No code is merged without forked-mainnet sim, chaos test, DRP snapshot/restore, 
 
 - v3.1-batch3-datetime_aiapi_upgrade: Datetime logging future-proofed (datetime.now(datetime.UTC)), AI audit agent can now call OpenAI API live.
 - v3.4-batch123-fullfix: Compliance sweep across all modules, unified error logging, updated tests and fork simulation script.
+- v4.0-batch4-ai_mutation_promotion: AI-driven self-mutation loop with founder-gated promotion and continuous audit.
