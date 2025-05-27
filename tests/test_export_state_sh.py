@@ -101,6 +101,7 @@ def test_export_encrypted(tmp_path):
         }
     )
 
+
     os.chdir(tmp_path)
 
     run_script([], env)

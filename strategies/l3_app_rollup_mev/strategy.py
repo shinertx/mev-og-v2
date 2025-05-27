@@ -31,6 +31,7 @@ from core.oracles.intent_feed import IntentFeed, IntentData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
 from core.tx_engine.nonce_manager import NonceManager
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+from agents.capital_lock import CapitalLock
 
 LOG_FILE = Path(os.getenv("L3_APP_ROLLUP_LOG", "logs/l3_app_rollup_mev.json"))
 LOG = StructuredLogger("l3_app_rollup_mev", log_file=str(LOG_FILE))
@@ -74,6 +75,7 @@ class L3AppRollupMEV:
         *,
         threshold: float | None = None,
         edges_enabled: Optional[Dict[str, bool]] = None,
+        capital_lock: CapitalLock | None = None,
     ) -> None:
         self.feed = UniswapV3Feed()
         self.intent_feed = IntentFeed()
@@ -88,6 +90,8 @@ class L3AppRollupMEV:
         self.pending_bridges: Dict[str, int] = {}
         self.failed_pools: Dict[str, int] = {}
         self.max_failures = 3
+
+        self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
 
         w3 = self.feed.web3s.get("ethereum") if self.feed.web3s else None
         self.nonce_manager = NonceManager(w3)
@@ -247,6 +251,18 @@ class L3AppRollupMEV:
             opp = self._detect_bridge_race(prices)
 
         if opp:
+            if not self.capital_lock.trade_allowed():
+                msg = "capital lock: trade not allowed"
+                LOG.log(
+                    "capital_lock",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="high",
+                    error=msg,
+                )
+                log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
+                return None
+
             metrics.record_opportunity(float(opp["spread"]), float(opp["profit"]), 0.0)
             pre = os.getenv("L3_APP_STATE_PRE", "state/l3_app_pre.json")
             post = os.getenv("L3_APP_STATE_POST", "state/l3_app_post.json")
@@ -259,6 +275,8 @@ class L3AppRollupMEV:
             tx_id = self._bundle_and_send(str(opp["action"]))
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
+
+            self.capital_lock.record_trade(float(opp["profit"]))
             for label, data in price_data.items():
                 self._record(
                     self.pools[label].domain,

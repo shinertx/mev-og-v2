@@ -407,6 +407,13 @@ any fail. Alerts are sent via `OPS_ALERT_WEBHOOK` and counted by the metrics
 server. `agents/capital_lock.py` enforces drawdown and loss limits; founder must
 approve unlock actions by setting `FOUNDER_APPROVED=1`.
 
+
+Each strategy receives a `CapitalLock` instance from the orchestrator. Before
+dispatching any transaction it calls `capital_lock.trade_allowed()`. When the
+lock is engaged the strategy aborts, logging a structured error entry with the
+message "capital lock: trade not allowed" to both its strategy log and
+`logs/errors.log`.
+
 ## Strategy Orchestrator
 
 `core/orchestrator.py` boots all enabled strategies from `config.yaml` and

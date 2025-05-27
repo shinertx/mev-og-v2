@@ -7,6 +7,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.rwa_settlement import RWASettlementMEV, VenueConfig
+from agents.capital_lock import CapitalLock
 from core.oracles.rwa_feed import RWAData
 
 
@@ -24,7 +25,7 @@ def setup_strat(threshold=0.01):
         "dex": VenueConfig("dex", "asset"),
         "cex": VenueConfig("cex", "asset"),
     }
-    strat = RWASettlementMEV(venues, threshold=threshold)
+    strat = RWASettlementMEV(venues, threshold=threshold, capital_lock=CapitalLock(1000, 1e9, 0))
     return strat
 
 
