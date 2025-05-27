@@ -1,13 +1,10 @@
 """Tests for the kill switch environment and file triggers."""
 
-<<<<<<< HEAD
-import sys; import pathlib; sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-import json
-=======
-import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-import json
+import sys
+from pathlib import Path
 import os
->>>>>>> 08463589b36fe30ca5373bfc83ad4f47056a2779
+import json
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import importlib
 
 import core.tx_engine.kill_switch as ks

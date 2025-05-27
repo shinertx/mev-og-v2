@@ -1,12 +1,8 @@
 """Tests for Prometheus metrics server."""
 
-<<<<<<< HEAD
 import sys
-import pathlib
-=======
-import sys, pathlib
->>>>>>> 08463589b36fe30ca5373bfc83ad4f47056a2779
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import urllib.request
 
@@ -18,6 +14,7 @@ from core import metrics
 def test_metrics_server(tmp_path):
     srv = metrics.MetricsServer(port=0)
     srv.start()
+    metrics._METRICS.update({"opportunities": 0, "fails": 0, "pnl": 0.0, "spreads": [], "latencies": [], "alert_count": 0})
 
     metrics.record_opportunity(0.1, 5.0, 0.5)
     metrics.record_fail()
