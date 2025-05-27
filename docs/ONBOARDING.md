@@ -70,6 +70,24 @@ python -m core.metrics --port $METRICS_PORT
 If you set `METRICS_TOKEN`, include the header
 `Authorization: Bearer $METRICS_TOKEN` when scraping.
 
+## Running the Strategy Orchestrator
+
+Start all enabled strategies using the unified orchestrator. Use dry-run mode
+first to verify configuration:
+
+```bash
+python -m core.orchestrator --config=config.yaml --dry-run
+```
+
+For continuous live execution run:
+
+```bash
+python -m core.orchestrator --config=config.yaml --live
+```
+
+Live mode requires `FOUNDER_APPROVED=1`. Use `--health` for an on-demand health
+check without executing strategies.
+
 ## 6. Wallet Operations
 
 `scripts/wallet_ops.py` handles secure wallet funding and draining. Every action
@@ -126,6 +144,7 @@ bash scripts/rollback.sh --archive=<exported-archive>
 * Check `logs/errors.log` for stack traces.
 * Ensure RPC endpoints in `config.yaml` are reachable.
 * Verify the metrics server is running on `$METRICS_PORT`.
+
 
 
 ---
