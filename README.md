@@ -60,14 +60,23 @@ pytest -v
 python ai/mutator/main.py --logs-dir logs
 ```
 
-### Environment Configuration
+### Environment & Configuration
 
-Set the following variables before running cross-domain arbitrage modules and `cross_rollup_superbot`:
+MEV-OG reads settings from a `.env` file and `config.yaml`. Use
+`config.example.yaml` as a template. Key variables include:
 
 ```
+OPENAI_API_KEY=<your-openai-key>          # Enables online audits
+FOUNDER_APPROVED=0                        # 1 allows promotion
 RPC_ETHEREUM_URL=<https://mainnet.ethereum.org>
 RPC_ARBITRUM_URL=<https://arbitrum.rpc>
 RPC_OPTIMISM_URL=<https://optimism.rpc>
+KILL_SWITCH_PATH=/tmp/mev_kill            # File trigger for halt
+METRICS_PORT=9102                         # Prometheus server port
+```
+
+Additional strategy values:
+```
 POOL_ETHEREUM=0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8
 POOL_ARBITRUM=0xb3f8e4262c5bfcc0a304143cfb33c7a9a64e0fe0
 POOL_OPTIMISM=0x85149247691df622eaf1a8bd0c4bd90d38a83a1f
@@ -75,8 +84,9 @@ ARB_ALERT_WEBHOOK=<https://discord-or-telegram-webhook>
 BRIDGE_COST_ETHEREUM_ARBITRUM=0.0005
 ```
 
-Update these values when integrating new assets or networks.
-Bridge cost variables (e.g., ``BRIDGE_COST_ETHEREUM_ARBITRUM``) control the assumed fee when moving funds across rollups for `cross_rollup_superbot`.
+Update these values when integrating new assets or networks. Bridge cost
+variables (e.g., ``BRIDGE_COST_ETHEREUM_ARBITRUM``) control the assumed fee when
+moving funds across rollups for `cross_rollup_superbot`.
 
 ### cross_rollup_superbot Runbook
 
@@ -86,6 +96,19 @@ python -m core.metrics &
 # Run fork simulation
 bash scripts/simulate_fork.sh --target=strategies/cross_rollup_superbot
 ```
+
+### AI Mutation Workflow
+
+1. Collect logs from all strategies.
+2. Run `ai/audit_agent.py --mode=offline` and review results.
+3. If approved, run `ai/audit_agent.py --mode=online` with `OPENAI_API_KEY`.
+4. Execute `ai/mutator/main.py` to generate new parameters.
+5. Set `FOUNDER_APPROVED=1` and run `ai/promote.py` to move updated strategies
+   into `active/`.
+6. Roll back with `ai/promote.rollback` or `scripts/rollback.sh` if needed.
+
+Logs must include `timestamp`, `tx_id`, `strategy_id`, `mutation_id`,
+`risk_level` and `block`. All metrics should expose Prometheus endpoints.
 
 ## CI/CD & Canary Deployment
 
