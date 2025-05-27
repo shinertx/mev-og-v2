@@ -64,6 +64,24 @@ Every PR or batch/module must pass:
 - Rollback: `bash scripts/rollback.sh --archive=<path>`
 - Mutation cycle: `python ai/mutator/main.py --logs-dir logs`
 
+### l3_sequencer_mev Runbook
+- Fork simulation: `bash scripts/simulate_fork.sh --target=strategies/l3_sequencer_mev`
+- Export state: `bash scripts/export_state.sh`
+- Rollback: `bash scripts/rollback.sh --archive=<path>`
+- Mutation cycle: `python ai/mutator/main.py --logs-dir logs`
+
+### nft_liquidation Runbook
+- Fork simulation: `bash scripts/simulate_fork.sh --target=strategies/nft_liquidation`
+- Export state: `bash scripts/export_state.sh`
+- Rollback: `bash scripts/rollback.sh --archive=<path>`
+- Mutation cycle: `python ai/mutator/main.py --logs-dir logs`
+
+### rwa_settlement Runbook
+- Fork simulation: `bash scripts/simulate_fork.sh --target=strategies/rwa_settlement`
+- Export state: `bash scripts/export_state.sh`
+- Rollback: `bash scripts/rollback.sh --archive=<path>`
+- Mutation cycle: `python ai/mutator/main.py --logs-dir logs`
+
 ---
 
 ## Codex Behavior Log

@@ -23,6 +23,12 @@ done
 NAME="$(basename "$TARGET")"
 if [[ "$NAME" == "cross_domain_arb" ]]; then
     NAME="cross_arb"
+elif [[ "$NAME" == "l3_sequencer_mev" ]]; then
+    NAME="l3_sequencer_mev"
+elif [[ "$NAME" == "nft_liquidation" ]]; then
+    NAME="nft_liquidation"
+elif [[ "$NAME" == "rwa_settlement" ]]; then
+    NAME="rwa_settlement"
 fi
 SCRIPT="infra/sim_harness/fork_sim_${NAME}.py"
 
