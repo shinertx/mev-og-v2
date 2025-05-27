@@ -49,7 +49,7 @@ class MutationRunner:
             if file.name == "errors.log":
                 continue
             try:
-                lines = [json.loads(l) for l in file.read_text().splitlines() if l.strip()]
+                lines = [json.loads(line) for line in file.read_text().splitlines() if line.strip()]
             except Exception as exc:
                 log_error("mutation_main", str(exc), strategy_id=file.stem, event="log_parse")
                 continue
@@ -69,11 +69,26 @@ class MutationRunner:
         ]
         for cmd in cmds:
             try:
-                subprocess.run(cmd, check=True, capture_output=True, text=True)
+                subprocess.run(
+                    cmd,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
             except FileNotFoundError:
-                log_error("mutation_main", f"missing command: {' '.join(cmd)}", strategy_id=strategy, event="cmd_missing")
+                log_error(
+                    "mutation_main",
+                    f"missing command: {' '.join(cmd)}",
+                    strategy_id=strategy,
+                    event="cmd_missing",
+                )
             except subprocess.CalledProcessError as exc:
-                log_error("mutation_main", f"cmd failed: {exc.stderr}", strategy_id=strategy, event="cmd_fail")
+                log_error(
+                    "mutation_main",
+                    f"cmd failed: {exc.stderr}",
+                    strategy_id=strategy,
+                    event="cmd_fail",
+                )
                 return False
         return True
 
@@ -112,18 +127,38 @@ class MutationRunner:
                 if hasattr(strat, "mutate"):
                     strat.mutate({"threshold": 0.005})
             except Exception as exc:  # pragma: no cover - import edge
-                log_error("mutation_main", f"mutation failed: {exc}", strategy_id=sid, event="mutate")
+                log_error(
+                    "mutation_main",
+                    f"mutation failed: {exc}",
+                    strategy_id=sid,
+                    event="mutate",
+                )
                 continue
 
             tests_pass = self._run_checks(sid)
             if tests_pass and os.getenv("FOUNDER_APPROVED") == "1":
                 src = self.repo_root / "strategies" / sid
                 dst = self.repo_root / "active" / sid
-                promote_strategy(src, dst, True, {"audit": audit_summary, "online": online_resp})
+                promote_strategy(
+                    src,
+                    dst,
+                    True,
+                    {"audit": audit_summary, "online": online_resp},
+                )
             elif not tests_pass:
-                log_error("mutation_main", "tests failed", strategy_id=sid, event="promote_block")
+                log_error(
+                    "mutation_main",
+                    "tests failed",
+                    strategy_id=sid,
+                    event="promote_block",
+                )
             else:
-                log_error("mutation_main", "founder approval required", strategy_id=sid, event="promote_gate")
+                log_error(
+                    "mutation_main",
+                    "founder approval required",
+                    strategy_id=sid,
+                    event="promote_gate",
+                )
 
 
 def main() -> None:  # pragma: no cover - CLI wrapper

@@ -177,7 +177,7 @@ class TransactionBuilder:
         tx_hash = None
         for attempt in range(1, max_attempts + 1):
             try:
-                nonce = self.nonce_manager.get_nonce(from_address, tx_id=tx_id)
+                self.nonce_manager.get_nonce(from_address, tx_id=tx_id)
                 if hasattr(self.web3, "eth"):
                     tx_hash = self.web3.eth.send_raw_transaction(signed_tx)
                 else:

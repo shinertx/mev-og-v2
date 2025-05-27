@@ -27,8 +27,8 @@ from core.logger import log_error
 PRICE_FRESHNESS_SEC = int(os.getenv("PRICE_FRESHNESS_SEC", "30"))
 
 try:  # pragma: no cover - optional dependency
-    from web3 import Web3
-    from web3.contract import Contract
+    from web3 import Web3  # type: ignore
+    from web3.contract import Contract  # type: ignore
 except Exception:  # pragma: no cover - only when web3 missing
     Web3 = None  # type: ignore
     Contract = Any  # type: ignore

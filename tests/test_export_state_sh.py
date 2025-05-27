@@ -39,13 +39,13 @@ def test_export_and_clean(tmp_path):
         names = tar.getnames()
         assert "logs/log.txt" in names or "state/state.txt" in names
 
-    entries = [json.loads(l) for l in log_file.read_text().splitlines()]
+    entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "export"
 
     run_script(["--clean"], env)
     assert not any(logs_dir.iterdir())
     assert not any(state_dir.iterdir())
-    entries = [json.loads(l) for l in log_file.read_text().splitlines()]
+    entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "clean"
 
 
@@ -63,5 +63,5 @@ def test_dry_run(tmp_path):
     result = run_script(["--dry-run"], env)
     assert "DRY RUN" in result.stdout
     assert not export_dir.exists()
-    entries = [json.loads(l) for l in log_file.read_text().splitlines()]
+    entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "dry-run"

@@ -27,14 +27,14 @@ def test_trigger_and_clean(tmp_path):
     assert env_file.read_text().strip() == "KILL_SWITCH=1"
     assert flag_file.exists()
 
-    entries = [json.loads(l) for l in log_file.read_text().splitlines()]
+    entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "trigger"
 
     run_script(["--clean"], env)
     assert not flag_file.exists()
     assert "KILL_SWITCH" not in env_file.read_text()
 
-    entries = [json.loads(l) for l in log_file.read_text().splitlines()]
+    entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "clean"
 
 
@@ -53,5 +53,5 @@ def test_dry_run(tmp_path):
     assert "DRY RUN" in result.stdout
     assert not flag_file.exists()
     assert not env_file.exists()
-    entries = [json.loads(l) for l in log_file.read_text().splitlines()]
+    entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "dry-run"

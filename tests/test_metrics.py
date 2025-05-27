@@ -1,16 +1,14 @@
 """Tests for Prometheus metrics server."""
 
+import urllib.request
+from pathlib import Path
 import sys
 
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-
-import urllib.request
-
-opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from core import metrics
+
+opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
 def test_metrics_server(tmp_path):

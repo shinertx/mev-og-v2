@@ -1,13 +1,12 @@
 """Unit tests for StructuredLogger behavior."""
 
-import sys
-
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-
 import json
 from datetime import datetime
+from pathlib import Path
+
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from core.logger import StructuredLogger, register_hook
 
@@ -32,7 +31,7 @@ def test_structured_logging(tmp_path, monkeypatch):
         error="boom",
     )
 
-    data = [json.loads(l) for l in log_file.read_text().splitlines()]
+    data = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert data[0]["module"] == "test_mod"
     assert data[0]["event"] == "event"
     assert captured and captured[0]["tx_id"] == "1"
