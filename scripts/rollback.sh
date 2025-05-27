@@ -47,8 +47,26 @@ if [[ -z "$ARCHIVE" || ! -f "$ARCHIVE" ]]; then
     exit 1
 fi
 
-# Extract archive relative to repo root
- tar -xzf "$ARCHIVE"
+TMP_DIR=$(mktemp -d)
+cleanup() {
+    rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
+
+# validate archive paths
+while IFS= read -r entry; do
+    if [[ "$entry" = /* || "$entry" == *".."* ]]; then
+        mkdir -p "$(dirname "$LOG_FILE")"
+        echo "$TIMESTAMP rollback_failed unsafe_path" >> "$LOG_FILE"
+        log_event "failed" "$ARCHIVE"
+        echo "Unsafe path detected in archive: $entry" >&2
+        exit 1
+    fi
+done < <(tar -tzf "$ARCHIVE")
+
+# Extract safely into temporary directory then copy
+tar -xzf "$ARCHIVE" -C "$TMP_DIR"
+cp -a "$TMP_DIR"/* .
 log_event "restore" "$ARCHIVE"
 mkdir -p "$(dirname "$LOG_FILE")"
 echo "$TIMESTAMP restored $ARCHIVE" >> "$LOG_FILE"

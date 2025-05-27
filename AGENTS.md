@@ -140,6 +140,8 @@ Every PR or batch/module must pass:
 - Every batch/module must log:
   - mutation_id, risk_level, DRP snapshot location.
   - State and logs must be exportable for audit/rollback (`scripts/export_state.sh`).
+    The export script skips symlinks and paths outside the repo to ensure
+    archives are safe to restore.
   - Major audit recommendations must be appended to this file for traceability.
 
 ## CI/CD & Canary Deploy
@@ -153,7 +155,9 @@ Every PR or batch/module must pass:
 ## DRP One-Click Rollback
 
 - `scripts/rollback.sh` restores logs, keys and active strategies from the most
-  recent export archive.
+  recent export archive. The script validates archive paths and extracts in a
+  temporary directory to block path traversal attacks.
+Rollback events append to `logs/rollback.log` and `logs/errors.log`.
 - Rollback events append to `logs/rollback.log` and `logs/errors.log`.
 
 ---
