@@ -73,6 +73,7 @@ while IFS= read -r entry; do
         log_event "failed" "$ARCHIVE"
         echo "Invalid path in archive: $entry" >&2
         rm -rf "$TMP_DIR"
+
         exit 1
     fi
 done < <(tar -tzf "$ARCHIVE")
@@ -84,6 +85,7 @@ cp -a "$TMP_DIR"/* "$PWD"/
 shopt -u dotglob
 
 rm -rf "$TMP_DIR"
+
 
 log_event "restore" "$ARCHIVE"
 mkdir -p "$(dirname "$LOG_FILE")"
