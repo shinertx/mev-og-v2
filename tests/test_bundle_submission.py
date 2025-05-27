@@ -1,0 +1,49 @@
+import os
+import sys
+import types
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
+
+from strategies.cross_rollup_superbot import CrossRollupSuperbot, PoolConfig, BridgeConfig
+
+class DummyFlashbots:
+    def __init__(self):
+        self.sent = []
+
+    def send_bundle(self, bundle, target_block):
+        self.sent.append((bundle, target_block))
+        return {"bundleHash": "hash"}
+
+class DummyEth:
+    def __init__(self):
+        self.block_number = 1
+
+class DummyWeb3:
+    def __init__(self):
+        self.eth = DummyEth()
+        self.flashbots = DummyFlashbots()
+
+
+def test_bundle_send(monkeypatch):
+    module = types.ModuleType("flashbots")
+
+    def flashbot(w3, account, endpoint_uri=None):
+        w3.flashbots = DummyFlashbots()
+
+    module.flashbot = flashbot
+    monkeypatch.setitem(sys.modules, "flashbots", module)
+
+    pools = {
+        "eth": PoolConfig("0xpool", "ethereum"),
+        "arb": PoolConfig("0xpool", "arbitrum"),
+    }
+    bridges = {("ethereum", "arbitrum"): BridgeConfig(0.0)}
+    strat = CrossRollupSuperbot(pools, bridges)
+    w3 = DummyWeb3()
+    strat.tx_builder.web3 = w3
+    strat.nonce_manager.web3 = w3
+    monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
+    txid = strat._bundle_and_send("test")
+    assert txid == "hash"
+    assert w3.flashbots.sent

@@ -1,5 +1,6 @@
 import json
 import tempfile
+import types
 from pathlib import Path
 import sys
 
@@ -34,6 +35,7 @@ class DummyPool:
 class DummyEth:
     def __init__(self, price):
         self.contract_obj = DummyPool(price)
+        self.block_number = 1
 
     def contract(self, address, abi):
         return self.contract_obj
@@ -91,7 +93,23 @@ def setup_strat(threshold=0.01):
     return strat
 
 
-def test_l3_sandwich_opportunity():
+def _patch_flashbots(monkeypatch):
+    module = types.ModuleType("flashbots")
+
+    class FB:
+        def send_bundle(self, bundle, target):
+            return {"bundleHash": "hash"}
+
+    def flashbot(w3, account, endpoint_uri=None):
+        w3.flashbots = FB()
+
+    module.flashbot = flashbot
+    monkeypatch.setitem(sys.modules, "flashbots", module)
+
+
+def test_l3_sandwich_opportunity(monkeypatch):
+    _patch_flashbots(monkeypatch)
+    monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
     strat = setup_strat(threshold=0.01)
     strat.feed = DummyFeed({"arbitrum": 100, "zksync": 102})
     strat.intent_feed = DummyIntentFeed({"zksync": []})
@@ -102,7 +120,9 @@ def test_l3_sandwich_opportunity():
     assert result and result["opportunity"]
 
 
-def test_bridge_race_opportunity():
+def test_bridge_race_opportunity(monkeypatch):
+    _patch_flashbots(monkeypatch)
+    monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
     strat = setup_strat(threshold=0.001)
     strat.feed = DummyFeed({"arbitrum": 101, "zksync": 100})
     strat.intent_feed = DummyIntentFeed({"zksync": [{"intent_id": "1", "domain": "zksync", "action": "bridge", "price": 101}]})
@@ -130,6 +150,8 @@ def test_snapshot_restore(tmp_path):
 
 
 def test_kill_switch(monkeypatch):
+    _patch_flashbots(monkeypatch)
+    monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
     strat = setup_strat()
     strat.feed = DummyFeed({"arbitrum": 100, "zksync": 102})
     strat.intent_feed = DummyIntentFeed({"zksync": []})
