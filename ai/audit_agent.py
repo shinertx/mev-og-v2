@@ -51,7 +51,7 @@ class AuditAgent:
         for p in log_paths:
             try:
                 lines = Path(p).read_text().splitlines()
-                events.extend(json.loads(l) for l in lines if l.strip())
+                events.extend(json.loads(line) for line in lines if line.strip())
             except Exception as exc:
                 LOGGER.log("log_read_error", strategy_id=p, error=str(exc), risk_level="low")
                 log_error("audit_agent", str(exc), event="log_read_error", strategy_id=str(p))
@@ -90,7 +90,7 @@ class AuditAgent:
     def run_online_audit(self, prompt: str) -> str:
         """Submit ``prompt`` to OpenAI and return the text response."""
 
-        import openai  # imported here to simplify testing/mocking
+        import openai  # imported here to simplify testing/mocking  # type: ignore
 
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:

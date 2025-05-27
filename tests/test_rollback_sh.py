@@ -18,7 +18,9 @@ def test_restore_success(tmp_path):
     logs = tmp_path / "logs"
     state = tmp_path / "state"
     active = tmp_path / "active"
-    logs.mkdir(); state.mkdir(); active.mkdir()
+    logs.mkdir()
+    state.mkdir()
+    active.mkdir()
     (logs / "log.txt").write_text("log")
     (state / "state.txt").write_text("state")
     (active / "a.txt").write_text("active")
@@ -27,7 +29,9 @@ def test_restore_success(tmp_path):
         tar.add(logs, arcname="logs")
         tar.add(state, arcname="state")
         tar.add(active, arcname="active")
-    shutil.rmtree(logs); shutil.rmtree(state); shutil.rmtree(active)
+    shutil.rmtree(logs)
+    shutil.rmtree(state)
+    shutil.rmtree(active)
     env = os.environ.copy()
     env.update({
         "ERROR_LOG_FILE": str(tmp_path / "errors.log"),
@@ -39,7 +43,7 @@ def test_restore_success(tmp_path):
     assert (logs / "log.txt").exists()
     assert (state / "state.txt").exists()
     assert (active / "a.txt").exists()
-    entries = [json.loads(l) for l in (tmp_path / "rollback.log").read_text().splitlines()]
+    entries = [json.loads(line) for line in (tmp_path / "rollback.log").read_text().splitlines()]
     assert entries[-1]["event"] == "restore"
 
 
@@ -57,6 +61,6 @@ def test_missing_archive(tmp_path):
         run_script([], env)
     except subprocess.CalledProcessError:
         pass
-    entries = [json.loads(l) for l in (tmp_path / "rb.log").read_text().splitlines()]
+    entries = [json.loads(line) for line in (tmp_path / "rb.log").read_text().splitlines()]
     assert entries[-1]["event"] == "failed"
     assert (tmp_path / "err.log").exists()

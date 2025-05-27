@@ -1,19 +1,16 @@
 """Tests for TransactionBuilder and associated kill switch logic."""
 
-import os
-
 import json
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 import pytest
 
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager
 
-from core.tx_engine.kill_switch import kill_switch_triggered
 
 
 
@@ -71,7 +68,7 @@ def test_kill_switch(tmp_path, monkeypatch):
     monkeypatch.setenv("ERROR_LOG_FILE", str(err_log))
     with pytest.raises(RuntimeError):
         builder.send_transaction(HexBytes(b"\x01"), "0xdef")
-    entries = [json.loads(l) for l in kill_log.read_text().splitlines()]
+    entries = [json.loads(line) for line in kill_log.read_text().splitlines()]
     assert entries[-1]["origin_module"] == "TransactionBuilder"
     err_lines = err_log.read_text().splitlines()
     assert err_lines

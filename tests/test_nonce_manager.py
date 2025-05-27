@@ -1,10 +1,10 @@
 """Unit tests for the NonceManager."""
 
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from core.tx_engine.nonce_manager import NonceManager
 
@@ -53,6 +53,6 @@ def test_cache_update_and_reset(tmp_path):
     assert nonce3 == 5
     assert w3.eth.calls == 4
 
-    logs = [json.loads(l) for l in log_file.read_text().splitlines()]
+    logs = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert logs[-1]["source"] == "get"
     assert logs[0]["source"] == "get"

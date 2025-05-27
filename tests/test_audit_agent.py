@@ -1,14 +1,10 @@
 """Unit tests for the AuditAgent logic and online audit path."""
 
 import sys
-
-import pathlib
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import json
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
+
 from ai.audit_agent import AuditAgent
 from core.logger import StructuredLogger
 

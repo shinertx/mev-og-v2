@@ -25,10 +25,8 @@ Simulation/test hooks and kill conditions:
 from __future__ import annotations
 
 import json
-import logging
 import os
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -100,7 +98,18 @@ class CrossRollupSuperbot:
     # ------------------------------------------------------------------
     def _record(self, domain: str, data: PriceData, opportunity: bool, spread: float, action: str = "", tx_id: str = "") -> None:
         LOG.log(
-            "price", tx_id=tx_id, strategy_id=STRATEGY_ID, mutation_id=os.getenv("MUTATION_ID", "dev"), risk_level="low", domain=domain, price=data.price, block=data.block, block_age=data.block_age, opportunity=opportunity, spread=spread, action=action,
+            "price",
+            tx_id=tx_id,
+            strategy_id=STRATEGY_ID,
+            mutation_id=os.getenv("MUTATION_ID", "dev"),
+            risk_level="low",
+            domain=domain,
+            price=data.price,
+            block=data.block,
+            block_age=data.block_age,
+            opportunity=opportunity,
+            spread=spread,
+            action=action,
         )
 
     # ------------------------------------------------------------------
@@ -125,7 +134,14 @@ class CrossRollupSuperbot:
         if profit <= 0:
             return None
         action = f"bundle_buy:{buy}_sell:{sell}"
-        return {"opportunity": True, "spread": spread, "profit": profit, "action": action, "buy": buy, "sell": sell}
+        return {
+            "opportunity": True,
+            "spread": spread,
+            "profit": profit,
+            "action": action,
+            "buy": buy,
+            "sell": sell,
+        }
 
     # ------------------------------------------------------------------
     def _bundle_and_send(self, action: str) -> str:
@@ -144,7 +160,12 @@ class CrossRollupSuperbot:
     def run_once(self) -> Optional[Dict[str, object]]:
         if kill_switch_triggered():
             record_kill_event(STRATEGY_ID)
-            LOG.log("killed", strategy_id=STRATEGY_ID, mutation_id=os.getenv("MUTATION_ID", "dev"), risk_level="high")
+            LOG.log(
+                "killed",
+                strategy_id=STRATEGY_ID,
+                mutation_id=os.getenv("MUTATION_ID", "dev"),
+                risk_level="high",
+            )
             return None
 
         price_data: Dict[str, PriceData] = {}
@@ -205,7 +226,14 @@ class CrossRollupSuperbot:
         if "threshold" in params:
             try:
                 self.threshold = float(params["threshold"])
-                LOG.log("mutate", strategy_id=STRATEGY_ID, mutation_id=os.getenv("MUTATION_ID", "dev"), risk_level="low", param="threshold", value=self.threshold)
+                LOG.log(
+                    "mutate",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    param="threshold",
+                    value=self.threshold,
+                )
             except Exception as exc:
                 log_error(STRATEGY_ID, f"mutate threshold: {exc}", event="mutate_error")
         if "bridge_costs" in params:
@@ -213,7 +241,13 @@ class CrossRollupSuperbot:
                 for k, v in params["bridge_costs"].items():
                     pair = tuple(k.split("->"))
                     self.bridge_costs[pair] = BridgeConfig(**v)
-                LOG.log("mutate", strategy_id=STRATEGY_ID, mutation_id=os.getenv("MUTATION_ID", "dev"), risk_level="low", param="bridge_costs")
+                LOG.log(
+                    "mutate",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    param="bridge_costs",
+                )
             except Exception as exc:
                 log_error(STRATEGY_ID, f"mutate bridge_costs: {exc}", event="mutate_error")
 

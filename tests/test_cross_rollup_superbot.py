@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.cross_rollup_superbot import CrossRollupSuperbot, PoolConfig, BridgeConfig
 from core.oracles.uniswap_feed import PriceData

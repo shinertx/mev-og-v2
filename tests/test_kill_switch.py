@@ -1,13 +1,11 @@
 """Tests for the kill switch environment and file triggers."""
 
-
+import json
+import importlib
 import sys
 from pathlib import Path
-import os
-import json
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import importlib
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 import core.tx_engine.kill_switch as ks
 
@@ -24,7 +22,7 @@ def test_env_triggers_kill_switch(tmp_path, monkeypatch):
     assert ks.kill_switch_triggered() is True
 
     ks.record_kill_event("test_env")
-    data = [json.loads(l) for l in log_file.read_text().splitlines()]
+    data = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert data[0]["triggered_by"] == "env"
     assert data[0]["origin_module"] == "test_env"
     assert data[0]["kill_event"] is True
@@ -45,7 +43,7 @@ def test_file_triggers_kill_switch(tmp_path, monkeypatch):
     assert ks.kill_switch_triggered() is True
 
     ks.record_kill_event("test_file")
-    data = [json.loads(l) for l in log_file.read_text().splitlines()]
+    data = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert data[0]["triggered_by"] == "file"
     assert data[0]["origin_module"] == "test_file"
 
