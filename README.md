@@ -46,6 +46,11 @@ MEV-OG is an AI-native, adversarial crypto trading system built to compound $5K 
 | `ai/mutator/main.py` | ✅ | Orchestrates AI mutation cycles and audit-driven promotion |
 | `ai/promote.py` | ✅ | Handles founder-gated promotion and rollback |
 | `core/tx_engine` | 🚧 | Gas/timing-safe tx builder with kill switch logic |
+| `agents/ops_agent.py` | ✅ | Health monitoring and alerts |
+| `agents/capital_lock.py` | ✅ | Drawdown and loss gating |
+| `adapters/cex_adapter.py` | ✅ | Sample CEX HTTP adapter |
+| `adapters/dex_adapter.py` | ✅ | DEX aggregator interface |
+| `adapters/bridge_adapter.py` | ✅ | Token bridge API wrapper |
 
 ---
 
@@ -285,3 +290,16 @@ bash scripts/kill_switch.sh --clean
 
 Environment variables `KILL_SWITCH_FLAG_FILE` and `KILL_SWITCH_LOG_FILE` control
 the flag and log paths.
+
+## OpsAgent & CapitalLock
+
+`agents/ops_agent.py` runs periodic health checks and pauses all strategies if
+any fail. Alerts are sent via `OPS_ALERT_WEBHOOK` and counted by the metrics
+server. `agents/capital_lock.py` enforces drawdown and loss limits; founder must
+approve unlock actions by setting `FOUNDER_APPROVED=1`.
+
+Example usage:
+
+```bash
+python scripts/batch_ops.py promote cross_rollup_superbot --source-dir staging --dest-dir active
+```

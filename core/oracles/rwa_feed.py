@@ -15,7 +15,6 @@ Simulation/test hooks and kill conditions:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple
 import os
 
 try:  # pragma: no cover - optional

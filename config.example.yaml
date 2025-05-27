@@ -21,6 +21,7 @@ risk:
     cross_chain:
       max_loss_usd: 100
       max_trade_size_usd: 50
+capital_lock_enabled: true
 
 alpha:
   enabled: ["cross_chain", "l2_sandwich"]   # List of enabled strategies
@@ -37,6 +38,7 @@ notifier:
     enabled: true
     chat_id: "123456789"   # Your Telegram chat ID (do not store the token here)
     founder_chat_id: "123456789"  # Founder Telegram ID for critical alerts
+  ops_alert_webhook: "https://hooks.example.com/ops"  # Discord/Telegram/Sentry
   email: "founder@example.com"
   notify_on: ["error", "trade", "kill_switch"]
 

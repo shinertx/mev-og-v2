@@ -9,7 +9,6 @@ service in production.
 from __future__ import annotations
 
 import os
-import json
 from dataclasses import dataclass
 from typing import List
 

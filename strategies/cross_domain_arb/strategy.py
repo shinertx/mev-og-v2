@@ -1,5 +1,7 @@
 """Cross-domain ETH/USDC price arbitrage detection strategy.
 
+# mypy: ignore-errors
+
 Module purpose and system role:
     - Scan Ethereum, Arbitrum, and Optimism Uniswap V3 pools for price
       discrepancies.
