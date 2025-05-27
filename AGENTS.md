@@ -60,6 +60,13 @@ Every PR or batch/module must pass:
 - Rollback: `bash scripts/rollback.sh --archive=<path>`
 - Mutation cycle: `python ai/mutator/main.py --logs-dir logs`
 
+### cross_domain_arb Runbook
+- Fork simulation: `bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb`
+- Export state: `bash scripts/export_state.sh`
+- Rollback: `bash scripts/rollback.sh --archive=<path>`
+- Mutation cycle: `python ai/mutator/main.py --logs-dir logs`
+- Env vars: `CROSS_ARB_STATE_PRE`, `CROSS_ARB_STATE_POST`, `CROSS_ARB_TX_PRE`, `CROSS_ARB_TX_POST`, `CROSS_ARB_LOG`
+
 ### l3_app_rollup_mev Runbook
 - Fork simulation: `bash scripts/simulate_fork.sh --target=strategies/l3_app_rollup_mev`
 - Export state: `bash scripts/export_state.sh`
