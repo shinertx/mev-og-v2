@@ -10,6 +10,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.cross_domain_arb import CrossDomainArb, PoolConfig
+from agents.capital_lock import CapitalLock
 from core.oracles.uniswap_feed import PriceData
 
 
@@ -79,7 +80,7 @@ def test_opportunity_detection():
         "arb": PoolConfig("0xpool", "arbitrum"),
         "opt": PoolConfig("0xpool", "optimism"),
     }
-    strat = CrossDomainArb(pools, threshold=0.01)
+    strat = CrossDomainArb(pools, threshold=0.01, capital_lock=CapitalLock(1000, 1e9, 0))
     strat.feed = DummyFeed({"ethereum": 100, "arbitrum": 102, "optimism": 101})
     strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
     strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
@@ -91,7 +92,7 @@ def test_opportunity_detection():
 
 def test_price_feed_error():
     pools = {"eth": PoolConfig("0xpool", "ethereum")}
-    strat = CrossDomainArb(pools)
+    strat = CrossDomainArb(pools, capital_lock=CapitalLock(1000, 1e9, 0))
     strat.feed = DummyFeed({"ethereum": RuntimeError("rpc fail")})
     strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
     strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
@@ -109,7 +110,7 @@ def test_no_false_positive_on_flip():
         "eth": PoolConfig("0xpool", "ethereum"),
         "arb": PoolConfig("0xpool", "arbitrum"),
     }
-    strat = CrossDomainArb(pools, threshold=0.05)
+    strat = CrossDomainArb(pools, threshold=0.05, capital_lock=CapitalLock(1000, 1e9, 0))
     strat.feed = DummyFeed({"ethereum": 100, "arbitrum": 99})
     strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
     strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
@@ -126,7 +127,7 @@ def test_no_false_positive_on_flip():
 
 def test_stale_block_warning(caplog):
     pools = {"eth": PoolConfig("0xpool", "ethereum")}
-    strat = CrossDomainArb(pools)
+    strat = CrossDomainArb(pools, capital_lock=CapitalLock(1000, 1e9, 0))
     stale = PriceData(100, "0xpool", 1, 1, 31)
     strat.feed = DummyFeed({"ethereum": 100})
     strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
@@ -145,7 +146,7 @@ def test_stale_block_warning(caplog):
 
 def test_snapshot_restore(tmp_path):
     pools = {"eth": PoolConfig("0xpool", "ethereum")}
-    strat = CrossDomainArb(pools)
+    strat = CrossDomainArb(pools, capital_lock=CapitalLock(1000, 1e9, 0))
     strat.last_prices = {"eth": 1.23}
     snap = tmp_path / "snap.json"
     strat.snapshot(snap)
@@ -161,7 +162,7 @@ def test_multiple_opportunities(tmp_path):
         "eth": PoolConfig("0xpool", "ethereum"),
         "arb": PoolConfig("0xpool", "arbitrum"),
     }
-    strat = CrossDomainArb(pools, threshold=0.01)
+    strat = CrossDomainArb(pools, threshold=0.01, capital_lock=CapitalLock(1000, 1e9, 0))
     strat.feed = DummyFeed({"ethereum": 100, "arbitrum": 103})
     strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
     strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
@@ -182,7 +183,7 @@ def test_multiple_opportunities(tmp_path):
 
 def test_mutate_hook(tmp_path):
     pools = {"eth": PoolConfig("0xpool", "ethereum")}
-    strat = CrossDomainArb(pools, threshold=0.01)
+    strat = CrossDomainArb(pools, threshold=0.01, capital_lock=CapitalLock(1000, 1e9, 0))
     assert strat.threshold == 0.01
     strat.mutate({"threshold": 0.02})
     assert strat.threshold == 0.02
@@ -190,7 +191,7 @@ def test_mutate_hook(tmp_path):
 
 def test_drp_snapshots(tmp_path):
     pools = {"eth": PoolConfig("0xpool", "ethereum")}
-    strat = CrossDomainArb(pools, threshold=0.0)
+    strat = CrossDomainArb(pools, threshold=0.0, capital_lock=CapitalLock(1000, 1e9, 0))
     strat.feed = DummyFeed({"ethereum": 100})
     strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
     strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]

@@ -7,6 +7,7 @@ import types
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.nft_liquidation import NFTLiquidationMEV, AuctionConfig
+from agents.capital_lock import CapitalLock
 from core.oracles.nft_liquidation_feed import AuctionData
 
 
@@ -21,7 +22,7 @@ class DummyFeed:
 
 def setup_strat(discount=0.05):
     auctions = {"proto": AuctionConfig("proto", "ethereum")}
-    strat = NFTLiquidationMEV(auctions, discount=discount)
+    strat = NFTLiquidationMEV(auctions, discount=discount, capital_lock=CapitalLock(1000, 1e9, 0))
     return strat
 
 
