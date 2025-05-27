@@ -46,8 +46,11 @@ MEV-OG is an AI-native, adversarial crypto trading system built to compound $5K 
 | `ai/mutator/main.py` | ✅ | Orchestrates AI mutation cycles and audit-driven promotion |
 | `ai/promote.py` | ✅ | Handles founder-gated promotion and rollback |
 | `core/tx_engine` | 🚧 | Gas/timing-safe tx builder with kill switch logic |
+| `core/oracles` | ✅ | Price, intention, and RWA feeds |
+| `core/metrics` | ✅ | Prometheus-style metrics server |
 | `agents/ops_agent.py` | ✅ | Health monitoring and alerts |
 | `agents/capital_lock.py` | ✅ | Drawdown and loss gating |
+| `agents/agent_registry.py` | ✅ | Inter-agent shared state |
 | `adapters/cex_adapter.py` | ✅ | Sample CEX HTTP adapter |
 | `adapters/dex_adapter.py` | ✅ | DEX aggregator interface |
 | `adapters/bridge_adapter.py` | ✅ | Token bridge API wrapper |
