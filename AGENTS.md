@@ -49,8 +49,14 @@ Every PR or batch/module must pass:
 - `foundry test`
 - `scripts/simulate_fork.sh --target=strategies/<module>`
 - `scripts/export_state.sh --dry-run`
-- `python ai/audit_agent.py --mode=offline --logs logs/<module>.json`
-No code is merged without forked-mainnet sim, chaos test, DRP snapshot/restore, and AI/LLM audit.
+ - `python ai/audit_agent.py --mode=offline --logs logs/<module>.json`
+ No code is merged without forked-mainnet sim, chaos test, DRP snapshot/restore, and AI/LLM audit.
+
+### cross_rollup_superbot Runbook
+- Fork simulation: `bash scripts/simulate_fork.sh --target=strategies/cross_rollup_superbot`
+- Export state: `bash scripts/export_state.sh`
+- Rollback: `bash scripts/rollback.sh --archive=<path>`
+- Mutation cycle: `python ai/mutator/main.py --logs-dir logs`
 
 ---
 
