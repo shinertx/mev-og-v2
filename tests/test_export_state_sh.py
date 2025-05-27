@@ -90,6 +90,7 @@ def test_export_encrypted(tmp_path):
 
 
     env = os.environ.copy()
+
     env.update(
         {
             "EXPORT_DIR": str(export_dir),
@@ -99,6 +100,7 @@ def test_export_encrypted(tmp_path):
             "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
         }
     )
+
     os.chdir(tmp_path)
 
     run_script([], env)
