@@ -78,6 +78,25 @@ BRIDGE_COST_ETHEREUM_ARBITRUM=0.0005
 Update these values when integrating new assets or networks.
 Bridge cost variables (e.g., ``BRIDGE_COST_ETHEREUM_ARBITRUM``) control the assumed fee when moving funds across rollups for `cross_rollup_superbot`.
 
+### cross_domain_arb Runbook
+
+```bash
+# Start metrics server
+python -m core.metrics &
+# Run fork simulation
+bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
+# Run mutation cycle (updates threshold)
+python ai/mutator/main.py --logs-dir logs
+# Export DRP snapshot
+bash scripts/export_state.sh
+```
+
+`cross_domain_arb` writes structured logs to `logs/cross_domain_arb.json` and
+errors to `logs/errors.log`. DRP state files are controlled by the
+`CROSS_ARB_STATE_PRE`, `CROSS_ARB_STATE_POST`, `CROSS_ARB_TX_PRE` and
+`CROSS_ARB_TX_POST` environment variables. Metrics are served on
+`http://localhost:8000/metrics` for Prometheus to scrape.
+
 ### cross_rollup_superbot Runbook
 
 ```bash
@@ -85,7 +104,16 @@ Bridge cost variables (e.g., ``BRIDGE_COST_ETHEREUM_ARBITRUM``) control the assu
 python -m core.metrics &
 # Run fork simulation
 bash scripts/simulate_fork.sh --target=strategies/cross_rollup_superbot
+# Run a mutation and audit cycle
+python ai/mutator/main.py --logs-dir logs
+# Export DRP snapshot and rollback if needed
+bash scripts/export_state.sh
+bash scripts/rollback.sh --archive=<exported-archive>
 ```
+
+`cross_rollup_superbot` logs to `logs/cross_rollup_superbot.json` and shares the
+common error log `logs/errors.log`. Metrics are scraped from the same
+`/metrics` endpoint.
 
 ## CI/CD & Canary Deployment
 
@@ -94,3 +122,23 @@ GitHub Actions workflow `main.yml` runs linting, typing, tests, fork simulations
 ## DRP Rollback
 
 Run `scripts/rollback.sh` to restore logs, keys and active strategies from the latest archive in `export/`. All events are logged to `logs/rollback.log` and `logs/errors.log`.
+
+## kill_switch.sh Usage
+
+`scripts/kill_switch.sh` manually toggles the system kill switch. By default it
+creates a flag file at `/flags/kill_switch.txt` and writes audit entries to
+`logs/kill_log.json`.
+
+```bash
+# Trigger the kill switch
+bash scripts/kill_switch.sh
+
+# Preview actions without modifying state
+bash scripts/kill_switch.sh --dry-run
+
+# Remove kill flag and clear environment variable
+bash scripts/kill_switch.sh --clean
+```
+
+Environment variables `KILL_SWITCH_FLAG_FILE` and `KILL_SWITCH_LOG_FILE` control
+the flag and log paths.
