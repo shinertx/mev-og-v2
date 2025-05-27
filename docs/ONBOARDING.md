@@ -64,6 +64,8 @@ server for Prometheus scraping with:
 ```bash
 python -m core.metrics --port $METRICS_PORT
 ```
+If you set `METRICS_TOKEN`, include the header
+`Authorization: Bearer $METRICS_TOKEN` when scraping.
 
 ---
 

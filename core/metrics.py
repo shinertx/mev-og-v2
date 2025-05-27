@@ -31,6 +31,7 @@ _METRICS: Dict[str, List[float] | float | int] = {
     "alert_count": 0,
 }
 _LOCK = threading.Lock()
+_METRICS_TOKEN = os.getenv("METRICS_TOKEN")
 
 
 # ----------------------------------------------------------------------
@@ -62,6 +63,12 @@ def record_alert() -> None:
 class _Handler(BaseHTTPRequestHandler):
     """Serve metrics data for Prometheus scraping."""
     def do_GET(self) -> None:  # pragma: no cover - trivial
+        if _METRICS_TOKEN:
+            auth = self.headers.get("Authorization")
+            if auth != f"Bearer {_METRICS_TOKEN}":
+                self.send_response(401)
+                self.end_headers()
+                return
         if self.path != "/metrics":
             self.send_response(404)
             self.end_headers()
