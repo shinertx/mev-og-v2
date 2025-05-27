@@ -66,7 +66,6 @@ def test_dry_run(tmp_path):
     entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "dry-run"
 
-
 def test_export_encrypted(tmp_path):
     (tmp_path / "logs").mkdir()
     (tmp_path / "logs" / "log.txt").write_text("log")
@@ -89,18 +88,23 @@ def test_export_encrypted(tmp_path):
     )
     openssl_path.chmod(0o755)
 
+
     env = os.environ.copy()
     env.update({
         "EXPORT_DIR": str(export_dir),
         "EXPORT_LOG_FILE": str(log_file),
+
         "PWD": str(tmp_path),
         "DRP_ENC_KEY": "secret",
         "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+      ]
     })
     os.chdir(tmp_path)
 
     run_script([], env)
+
     archives = list(export_dir.glob("drp_export_*.tar.gz.enc"))
     assert len(archives) == 1
     entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "export"
+

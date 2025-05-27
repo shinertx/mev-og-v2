@@ -4,6 +4,7 @@ import tarfile
 import json
 import shutil
 from pathlib import Path
+import pytest
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "rollback.sh"
 
@@ -65,7 +66,6 @@ def test_missing_archive(tmp_path):
     assert entries[-1]["event"] == "failed"
     assert (tmp_path / "err.log").exists()
 
-
 def test_restore_encrypted(tmp_path):
     export_dir = tmp_path / "export"
     export_dir.mkdir()
@@ -95,6 +95,7 @@ def test_restore_encrypted(tmp_path):
     )
     openssl_path.chmod(0o755)
 
+
     env = os.environ.copy()
     env.update({
         "ERROR_LOG_FILE": str(tmp_path / "err.log"),
@@ -109,3 +110,4 @@ def test_restore_encrypted(tmp_path):
     assert (tmp_path / "logs" / "log.txt").exists()
     entries = [json.loads(line) for line in (tmp_path / "rb.log").read_text().splitlines()]
     assert entries[-1]["event"] == "restore"
+

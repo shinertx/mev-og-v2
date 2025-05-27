@@ -370,7 +370,7 @@ GitHub Actions workflow `main.yml` runs linting, typing, tests, fork simulations
 
 ## DRP Recovery
 
-Run `scripts/rollback.sh` to restore logs, keys and active strategies from the latest archive in `export/`. All events are logged to `logs/rollback.log` and `logs/errors.log`.
+Run `scripts/rollback.sh` to restore logs, keys and active strategies from the latest archive in `export/`. The script now validates archive contents and extracts in a temporary directory to block path traversal attacks. All events are logged to `logs/rollback.log` and `logs/errors.log`.
 
 ## kill_switch.sh Usage
 

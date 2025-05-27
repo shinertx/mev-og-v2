@@ -8,6 +8,7 @@ set -euo pipefail
 
 EXPORT_DIR="${EXPORT_DIR:-export}"
 ARCHIVE=""
+EXPECTED_SHA256=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -17,6 +18,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --export-dir=*)
             EXPORT_DIR="${1#*=}"
+            shift
+            ;;
+        --sha256=*)
+            EXPECTED_SHA256="${1#*=}"
             shift
             ;;
         *)
@@ -64,6 +69,7 @@ if [[ "$ARCHIVE" == *.enc ]]; then
         ARCHIVE="${ARCHIVE%.enc}"
     else
         echo "No openssl or gpg available for decryption" >&2
+
         exit 1
     fi
 fi
@@ -90,6 +96,7 @@ fi
 
 # Extract archive relative to repo root
  tar -xzf "$ARCHIVE"
+
 log_event "restore" "$ARCHIVE"
 mkdir -p "$(dirname "$LOG_FILE")"
 echo "$TIMESTAMP restored $ARCHIVE" >> "$LOG_FILE"
