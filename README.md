@@ -212,6 +212,10 @@ the values used in tests and the simulation harness:
 | `SUPERBOT_TX_POST` | `state/superbot_tx_post.json` | Tx builder post snapshot |
 | `SUPERBOT_TX_PRE` | `state/superbot_tx_pre.json` | Tx builder pre snapshot |
 | `TX_LOG_FILE` | `logs/tx_log.json` | Transaction builder log |
+| `ORCH_CONFIG` | `config.yaml` | Orchestrator config file |
+| `ORCH_LOGS_DIR` | `logs` | Directory for orchestrator logs |
+| `ORCH_MODE` | `dry-run` | Default run mode |
+| `WALLET_OPS_LOG` | `logs/wallet_ops.log` | Wallet operations audit log |
 
 ### cross_domain_arb Runbook
 
@@ -435,3 +439,62 @@ python scripts/wallet_ops.py drain-to-cold --from 0xhot --to 0xcold
 
 Set `FOUNDER_APPROVED=1` or confirm interactively when prompted. On failure the
 script aborts and logs the error.
+
+## Orchestrator CLI
+
+`ai/mutator/main.py` orchestrates dry runs and live trading. Key options:
+
+```
+--logs-dir <path>   # strategy log directory
+--config <file>     # config path
+--dry-run           # run validations only
+--mode live|dry-run # override config mode
+```
+
+Dry-run example:
+
+```bash
+python ai/mutator/main.py --logs-dir logs --dry-run
+```
+
+After verifying results, remove `--dry-run` and set `mode: live` in
+`config.yaml`. A DRP archive is created automatically.
+
+## Wallet Ops CLI
+
+Use `scripts/wallet_ops.py` to safely fund or drain wallets.
+
+```bash
+python scripts/wallet_ops.py deposit 1.0   # fund 1 ETH
+python scripts/wallet_ops.py withdraw 0.5  # withdraw 0.5 ETH
+```
+
+Actions append to `logs/wallet_ops.log` for auditing.
+
+## Live Trade Checklist
+
+1. `poetry install` and `docker compose up -d`
+2. Copy `.env.example` to `.env` and fill RPC keys
+3. Copy `config.example.yaml` to `config.yaml`
+4. Run `pytest -v` and `foundry test`
+5. `bash scripts/simulate_fork.sh --target=strategies/<module>`
+6. `python ai/mutator/main.py --dry-run`
+7. Review `logs/errors.log` and DRP archive
+8. Set `FOUNDER_APPROVED=1` and run `python ai/mutator/main.py --mode live`
+9. Check metrics at `http://localhost:$METRICS_PORT/metrics`
+10. Drain funds with `wallet_ops.py` if needed
+
+## Troubleshooting / FAQ
+
+- **RPC failures:** confirm endpoints in `config.yaml` and ensure nodes are live.
+- **Metrics missing:** run `python -m core.metrics --port $METRICS_PORT`.
+- **Promotion blocked:** check `FOUNDER_APPROVED=1` and read `logs/errors.log`.
+- **Rollback:** `bash scripts/rollback.sh --archive=<archive>`.
+
+## Green-light Checklist
+
+- Tests and fork simulations pass
+- DRP snapshot exported
+- Metrics endpoint live
+- Wallet balances checked via `wallet_ops.py`
+
