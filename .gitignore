@@ -1,2 +1,103 @@
 .env
 .env
+.pyc
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pye
+*.pyo
+*.pyd
+*.pyc
+*.pyo
+
+# Cython build
+*.c
+*.so
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Virtualenv
+env/
+.venv/
+venv/
+ENV/
+env.bak/
+*.egg-info/
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
+.poetry/
+.poetry.lock
+
+# VSCode/Codespaces
+.vscode/
+.devcontainer/
+.settings/
+.history/
+*.code-workspace
+
+# macOS/Linux
+.DS_Store
+Thumbs.db
+.cache
+*.swp
+*.swo
+
+# System/logs
+logs/
+*.log
+*.json
+!logs/.gitkeep   # (keep folder)
+
+# DRP/Export/Backup/State Artifacts
+export/
+state/
+*.tar.gz
+*.zip
+*.bak
+*.tmp
+
+# Tests
+.pytest_cache/
+.coverage
+coverage.*
+htmlcov/
+.tox/
+.cache/
+test-results/
+
+# Reports
+*.sqlite3
+*.db
+*.db-journal
+data/
+notebooks/
+reports/
+*.html
+*.xml
+
+# Node (in case you add frontends)
+node_modules/
+
+# Security/secrets
+.env
+.env.*
+secrets/
+*.key
+*.pem
+
+# Ignore these but keep example configs
+!config.yaml.example
+!config.example.yaml
+!env.example
+
+# Ignore anything you might generate during forked simulation
+sim_complete.txt
+
+# Misc cleanup
+*.orig
+*.rej
+*.bak
