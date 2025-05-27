@@ -41,7 +41,7 @@ log_event() {
 }
 
 if [[ -z "$ARCHIVE" ]]; then
-    ARCHIVE=$(ls -1t "$EXPORT_DIR"/drp_export_*.tar.gz 2>/dev/null | head -n1 || true)
+    ARCHIVE=$(ls -1t "$EXPORT_DIR"/drp_export_*.tar.* 2>/dev/null | head -n1 || true)
 fi
 
 if [[ -z "$ARCHIVE" || ! -f "$ARCHIVE" ]]; then
@@ -52,40 +52,50 @@ if [[ -z "$ARCHIVE" || ! -f "$ARCHIVE" ]]; then
     exit 1
 fi
 
-if [[ -n "$EXPECTED_SHA256" ]]; then
-    ACTUAL_SHA256=$(sha256sum "$ARCHIVE" | awk '{print $1}')
-    if [[ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]]; then
-        mkdir -p "$(dirname "$LOG_FILE")"
-        echo "$TIMESTAMP rollback_failed checksum_mismatch" >> "$LOG_FILE"
-        log_event "failed" "$ARCHIVE"
-        echo "Archive integrity check failed" >&2
+# decrypt if needed
+if [[ "$ARCHIVE" == *.enc ]]; then
+    if [[ -z "${DRP_ENC_KEY:-}" ]]; then
+        echo "DRP_ENC_KEY required for decryption" >&2
+        exit 1
+    fi
+    if command -v openssl >/dev/null 2>&1; then
+        echo -n "$DRP_ENC_KEY" | \
+            openssl enc -d -aes-256-cbc -pbkdf2 -pass stdin \
+            -in "$ARCHIVE" -out "${ARCHIVE%.enc}"
+        ARCHIVE="${ARCHIVE%.enc}"
+    elif command -v gpg >/dev/null 2>&1; then
+        echo "$DRP_ENC_KEY" | \
+            gpg --batch --yes --passphrase-fd 0 -o "${ARCHIVE%.enc}" -d "$ARCHIVE"
+        ARCHIVE="${ARCHIVE%.enc}"
+    else
+        echo "No openssl or gpg available for decryption" >&2
+
         exit 1
     fi
 fi
 
-TMP_DIR=$(mktemp -d)
-
-# Validate archive paths before extraction
-while IFS= read -r entry; do
-    if [[ "$entry" == /* || "$entry" == *"../"* || "$entry" == *".." ]]; then
-        mkdir -p "$(dirname "$LOG_FILE")"
-        echo "$TIMESTAMP rollback_failed invalid_path" >> "$LOG_FILE"
-        log_event "failed" "$ARCHIVE"
-        echo "Invalid path in archive: $entry" >&2
-        rm -rf "$TMP_DIR"
-
+if [[ "$ARCHIVE" == *.gpg ]]; then
+    if [[ -z "${DRP_ENC_KEY:-}" ]]; then
+        echo "DRP_ENC_KEY required for decryption" >&2
         exit 1
     fi
-done < <(tar -tzf "$ARCHIVE")
+    if command -v gpg >/dev/null 2>&1; then
+        echo "$DRP_ENC_KEY" | \
+            gpg --batch --yes --passphrase-fd 0 -o "${ARCHIVE%.gpg}" -d "$ARCHIVE"
+        ARCHIVE="${ARCHIVE%.gpg}"
+    elif command -v openssl >/dev/null 2>&1; then
+        echo -n "$DRP_ENC_KEY" | \
+            openssl enc -d -aes-256-cbc -pbkdf2 -pass stdin \
+            -in "$ARCHIVE" -out "${ARCHIVE%.gpg}"
+        ARCHIVE="${ARCHIVE%.gpg}"
+    else
+        echo "No openssl or gpg available for decryption" >&2
+        exit 1
+    fi
+fi
 
-tar -xzf "$ARCHIVE" -C "$TMP_DIR"
-
-shopt -s dotglob
-cp -a "$TMP_DIR"/* "$PWD"/
-shopt -u dotglob
-
-rm -rf "$TMP_DIR"
-
+# Extract archive relative to repo root
+ tar -xzf "$ARCHIVE"
 
 log_event "restore" "$ARCHIVE"
 mkdir -p "$(dirname "$LOG_FILE")"

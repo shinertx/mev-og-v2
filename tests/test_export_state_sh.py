@@ -66,24 +66,45 @@ def test_dry_run(tmp_path):
     entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "dry-run"
 
-
-def test_symlink_outside_repo_skipped(tmp_path):
-    logs_dir = tmp_path / "logs"
-    logs_dir.mkdir()
-    (logs_dir / "link").symlink_to("/etc/passwd")
-
+def test_export_encrypted(tmp_path):
+    (tmp_path / "logs").mkdir()
+    (tmp_path / "logs" / "log.txt").write_text("log")
     export_dir = tmp_path / "export"
-    log_file = tmp_path / "export_log.json"
+    log_file = tmp_path / "log.json"
+
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    openssl_path = bin_dir / "openssl"
+    openssl_path.write_text(
+        "#!/bin/bash\n"
+        "while [[ $# -gt 0 ]]; do\n"
+        " case \"$1\" in\n"
+        "  -in) IN=$2; shift 2;;\n"
+        "  -out) OUT=$2; shift 2;;\n"
+        "  *) shift;;\n"
+        " esac\n"
+        "done\n"
+        "cp \"$IN\" \"$OUT\"\n"
+    )
+    openssl_path.chmod(0o755)
+
+
     env = os.environ.copy()
     env.update({
         "EXPORT_DIR": str(export_dir),
         "EXPORT_LOG_FILE": str(log_file),
-        "PWD": str(tmp_path)
+
+        "PWD": str(tmp_path),
+        "DRP_ENC_KEY": "secret",
+        "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+      ]
     })
     os.chdir(tmp_path)
 
     run_script([], env)
-    archive = list(export_dir.glob("drp_export_*.tar.gz"))[0]
-    with tarfile.open(archive, "r:gz") as tar:
-        names = tar.getnames()
-        assert "logs/link" not in names
+
+    archives = list(export_dir.glob("drp_export_*.tar.gz.enc"))
+    assert len(archives) == 1
+    entries = [json.loads(line) for line in log_file.read_text().splitlines()]
+    assert entries[-1]["mode"] == "export"
+

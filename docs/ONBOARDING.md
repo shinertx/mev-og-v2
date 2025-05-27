@@ -50,6 +50,9 @@ Create a Disaster Recovery Package (DRP) after successful tests:
 bash scripts/export_state.sh
 ```
 
+Set `DRP_ENC_KEY` to encrypt the archive with `openssl` or `gpg`. The same
+variable must be provided to `scripts/rollback.sh` for decryption.
+
 Restore from an archive if needed:
 
 ```bash

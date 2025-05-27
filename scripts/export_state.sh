@@ -74,6 +74,26 @@ done < <(find "${ITEMS[@]}" -type l -print)
 if [[ ${#ITEMS[@]} -gt 0 ]]; then
     tar -czf "$EXPORT_DIR/$ARCHIVE" "${EXCLUDES[@]}" "${ITEMS[@]}"
     echo "Export created at $EXPORT_DIR/$ARCHIVE"
+
+    if [[ -n "${DRP_ENC_KEY:-}" ]]; then
+        if command -v openssl >/dev/null 2>&1; then
+            echo -n "$DRP_ENC_KEY" | \
+                openssl enc -aes-256-cbc -pbkdf2 -salt -pass stdin \
+                -in "$EXPORT_DIR/$ARCHIVE" -out "$EXPORT_DIR/$ARCHIVE.enc"
+            rm "$EXPORT_DIR/$ARCHIVE"
+            ARCHIVE="$ARCHIVE.enc"
+            echo "Archive encrypted with openssl"
+        elif command -v gpg >/dev/null 2>&1; then
+            echo "$DRP_ENC_KEY" | \
+                gpg --batch --yes --passphrase-fd 0 -c \
+                -o "$EXPORT_DIR/$ARCHIVE.gpg" "$EXPORT_DIR/$ARCHIVE"
+            rm "$EXPORT_DIR/$ARCHIVE"
+            ARCHIVE="$ARCHIVE.gpg"
+            echo "Archive encrypted with gpg"
+        else
+            echo "Encryption requested but openssl or gpg not found" >&2
+        fi
+    fi
 else
     echo "Warning: nothing to export" >&2
 fi
