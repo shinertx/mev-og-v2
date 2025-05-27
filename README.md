@@ -298,6 +298,18 @@ any fail. Alerts are sent via `OPS_ALERT_WEBHOOK` and counted by the metrics
 server. `agents/capital_lock.py` enforces drawdown and loss limits; founder must
 approve unlock actions by setting `FOUNDER_APPROVED=1`.
 
+## Batch Operations
+
+`scripts/batch_ops.py` manages groups of strategies. It supports three actions:
+
+- `promote` – move a strategy from a source directory into the active set.
+- `pause` – move a live strategy into the paused directory.
+- `rollback` – restore a strategy from the destination directory using the audit trail.
+
+All actions require `FOUNDER_APPROVED=1`. Control where strategies are read from
+and written to with `--source-dir`, `--dest-dir` and `--paused-dir`.
+See the example call at the end of this README for a typical promotion command.
+
 Example usage:
 
 ```bash
