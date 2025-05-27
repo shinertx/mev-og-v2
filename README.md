@@ -171,7 +171,13 @@ python ai/mutator/main.py --logs-dir logs
 bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
 ```
+- `CROSS_ROLLUP_LOG` – log file (defaults to `logs/cross_rollup_superbot.json`)
+- `SUPERBOT_STATE_PRE` – pre-trade snapshot (defaults to `state/superbot_pre.json`)
+- `SUPERBOT_STATE_POST` – post-trade snapshot (defaults to `state/superbot_post.json`)
+- `SUPERBOT_TX_PRE` – pre-bundle TX snapshot (defaults to `state/superbot_tx_pre.json`)
+- `SUPERBOT_TX_POST` – post-bundle TX snapshot (defaults to `state/superbot_tx_post.json`)
 
+Paths default under `logs/` or `state/` unless overridden.
 ### l3_app_rollup_mev Runbook
 
 ```bash
@@ -185,6 +191,12 @@ python ai/mutator/main.py --logs-dir logs
 bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
 ```
+- `L3_APP_ROLLUP_LOG` – log file (defaults to `logs/l3_app_rollup_mev.json`)
+- `L3_APP_STATE_PRE` – pre-trade snapshot (defaults to `state/l3_app_pre.json`)
+- `L3_APP_STATE_POST` – post-trade snapshot (defaults to `state/l3_app_post.json`)
+- `L3_APP_TX_PRE` – pre-bundle TX snapshot (defaults to `state/l3_app_tx_pre.json`)
+- `L3_APP_TX_POST` – post-bundle TX snapshot (defaults to `state/l3_app_tx_post.json`)
+Paths default under `logs/` or `state/` unless overridden.
 
 ### l3_sequencer_mev Runbook
 
@@ -199,6 +211,12 @@ python ai/mutator/main.py --logs-dir logs
 bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
 ```
+- `L3_SEQ_LOG` – log file (defaults to `logs/l3_sequencer_mev.json`)
+- `L3_SEQ_STATE_PRE` – pre-trade snapshot (defaults to `state/l3_seq_pre.json`)
+- `L3_SEQ_STATE_POST` – post-trade snapshot (defaults to `state/l3_seq_post.json`)
+- `L3_SEQ_TX_PRE` – pre-bundle TX snapshot (defaults to `state/l3_seq_tx_pre.json`)
+- `L3_SEQ_TX_POST` – post-bundle TX snapshot (defaults to `state/l3_seq_tx_post.json`)
+Paths default under `logs/` or `state/` unless overridden.
 
 ### nft_liquidation Runbook
 
@@ -213,6 +231,12 @@ python ai/mutator/main.py --logs-dir logs
 bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
 ```
+- `NFT_LIQ_LOG` – log file (defaults to `logs/nft_liquidation.json`)
+- `NFT_LIQ_STATE_PRE` – pre-bid snapshot (defaults to `state/nft_liq_pre.json`)
+- `NFT_LIQ_STATE_POST` – post-bid snapshot (defaults to `state/nft_liq_post.json`)
+- `NFT_LIQ_TX_PRE` – pre-bundle TX snapshot (defaults to `state/nft_liq_tx_pre.json`)
+- `NFT_LIQ_TX_POST` – post-bundle TX snapshot (defaults to `state/nft_liq_tx_post.json`)
+Paths default under `logs/` or `state/` unless overridden.
 
 ### rwa_settlement Runbook
 
@@ -227,6 +251,12 @@ python ai/mutator/main.py --logs-dir logs
 bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
 ```
+- `RWA_SETTLE_LOG` – log file (defaults to `logs/rwa_settlement.json`)
+- `RWA_STATE_PRE` – pre-settlement snapshot (defaults to `state/rwa_pre.json`)
+- `RWA_STATE_POST` – post-settlement snapshot (defaults to `state/rwa_post.json`)
+- `RWA_TX_PRE` – pre-bundle TX snapshot (defaults to `state/rwa_tx_pre.json`)
+- `RWA_TX_POST` – post-bundle TX snapshot (defaults to `state/rwa_tx_post.json`)
+Paths default under `logs/` or `state/` unless overridden.
 
 ### AI Mutation Workflow
 
