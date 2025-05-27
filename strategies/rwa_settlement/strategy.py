@@ -27,6 +27,7 @@ from core.oracles.rwa_feed import RWAFeed, RWAData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
 from core.tx_engine.nonce_manager import NonceManager
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+from agents.capital_lock import CapitalLock
 
 LOG_FILE = Path(os.getenv("RWA_SETTLE_LOG", "logs/rwa_settlement.json"))
 LOG = StructuredLogger("rwa_settlement", log_file=str(LOG_FILE))
@@ -57,6 +58,7 @@ class RWASettlementMEV:
         venues: Dict[str, VenueConfig],
         *,
         threshold: float | None = None,
+        capital_lock: CapitalLock | None = None,
     ) -> None:
         self.feed = RWAFeed()
         self.venues = venues
@@ -68,6 +70,8 @@ class RWASettlementMEV:
         self.tx_builder = TransactionBuilder(w3, self.nonce_manager)
         self.executor = os.getenv("RWA_EXECUTOR", "0x0000000000000000000000000000000000000000")
         self.sample_tx = HexBytes(b"\x01")
+
+        self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
 
     # ------------------------------------------------------------------
     def snapshot(self, path: str) -> None:
@@ -161,6 +165,18 @@ class RWASettlementMEV:
         prices = {k: d.price + d.fee for k, d in price_data.items()}
         opp = self._detect_opportunity(prices)
         if opp:
+            if not self.capital_lock.trade_allowed():
+                msg = "capital lock: trade not allowed"
+                LOG.log(
+                    "capital_lock",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="high",
+                    error=msg,
+                )
+                log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
+                return None
+
             metrics.record_opportunity(float(opp["spread"]), 0.0, 0.0)
             pre = os.getenv("RWA_STATE_PRE", "state/rwa_pre.json")
             post = os.getenv("RWA_STATE_POST", "state/rwa_post.json")
@@ -173,6 +189,9 @@ class RWASettlementMEV:
             tx_id = self._bundle_and_send(str(opp["action"]))
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
+
+            profit = prices[opp["sell"]] - prices[opp["buy"]]
+            self.capital_lock.record_trade(profit)
             for label, data in price_data.items():
                 self._record(
                     self.venues[label].venue,

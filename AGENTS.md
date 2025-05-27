@@ -28,6 +28,9 @@ This file is the single source of truth for mutation, validation, and integratio
   `scripts/export_state.sh`.
 - OpsAgent monitors health, pauses on failure, and sends alerts via webhooks.
 - CapitalLock enforces drawdown/loss thresholds; unlocks require founder approval.
+ - Strategies must call `capital_lock.trade_allowed()` before every trade.
+   If False, abort and log "capital lock: trade not allowed" to the strategy log
+   and `logs/errors.log` with `risk_level` "high".
 
 ---
 
@@ -90,6 +93,12 @@ Every PR or batch/module must pass:
 - Use `scripts/batch_ops.py` to promote, pause or rollback strategies.
 - CapitalLock state is shared via `agents.agent_registry` and unpaused only when
   founder sets `FOUNDER_APPROVED=1` and calls `unlock`.
+ - Example strategy integration:
+   ```python
+   from agents.capital_lock import CapitalLock
+   lock = CapitalLock(max_drawdown_pct=5, max_loss_usd=100, balance_usd=1000)
+   strat = Strategy(..., capital_lock=lock)
+   ```
 
 ### rwa_settlement Runbook
 - Fork simulation: `bash scripts/simulate_fork.sh --target=strategies/rwa_settlement`

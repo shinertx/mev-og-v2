@@ -97,7 +97,6 @@ def test_export_encrypted(tmp_path):
         "PWD": str(tmp_path),
         "DRP_ENC_KEY": "secret",
         "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
-      ]
     })
     os.chdir(tmp_path)
 

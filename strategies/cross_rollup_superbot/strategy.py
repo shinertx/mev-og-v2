@@ -36,6 +36,7 @@ from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
 from core.tx_engine.nonce_manager import NonceManager
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+from agents.capital_lock import CapitalLock
 
 LOG_FILE = Path(os.getenv("CROSS_ROLLUP_LOG", "logs/cross_rollup_superbot.json"))
 LOG = StructuredLogger("cross_rollup_superbot", log_file=str(LOG_FILE))
@@ -77,6 +78,8 @@ class CrossRollupSuperbot:
         pools: Dict[str, PoolConfig],
         bridge_costs: Dict[Tuple[str, str], BridgeConfig],
         threshold: float | None = None,
+        *,
+        capital_lock: CapitalLock | None = None,
     ) -> None:
         self.feed = UniswapV3Feed()
         self.pools = pools
@@ -85,6 +88,8 @@ class CrossRollupSuperbot:
         self.last_prices: Dict[str, float] = {}
         self.failed_pools: Dict[str, int] = {}
         self.max_failures = 3
+
+        self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
 
         w3 = self.feed.web3s.get("ethereum") if self.feed.web3s else None
         self.nonce_manager = NonceManager(w3)
@@ -213,6 +218,18 @@ class CrossRollupSuperbot:
         prices = {k: d.price for k, d in price_data.items()}
         opp = self._detect_opportunity(prices)
         if opp:
+            if not self.capital_lock.trade_allowed():
+                msg = "capital lock: trade not allowed"
+                LOG.log(
+                    "capital_lock",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="high",
+                    error=msg,
+                )
+                log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
+                return None
+
             metrics.record_opportunity(float(opp["spread"]), float(opp["profit"]), 0.0)
             pre = os.getenv("SUPERBOT_STATE_PRE", "state/superbot_pre.json")
             post = os.getenv("SUPERBOT_STATE_POST", "state/superbot_post.json")
@@ -225,6 +242,8 @@ class CrossRollupSuperbot:
             tx_id = self._bundle_and_send(str(opp["action"]))
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
+
+            self.capital_lock.record_trade(float(opp["profit"]))
             for label, data in price_data.items():
                 self._record(
                     self.pools[label].domain,

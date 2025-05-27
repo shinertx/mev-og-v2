@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.cross_rollup_superbot import CrossRollupSuperbot, PoolConfig, BridgeConfig
+from agents.capital_lock import CapitalLock
 from core.oracles.uniswap_feed import PriceData
 
 
@@ -78,7 +79,7 @@ def setup_strat(threshold=0.01):
         "arb": PoolConfig("0xpool", "arbitrum"),
     }
     bridges = {("ethereum", "arbitrum"): BridgeConfig(0.0001)}
-    strat = CrossRollupSuperbot(pools, bridges, threshold=threshold)
+    strat = CrossRollupSuperbot(pools, bridges, threshold=threshold, capital_lock=CapitalLock(1000, 1e9, 0))
     return strat
 
 
