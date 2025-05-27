@@ -19,10 +19,10 @@ import os
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from statistics import mean
-from typing import Dict, List, cast
+from typing import Any, Dict, List, cast
 
 
-_METRICS: Dict[str, List[float] | float | int] = {
+_METRICS: Dict[str, Any] = {
     "opportunities": 0,
     "fails": 0,
     "pnl": 0.0,
@@ -67,8 +67,10 @@ class _Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         with _LOCK:
-            avg_spread = mean(_METRICS["spreads"]) if _METRICS["spreads"] else 0.0
-            avg_latency = mean(_METRICS["latencies"]) if _METRICS["latencies"] else 0.0
+            spreads = cast(List[float], _METRICS["spreads"])
+            latencies = cast(List[float], _METRICS["latencies"])
+            avg_spread = mean(spreads) if spreads else 0.0
+            avg_latency = mean(latencies) if latencies else 0.0
             body = (
                 f"opportunities_total {_METRICS['opportunities']}\n"
                 f"fails_total {_METRICS['fails']}\n"

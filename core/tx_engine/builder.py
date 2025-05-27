@@ -22,7 +22,7 @@ import os
 import tarfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast, SupportsIndex
 
 from .kill_switch import kill_switch_triggered, record_kill_event
 from .nonce_manager import NonceManager
@@ -30,7 +30,7 @@ from core.logger import log_error
 
 # simple HexBytes implementation
 class HexBytes(bytes):
-    def hex(self) -> str:
+    def hex(self, sep: str | bytes | None = None, bytes_per_sep: SupportsIndex = 1) -> str:
         import binascii
         return binascii.hexlify(self).decode()
 
@@ -98,7 +98,7 @@ class TransactionBuilder:
         strategy_id: str = "",
         mutation_id: str = "",
         risk_level: str = "",
-    ) -> str:
+    ) -> HexBytes:
         """Send ``signed_tx`` with retry and kill switch checks."""
 
         tx_id = signed_tx.hex()
@@ -174,21 +174,21 @@ class TransactionBuilder:
 
         max_attempts = 3
         last_err = None
-        tx_hash = None
+        tx_hash: HexBytes | None = None
         for attempt in range(1, max_attempts + 1):
             try:
                 self.nonce_manager.get_nonce(from_address, tx_id=tx_id)
                 if hasattr(self.web3, "eth"):
-                    tx_hash = self.web3.eth.send_raw_transaction(signed_tx)
+                    tx_hash = cast(HexBytes, self.web3.eth.send_raw_transaction(signed_tx))
                 else:
-                    tx_hash = b"testhash"
+                    tx_hash = HexBytes(b"testhash")
                 status = "sent"
                 self._log(
                     {
                         "tx_id": tx_id,
                         "from_address": from_address,
                         "gas_estimate": gas_with_margin,
-                        "tx_hash": tx_hash.hex() if hasattr(tx_hash, "hex") else tx_hash,
+                        "tx_hash": tx_hash.hex() if isinstance(tx_hash, (bytes, bytearray)) else str(tx_hash),
                         "kill_triggered": False,
                         "status": status,
                         "event": status,
@@ -233,4 +233,4 @@ class TransactionBuilder:
         if last_err is not None:
             raise last_err
 
-        return tx_hash
+        return tx_hash if tx_hash is not None else HexBytes(b"")

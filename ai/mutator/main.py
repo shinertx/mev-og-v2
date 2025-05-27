@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+from pkgutil import extend_path
 import json
 import os
 import subprocess
@@ -121,6 +122,8 @@ class MutationRunner:
             if sid in result.get("pruned", []):
                 continue
             try:
+                import strategies
+                strategies.__path__ = extend_path(strategies.__path__, "strategies")
                 module = importlib.import_module(f"strategies.{sid}.strategy")
                 strat_cls = getattr(module, [n for n in dir(module) if n[0].isupper()][0])
                 strat = strat_cls({})

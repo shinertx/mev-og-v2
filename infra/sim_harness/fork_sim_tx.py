@@ -17,7 +17,7 @@ from core.tx_engine.nonce_manager import NonceManager
 
 try:
     from web3 import Web3
-    from web3.middleware import geth_poa_middleware
+    from web3.middleware import geth_poa_middleware  # type: ignore[attr-defined]
 except ImportError:  # pragma: no cover - only executed when web3 is installed
     raise SystemExit("web3 is required for fork simulation")
 

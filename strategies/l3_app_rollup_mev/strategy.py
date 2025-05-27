@@ -22,7 +22,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TypedDict, cast
 
 from core.logger import StructuredLogger, log_error
 from core import metrics
@@ -51,6 +51,15 @@ class BridgeConfig:
 
     cost: float
     latency_sec: int = 0
+
+
+class Opportunity(TypedDict):
+    opportunity: bool
+    spread: float
+    profit: float
+    action: str
+    buy: str
+    sell: str
 
 
 class L3AppRollupMEV:
@@ -131,7 +140,7 @@ class L3AppRollupMEV:
         fee = self.bridge_costs.get((buy, sell), BridgeConfig(0.0)).cost
         return (spread - fee)
 
-    def _detect_sandwich(self, prices: Dict[str, float]) -> Optional[Dict[str, object]]:
+    def _detect_sandwich(self, prices: Dict[str, float]) -> Optional[Opportunity]:
         if not self.edges_enabled.get("l3_sandwich", True):
             return None
         domains = list(prices.keys())
@@ -146,9 +155,9 @@ class L3AppRollupMEV:
         if profit <= 0:
             return None
         action = f"l3_sandwich:{buy}->{sell}"
-        return {"opportunity": True, "spread": spread, "profit": profit, "action": action, "buy": buy, "sell": sell}
+        return cast(Opportunity, {"opportunity": True, "spread": spread, "profit": profit, "action": action, "buy": buy, "sell": sell})
 
-    def _detect_bridge_race(self, prices: Dict[str, float]) -> Optional[Dict[str, object]]:
+    def _detect_bridge_race(self, prices: Dict[str, float]) -> Optional[Opportunity]:
         if not self.edges_enabled.get("bridge_race", True):
             return None
         for (src, dst), cfg in self.bridge_costs.items():
@@ -173,7 +182,7 @@ class L3AppRollupMEV:
             if profit <= 0:
                 continue
             action = f"bridge_race:{src}->{dst}"
-            return {"opportunity": True, "spread": spread, "profit": profit, "action": action, "buy": src, "sell": dst}
+            return cast(Opportunity, {"opportunity": True, "spread": spread, "profit": profit, "action": action, "buy": src, "sell": dst})
         return None
 
     def _bundle_and_send(self, action: str) -> str:
@@ -187,7 +196,7 @@ class L3AppRollupMEV:
         return str(tx_hash)
 
     # ------------------------------------------------------------------
-    def run_once(self) -> Optional[Dict[str, object]]:
+    def run_once(self) -> Optional[Opportunity]:
         if kill_switch_triggered():
             record_kill_event(STRATEGY_ID)
             LOG.log(
@@ -254,7 +263,7 @@ class L3AppRollupMEV:
         return opp
 
     # ------------------------------------------------------------------
-    def mutate(self, params: Dict[str, object]) -> None:
+    def mutate(self, params: Dict[str, Any]) -> None:
         if "threshold" in params:
             try:
                 self.threshold = float(params["threshold"])

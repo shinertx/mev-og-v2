@@ -20,7 +20,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional, TypedDict, cast
 import time
 
 from core.logger import StructuredLogger, log_error
@@ -41,6 +41,15 @@ class PoolConfig:
 
     pool: str
     domain: str
+
+
+class Opportunity(TypedDict):
+    opportunity: bool
+    spread: float
+    profit: float
+    action: str
+    buy: str
+    sell: str
 
 
 class L3SequencerMEV:
@@ -117,7 +126,7 @@ class L3SequencerMEV:
         spread = (price_sell - price_buy) / price_buy
         return spread
 
-    def _detect_opportunity(self, prices: Dict[str, float], block: int, timestamp: int) -> Optional[Dict[str, object]]:
+    def _detect_opportunity(self, prices: Dict[str, float], block: int, timestamp: int) -> Optional[Opportunity]:
         if not self._time_band_ok(timestamp):
             return None
         if block < self.last_block - self.reorg_window:
@@ -135,7 +144,7 @@ class L3SequencerMEV:
         if profit <= 0:
             return None
         action = f"sequencer_sandwich:{buy}->{sell}"
-        return {"opportunity": True, "spread": spread, "profit": profit, "action": action, "buy": buy, "sell": sell}
+        return cast(Opportunity, {"opportunity": True, "spread": spread, "profit": profit, "action": action, "buy": buy, "sell": sell})
 
     # ------------------------------------------------------------------
     def _bundle_and_send(self, action: str) -> str:
@@ -149,7 +158,7 @@ class L3SequencerMEV:
         return str(tx_hash)
 
     # ------------------------------------------------------------------
-    def run_once(self) -> Optional[Dict[str, object]]:
+    def run_once(self) -> Optional[Opportunity]:
         if kill_switch_triggered():
             record_kill_event(STRATEGY_ID)
             LOG.log(
@@ -216,7 +225,7 @@ class L3SequencerMEV:
         return opp
 
     # ------------------------------------------------------------------
-    def mutate(self, params: Dict[str, object]) -> None:
+    def mutate(self, params: Dict[str, Any]) -> None:
         if "threshold" in params:
             try:
                 self.threshold = float(params["threshold"])

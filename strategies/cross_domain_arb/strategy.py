@@ -27,7 +27,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from statistics import mean
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 try:  # webhook optional
     import requests
@@ -229,7 +229,7 @@ class CrossDomainArb:
         return opp
 
     # ------------------------------------------------------------------
-    def mutate(self, params: Dict[str, object]) -> None:
+    def mutate(self, params: Dict[str, Any]) -> None:
         """Apply parameter mutations for auto-tuning.
 
         Currently supports updating the ``threshold`` used for spread detection.

@@ -20,7 +20,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from core.logger import StructuredLogger, log_error
 from core import metrics
@@ -158,7 +158,7 @@ class NFTLiquidationMEV:
         return None
 
     # ------------------------------------------------------------------
-    def mutate(self, params: Dict[str, object]) -> None:
+    def mutate(self, params: Dict[str, Any]) -> None:
         if "discount" in params:
             try:
                 self.discount = float(params["discount"])
