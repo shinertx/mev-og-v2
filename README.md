@@ -403,6 +403,19 @@ any fail. Alerts are sent via `OPS_ALERT_WEBHOOK` and counted by the metrics
 server. `agents/capital_lock.py` enforces drawdown and loss limits; founder must
 approve unlock actions by setting `FOUNDER_APPROVED=1`.
 
+## Strategy Orchestrator
+
+`core/orchestrator.py` boots all enabled strategies from `config.yaml` and
+enforces kill switch, capital lock and founder approval on every iteration.
+
+```bash
+python -m core.orchestrator --config=config.yaml --dry-run   # single cycle
+python -m core.orchestrator --config=config.yaml --live      # continuous
+```
+
+Use `--health` to run only OpsAgent checks. Live mode requires
+`FOUNDER_APPROVED=1`.
+
 ## Batch Operations
 
 `scripts/batch_ops.py` manages groups of strategies. It supports three actions:
