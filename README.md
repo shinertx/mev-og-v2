@@ -139,6 +139,73 @@ Update these values when integrating new assets or networks. Bridge cost
 variables (e.g., ``BRIDGE_COST_ETHEREUM_ARBITRUM``) control the assumed fee when
 moving funds across rollups for `cross_rollup_superbot`.
 
+All environment variables recognised by MEV-OG are listed below. Defaults match
+the values used in tests and the simulation harness:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `ARB_ALERT_WEBHOOK` | `<none>` | Alert URL for cross_domain_arb |
+| `ARB_EXECUTOR_ADDR` | `0x000...` | Executor address for cross_domain_arb |
+| `BRIDGE_LATENCY_MAX` | `30` | Max seconds for bridge to finalize |
+| `CROSS_ARB_LOG` | `logs/cross_domain_arb.json` | cross_domain_arb log |
+| `CROSS_ARB_STATE_POST` | `state/cross_arb_post.json` | DRP snapshot after execution |
+| `CROSS_ARB_STATE_PRE` | `state/cross_arb_pre.json` | DRP snapshot before execution |
+| `CROSS_ARB_TX_POST` | `state/tx_post.json` | Tx builder snapshot after |
+| `CROSS_ARB_TX_PRE` | `state/tx_pre.json` | Tx builder snapshot before |
+| `CROSS_ROLLUP_LOG` | `logs/cross_rollup_superbot.json` | cross_rollup_superbot log |
+| `ERROR_LOG_FILE` | `logs/errors.log` | Shared error log |
+| `FORK_BLOCK` | `19741234` | Fork block for sim harness |
+| `FOUNDER_APPROVED` | `0` | 1 allows promote to production |
+| `INTENT_FEED_URL` | `http://localhost:9000` | L3 intent feed |
+| `KILL_SWITCH_FLAG_FILE` | `/flags/kill_switch.txt` | Kill switch trigger file |
+| `KILL_SWITCH_LOG_FILE` | `/logs/kill_log.json` | Kill switch audit log |
+| `L3_APP_EXECUTOR` | `0x000...` | Executor for l3_app_rollup_mev |
+| `L3_APP_ROLLUP_LOG` | `logs/l3_app_rollup_mev.json` | l3_app_rollup_mev log |
+| `L3_APP_STATE_POST` | `state/l3_app_post.json` | Post DRP snapshot |
+| `L3_APP_STATE_PRE` | `state/l3_app_pre.json` | Pre DRP snapshot |
+| `L3_APP_TX_POST` | `state/l3_app_tx_post.json` | Tx builder post snapshot |
+| `L3_APP_TX_PRE` | `state/l3_app_tx_pre.json` | Tx builder pre snapshot |
+| `L3_SEQ_EXECUTOR` | `0x000...` | Executor for l3_sequencer_mev |
+| `L3_SEQ_LOG` | `logs/l3_sequencer_mev.json` | l3_sequencer_mev log |
+| `L3_SEQ_STATE_POST` | `state/l3_seq_post.json` | Post DRP snapshot |
+| `L3_SEQ_STATE_PRE` | `state/l3_seq_pre.json` | Pre DRP snapshot |
+| `L3_SEQ_TX_POST` | `state/l3_seq_tx_post.json` | Tx builder post snapshot |
+| `L3_SEQ_TX_PRE` | `state/l3_seq_tx_pre.json` | Tx builder pre snapshot |
+| `METRICS_PORT` | `8000` | Port for Prometheus metrics |
+| `MUTATION_ID` | `dev` | Tag for current mutation cycle |
+| `NFT_FEED_URL` | `http://localhost:9000` | NFT liquidation feed |
+| `NFT_LIQ_EXECUTOR` | `0x000...` | Executor for nft_liquidation |
+| `NFT_LIQ_LOG` | `logs/nft_liquidation.json` | nft_liquidation log |
+| `NFT_LIQ_STATE_POST` | `state/nft_liq_post.json` | Post DRP snapshot |
+| `NFT_LIQ_STATE_PRE` | `state/nft_liq_pre.json` | Pre DRP snapshot |
+| `NFT_LIQ_TX_POST` | `state/nft_liq_tx_post.json` | Tx builder post snapshot |
+| `NFT_LIQ_TX_PRE` | `state/nft_liq_tx_pre.json` | Tx builder pre snapshot |
+| `OPENAI_API_KEY` | `<none>` | Required for online GPT audits |
+| `OPS_ALERT_WEBHOOK` | `<none>` | Webhook for OpsAgent alerts |
+| `POOL_ARBITRUM` | `0xb3f8e426...` | Arbitrum pool address |
+| `POOL_ETHEREUM` | `0x8ad599c3...` | Ethereum pool address |
+| `POOL_L3` | `0x0000000...` | L3 test pool |
+| `POOL_OPTIMISM` | `0x8514924...` | Optimism pool address |
+| `POOL_ZKSYNC` | `0x0000000...` | zkSync test pool |
+| `PRICE_FRESHNESS_SEC` | `30` | Allowed staleness for price feeds |
+| `RPC_ARBITRUM_URL` | `http://localhost:8547` | Arbitrum RPC |
+| `RPC_ETHEREUM_URL` | `http://localhost:8545` | Ethereum RPC |
+| `RPC_OPTIMISM_URL` | `http://localhost:8548` | Optimism RPC |
+| `RPC_ZKSYNC_URL` | `http://localhost:8550` | zkSync RPC |
+| `RWA_EXECUTOR` | `0x000...` | Executor for rwa_settlement |
+| `RWA_FEED_URL` | `http://localhost:9100` | RWA pricing feed |
+| `RWA_SETTLE_LOG` | `logs/rwa_settlement.json` | rwa_settlement log |
+| `RWA_STATE_POST` | `state/rwa_post.json` | Post DRP snapshot |
+| `RWA_STATE_PRE` | `state/rwa_pre.json` | Pre DRP snapshot |
+| `RWA_TX_POST` | `state/rwa_tx_post.json` | Tx builder post snapshot |
+| `RWA_TX_PRE` | `state/rwa_tx_pre.json` | Tx builder pre snapshot |
+| `SUPERBOT_EXECUTOR` | `0x000...` | Executor for cross_rollup_superbot |
+| `SUPERBOT_STATE_POST` | `state/superbot_post.json` | Post DRP snapshot |
+| `SUPERBOT_STATE_PRE` | `state/superbot_pre.json` | Pre DRP snapshot |
+| `SUPERBOT_TX_POST` | `state/superbot_tx_post.json` | Tx builder post snapshot |
+| `SUPERBOT_TX_PRE` | `state/superbot_tx_pre.json` | Tx builder pre snapshot |
+| `TX_LOG_FILE` | `logs/tx_log.json` | Transaction builder log |
+
 ### cross_domain_arb Runbook
 
 ```bash
