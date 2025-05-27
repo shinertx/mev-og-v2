@@ -70,6 +70,20 @@ python -m core.metrics --port $METRICS_PORT
 If you set `METRICS_TOKEN`, include the header
 `Authorization: Bearer $METRICS_TOKEN` when scraping.
 
+## 6. Wallet Operations
+
+`scripts/wallet_ops.py` handles secure wallet funding and draining. Every action
+requires founder confirmation and logs to `logs/wallet_ops.json`.
+
+```bash
+python scripts/wallet_ops.py fund --from 0xabc --to 0xdef --amount 1
+python scripts/wallet_ops.py withdraw-all --from 0xhot --to 0xbank
+python scripts/wallet_ops.py drain-to-cold --from 0xhot --to 0xcold
+```
+
+Use `--dry-run` to simulate without sending a transaction. State snapshots are
+exported before and after each operation.
+
 ---
 
 Refer to [AGENTS.md](../AGENTS.md) and [PROJECT_BIBLE.md](../PROJECT_BIBLE.md) for

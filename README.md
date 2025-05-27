@@ -420,3 +420,18 @@ Example usage:
 ```bash
 python scripts/batch_ops.py promote cross_rollup_superbot --source-dir staging --dest-dir active
 ```
+
+## Wallet Operations
+
+`scripts/wallet_ops.py` provides gated funding and withdrawal utilities. Every
+action logs to `logs/wallet_ops.json` and snapshots state via
+`scripts/export_state.sh` before and after execution.
+
+```
+python scripts/wallet_ops.py fund --from 0xabc --to 0xdef --amount 1 --dry-run
+python scripts/wallet_ops.py withdraw-all --from 0xhot --to 0xbank
+python scripts/wallet_ops.py drain-to-cold --from 0xhot --to 0xcold
+```
+
+Set `FOUNDER_APPROVED=1` or confirm interactively when prompted. On failure the
+script aborts and logs the error.
