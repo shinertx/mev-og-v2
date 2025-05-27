@@ -113,6 +113,8 @@ Start the metrics endpoint with:
 python -m core.metrics --port $METRICS_PORT
 ```
 and point Prometheus to `http://localhost:$METRICS_PORT/metrics` for monitoring.
+If `METRICS_TOKEN` is set, include `Authorization: Bearer $METRICS_TOKEN` in
+requests.
 
 ### Environment & Configuration
 
@@ -127,6 +129,7 @@ RPC_ARBITRUM_URL=<https://arbitrum.rpc>
 RPC_OPTIMISM_URL=<https://optimism.rpc>
 KILL_SWITCH_PATH=/tmp/mev_kill            # File trigger for halt
 METRICS_PORT=9102                         # Prometheus server port
+METRICS_TOKEN=<optional-token>            # Require auth header if set
 ```
 
 Additional strategy values:
