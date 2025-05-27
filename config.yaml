@@ -78,12 +78,14 @@ trade_amount_usd: 100
 notifier:
   telegram_token: ""        # Set in .env
   telegram_chat_id: ""
+  ops_alert_webhook: ""
   email: ""
 
 # --- Risk Controls ---
 risk:
   max_drawdown_pct: 5
   max_loss_usd: 200
+capital_lock_enabled: true
 
 # --- Kill Switch ---
 kill_switch_enabled: true

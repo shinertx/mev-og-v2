@@ -21,6 +21,11 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Dict, List
 
+try:  # optional dependency
+    import requests  # type: ignore
+except Exception:  # pragma: no cover - optional
+    requests = None  # type: ignore
+
 
 def _error_log_file() -> Path:
     """Return the configured error log file path."""
@@ -44,6 +49,17 @@ def log_error(module: str, error: str, **extra: Any) -> None:
 
 
 _HOOKS: List[Callable[[Dict[str, Any]], None]] = []
+_ALERT_WEBHOOKS = [w for w in os.getenv("OPS_ALERT_WEBHOOK", "").split(",") if w]
+
+
+def _send_alert(message: str) -> None:
+    if not _ALERT_WEBHOOKS or requests is None:
+        return
+    for url in _ALERT_WEBHOOKS:
+        try:  # pragma: no cover - network
+            requests.post(url, json={"text": message}, timeout=5)
+        except Exception:
+            pass
 
 
 def register_hook(func: Callable[[Dict[str, Any]], None]) -> None:
@@ -110,9 +126,12 @@ class StructuredLogger:
                 mutation_id=mutation_id,
                 risk_level=risk_level,
             )
+        if error or risk_level == "high":
+            _send_alert(f"{self.module}:{event}:{error or ''}")
 
     # ------------------------------------------------------------------
     def trace(self, message: str, **kw: Any) -> None:
         """Alias for :func:`log` used for verbose tracing."""
 
         self.log(message, **kw)
+

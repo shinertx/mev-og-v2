@@ -39,20 +39,20 @@ _LOCK = threading.Lock()
 
 def record_opportunity(spread: float, pnl: float, latency: float) -> None:
     with _LOCK:
-        _METRICS["opportunities"] += 1
-        _METRICS["pnl"] += pnl
+        _METRICS["opportunities"] = cast(int, _METRICS["opportunities"]) + 1
+        _METRICS["pnl"] = cast(float, _METRICS["pnl"]) + pnl
         cast(list, _METRICS["spreads"]).append(spread)  # type: ignore[arg-type]
         cast(list, _METRICS["latencies"]).append(latency)  # type: ignore[arg-type]
 
 
 def record_fail() -> None:
     with _LOCK:
-        _METRICS["fails"] += 1
+        _METRICS["fails"] = cast(int, _METRICS["fails"]) + 1
 
 
 def record_alert() -> None:
     with _LOCK:
-        _METRICS["alert_count"] += 1
+        _METRICS["alert_count"] = cast(int, _METRICS["alert_count"]) + 1
 
 
 # ----------------------------------------------------------------------

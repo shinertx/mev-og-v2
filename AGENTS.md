@@ -26,6 +26,8 @@ This file is the single source of truth for mutation, validation, and integratio
   (`FOUNDER_APPROVED=1`) before any live promotion.
 - Every cycle must export an audit trail and DRP snapshot using
   `scripts/export_state.sh`.
+- OpsAgent monitors health, pauses on failure, and sends alerts via webhooks.
+- CapitalLock enforces drawdown/loss thresholds; unlocks require founder approval.
 
 ---
 
@@ -75,6 +77,12 @@ Every PR or batch/module must pass:
 - Export state: `bash scripts/export_state.sh`
 - Rollback: `bash scripts/rollback.sh --archive=<path>`
 - Mutation cycle: `python ai/mutator/main.py --logs-dir logs`
+
+### OpsAgent & CapitalLock Runbook
+- Start OpsAgent: `python -m agents.ops_agent` (health checks in config)
+- Use `scripts/batch_ops.py` to promote, pause or rollback strategies.
+- CapitalLock state is shared via `agents.agent_registry` and unpaused only when
+  founder sets `FOUNDER_APPROVED=1` and calls `unlock`.
 
 ### rwa_settlement Runbook
 - Fork simulation: `bash scripts/simulate_fork.sh --target=strategies/rwa_settlement`
@@ -159,6 +167,11 @@ Every PR or batch/module must pass:
 - `strategies/l3_app_rollup_mev`        # L3 builder/sequencer MEV (emerging arms race)
 - `strategies/rwa_settlement`           # On-chain RWA/asset-backed MEV
 - `infra/real_world_execution`          # CEX/DEX hybrid arb, capital lock-in
+- `agents/ops_agent.py`                 # Ops monitoring and alerts
+- `agents/capital_lock.py`              # Runtime risk gating
+- `adapters/cex_adapter.py`             # Exchange adapter
+- `adapters/dex_adapter.py`             # Aggregator adapter
+- `adapters/bridge_adapter.py`          # Bridge API adapter
 
 
 ## Changelog
@@ -167,3 +180,4 @@ Every PR or batch/module must pass:
 - 2025-05-26T17:46:21Z – Export snapshot and rollback restore test.
 - 2025-05-26T17:48:56Z – Snapshot after `cross_rollup_superbot` simulation.
 - 2025-05-26T18:23:14Z – Post-metrics server integration export.
+

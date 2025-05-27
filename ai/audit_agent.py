@@ -90,7 +90,7 @@ class AuditAgent:
     def run_online_audit(self, prompt: str) -> str:
         """Submit ``prompt`` to OpenAI and return the text response."""
 
-        import openai  # imported here to simplify testing/mocking  # type: ignore
+        import openai  # type: ignore  # imported here to simplify testing/mocking
 
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
