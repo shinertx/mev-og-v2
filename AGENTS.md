@@ -62,14 +62,12 @@ Every PR or batch/module must pass:
 
 ## Codex Behavior Log
 
-- v0.1-core-doctrine: Codex preamble, kill switch, sim-first, DRP, AI audit logging.
-- v1.0-batch1-tx_engine: TransactionBuilder w/ kill switch, logs, DRP export.
-- v1.1-batch1-kill_switch: Kill switch, logging, sim harness, unit test.
-- v1.2-batch1-export_state: DRP snapshot/export, logs, dry-run/clean modes.
-- v1.3-batch1-kill_switch_sh: Manual/DRY-RUN kill script, PR-ready, logs.
-- v1.4-batch1-full_audit_patch: Full DRP/sim audit and patch.
 - v2.1-batch2-goat_upgrade: Adversarial, DRP, sim, metrics, alert, mutation/AI-ready cross-domain MEV stack.
 - v3.1-batch3-datetime_aiapi_upgrade: Datetime logging future-proofed, AI audit agent online (OpenAI API ready).
+- v3.4-batch123-fullfix: Compliance sweep across modules, unified error logging, updated tests and fork simulation script.
+- v4.0-batch4-ai_mutation_promotion: AI-driven self-mutation loop with founder-gated promotion and continuous audit.
+- v5.0-batch5-cicd_canary_drp: CI workflow, canary tagging and DRP rollback added.
+- v6.0-batch6-superbot_metrics: Improved DRP export/rollback scripts, cross_rollup_superbot deployment, metrics server integration.
 
 ---
 
@@ -138,26 +136,10 @@ Every PR or batch/module must pass:
 - `strategies/rwa_settlement`           # On-chain RWA/asset-backed MEV
 - `infra/real_world_execution`          # CEX/DEX hybrid arb, capital lock-in
 
----
 
-- `v1.1-batch1-kill_switch`: Codex now produces:
-  - Kill switch check from `.env` or flag file
-  - Logs kill events to `/logs/kill_log.json`
-  - Sim harness + unit test for env/file triggers
+## Changelog
 
-
-- `v1.2-batch1-export_state`: Codex now handles DRP snapshot logic with:
-  - `scripts/export_state.sh`: exports logs, strategies, and keys
-  - DRY-RUN and CLEAN modes
-  - Structured export log JSON with timestamp
-
-- `v1.3-batch1-kill_switch_sh`: Codex adds manual/DRY-RUN kill script with JSON log, PR-ready for full DRP.
-
-- v1.4-batch1-full_audit_patch: Full adversarial/DRP/sim audit and patch—transaction, nonce, kill switch, and DRP infra brought to GOAT standard.
-
-- v2.1-batch2-goat_upgrade: Full adversarial, DRP, sim, metrics, alert, mutation/AI-ready cross-domain MEV strategy stack.
-
-- v3.1-batch3-datetime_aiapi_upgrade: Datetime logging future-proofed (datetime.now(datetime.UTC)), AI audit agent can now call OpenAI API live.
-- v3.4-batch123-fullfix: Compliance sweep across all modules, unified error logging, updated tests and fork simulation script.
-- v4.0-batch4-ai_mutation_promotion: AI-driven self-mutation loop with founder-gated promotion and continuous audit.
-- v5.0-batch5-cicd_canary_drp: CI workflow, canary tagging and DRP rollback added.
+- 2025-05-26T15:24:44Z – DRP export snapshot (dry-run baseline).
+- 2025-05-26T17:46:21Z – Export snapshot and rollback restore test.
+- 2025-05-26T17:48:56Z – Snapshot after `cross_rollup_superbot` simulation.
+- 2025-05-26T18:23:14Z – Post-metrics server integration export.
