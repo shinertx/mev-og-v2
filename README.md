@@ -407,6 +407,7 @@ any fail. Alerts are sent via `OPS_ALERT_WEBHOOK` and counted by the metrics
 server. `agents/capital_lock.py` enforces drawdown and loss limits; founder must
 approve unlock actions by setting `FOUNDER_APPROVED=1`.
 
+
 Each strategy receives a `CapitalLock` instance from the orchestrator. Before
 dispatching any transaction it calls `capital_lock.trade_allowed()`. When the
 lock is engaged the strategy aborts, logging a structured error entry with the
@@ -425,7 +426,6 @@ python -m core.orchestrator --config=config.yaml --live      # continuous
 
 Use `--health` to run only OpsAgent checks. Live mode requires
 `FOUNDER_APPROVED=1`.
-
 
 ## Batch Operations
 
