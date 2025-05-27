@@ -157,6 +157,7 @@ the values used in tests and the simulation harness:
 | `CROSS_ARB_TX_PRE` | `state/tx_pre.json` | Tx builder snapshot before |
 | `CROSS_ROLLUP_LOG` | `logs/cross_rollup_superbot.json` | cross_rollup_superbot log |
 | `ERROR_LOG_FILE` | `logs/errors.log` | Shared error log |
+| `DRP_ENC_KEY` | `<none>` | Optional key to encrypt DRP archives |
 | `FORK_BLOCK` | `19741234` | Fork block for sim harness |
 | `FOUNDER_APPROVED` | `0` | 1 allows promote to production |
 | `INTENT_FEED_URL` | `http://localhost:9000` | L3 intent feed |
