@@ -3,4 +3,6 @@ pytest
 hexbytes
 requests
 flake8
+# Flashbots bundle submission
+flashbots
 # Add any others your code imports

@@ -1,5 +1,6 @@
 import json
 import tempfile
+import types
 from pathlib import Path
 import sys
 
@@ -27,15 +28,41 @@ def setup_strat(threshold=0.01):
     return strat
 
 
-def test_opportunity_detection():
+class DummyEth:
+    def __init__(self):
+        self.block_number = 1
+
+
+class DummyWeb3:
+    def __init__(self):
+        self.eth = DummyEth()
+
+
+def _patch_flashbots(monkeypatch):
+    module = types.ModuleType("flashbots")
+
+    class FB:
+        def send_bundle(self, bundle, target):
+            return {"bundleHash": "hash"}
+
+    def flashbot(w3, account, endpoint_uri=None):
+        w3.flashbots = FB()
+
+    module.flashbot = flashbot
+    monkeypatch.setitem(sys.modules, "flashbots", module)
+
+
+def test_opportunity_detection(monkeypatch):
+    _patch_flashbots(monkeypatch)
+    monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
     strat = setup_strat(threshold=0.01)
     feed_data = {
         ("dex", "asset"): RWAData(100, 0.1, 1),
         ("cex", "asset"): RWAData(102, 0.1, 1),
     }
     strat.feed = DummyFeed(feed_data)
-    strat.tx_builder.web3 = None
-    strat.nonce_manager.web3 = None
+    strat.tx_builder.web3 = DummyWeb3()
+    strat.nonce_manager.web3 = DummyWeb3()
     strat.tx_builder.send_transaction = lambda *a, **k: b"hash"
     result = strat.run_once()
     assert result and result["opportunity"]
@@ -60,11 +87,13 @@ def test_mutate_hook():
 
 
 def test_kill_switch(monkeypatch):
+    _patch_flashbots(monkeypatch)
+    monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
     strat = setup_strat()
     feed_data = {("dex", "asset"): RWAData(100, 0.1, 1), ("cex", "asset"): RWAData(100, 0.1, 1)}
     strat.feed = DummyFeed(feed_data)
-    strat.tx_builder.web3 = None
-    strat.nonce_manager.web3 = None
+    strat.tx_builder.web3 = DummyWeb3()
+    strat.nonce_manager.web3 = DummyWeb3()
     strat.tx_builder.send_transaction = lambda *a, **k: b"hash"
     tmp = tempfile.mkdtemp()
     monkeypatch.setenv("KILL_SWITCH_LOG_FILE", str(Path(tmp) / "kill.json"))

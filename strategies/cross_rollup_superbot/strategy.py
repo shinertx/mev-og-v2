@@ -145,16 +145,26 @@ class CrossRollupSuperbot:
 
     # ------------------------------------------------------------------
     def _bundle_and_send(self, action: str) -> str:
-        """Stub for bundle creation and atomic relay."""
-        # Placeholder for Flashbots/SUAVE integration; upgrade for live system.
-        tx_hash = self.tx_builder.send_transaction(
-            self.sample_tx,
-            self.executor,
-            strategy_id=STRATEGY_ID,
-            mutation_id=os.getenv("MUTATION_ID", "dev"),
-            risk_level="low",
-        )
-        return str(tx_hash)
+        """Create Flashbots/SUAVE bundle and relay it."""
+        try:
+            from eth_account import Account  # type: ignore
+            from flashbots import flashbot  # type: ignore
+        except Exception as exc:  # pragma: no cover - import guard
+            raise RuntimeError("flashbots package required") from exc
+
+        w3 = self.tx_builder.web3
+        auth_key = os.getenv("FLASHBOTS_AUTH_KEY")
+        relay = os.getenv("FLASHBOTS_RPC_URL", "https://relay.flashbots.net")
+        if not auth_key:
+            raise RuntimeError("FLASHBOTS_AUTH_KEY not set")
+
+        auth_account = Account.from_key(auth_key)
+        flashbot(w3, auth_account, endpoint_uri=relay)
+
+        bundle = [{"signed_transaction": self.sample_tx}]
+        target_block = w3.eth.block_number + 1
+        result = w3.flashbots.send_bundle(bundle, target_block)
+        return str(result.get("bundleHash"))
 
     # ------------------------------------------------------------------
     def run_once(self) -> Optional[Dict[str, object]]:
