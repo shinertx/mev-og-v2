@@ -4,6 +4,7 @@ import tarfile
 import time
 from pathlib import Path
 import sys
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
@@ -34,4 +35,26 @@ def test_drp_restore_time(tmp_path):
     duration = time.time() - start
     assert duration < 60
     assert (logs / "log.txt").exists()
+
+
+def test_invalid_archive_fails_fast(tmp_path):
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    bad = tmp_path / "bad"
+    bad.mkdir()
+    (bad / "x.txt").write_text("x")
+    archive = export_dir / "bad.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(bad / "x.txt", arcname="../../x.txt")
+    env = os.environ.copy()
+    env.update({
+        "ERROR_LOG_FILE": str(tmp_path / "err.log"),
+        "ROLLBACK_LOG_FILE": str(tmp_path / "rb.log"),
+        "PWD": str(tmp_path),
+    })
+    start = time.time()
+    with pytest.raises(subprocess.CalledProcessError):
+        run_script([f"--archive={archive}"], env)
+    assert time.time() - start < 60
+    assert not (tmp_path / "x.txt").exists()
 

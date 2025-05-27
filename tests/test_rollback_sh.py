@@ -4,6 +4,7 @@ import tarfile
 import json
 import shutil
 from pathlib import Path
+import pytest
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "rollback.sh"
 
@@ -64,3 +65,26 @@ def test_missing_archive(tmp_path):
     entries = [json.loads(line) for line in (tmp_path / "rb.log").read_text().splitlines()]
     assert entries[-1]["event"] == "failed"
     assert (tmp_path / "err.log").exists()
+
+
+def test_path_escape_blocked(tmp_path):
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    bad = tmp_path / "bad"
+    bad.mkdir()
+    (bad / "evil.txt").write_text("bad")
+    archive = export_dir / "bad.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(bad / "evil.txt", arcname="../evil.txt")
+    env = os.environ.copy()
+    env.update({
+        "ERROR_LOG_FILE": str(tmp_path / "err.log"),
+        "ROLLBACK_LOG_FILE": str(tmp_path / "rb.log"),
+        "PWD": str(tmp_path),
+    })
+    os.chdir(tmp_path)
+    with pytest.raises(subprocess.CalledProcessError):
+        run_script([f"--archive={archive}"], env)
+    entries = [json.loads(line) for line in (tmp_path / "rb.log").read_text().splitlines()]
+    assert entries[-1]["event"] == "failed"
+    assert not (tmp_path / "evil.txt").exists()

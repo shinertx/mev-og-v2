@@ -8,6 +8,7 @@ set -euo pipefail
 
 EXPORT_DIR="${EXPORT_DIR:-export}"
 ARCHIVE=""
+EXPECTED_SHA256=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -17,6 +18,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --export-dir=*)
             EXPORT_DIR="${1#*=}"
+            shift
+            ;;
+        --sha256=*)
+            EXPECTED_SHA256="${1#*=}"
             shift
             ;;
         *)
@@ -47,8 +52,39 @@ if [[ -z "$ARCHIVE" || ! -f "$ARCHIVE" ]]; then
     exit 1
 fi
 
-# Extract archive relative to repo root
- tar -xzf "$ARCHIVE"
+if [[ -n "$EXPECTED_SHA256" ]]; then
+    ACTUAL_SHA256=$(sha256sum "$ARCHIVE" | awk '{print $1}')
+    if [[ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]]; then
+        mkdir -p "$(dirname "$LOG_FILE")"
+        echo "$TIMESTAMP rollback_failed checksum_mismatch" >> "$LOG_FILE"
+        log_event "failed" "$ARCHIVE"
+        echo "Archive integrity check failed" >&2
+        exit 1
+    fi
+fi
+
+TMP_DIR=$(mktemp -d)
+
+# Validate archive paths before extraction
+while IFS= read -r entry; do
+    if [[ "$entry" == /* || "$entry" == *"../"* || "$entry" == *".." ]]; then
+        mkdir -p "$(dirname "$LOG_FILE")"
+        echo "$TIMESTAMP rollback_failed invalid_path" >> "$LOG_FILE"
+        log_event "failed" "$ARCHIVE"
+        echo "Invalid path in archive: $entry" >&2
+        rm -rf "$TMP_DIR"
+        exit 1
+    fi
+done < <(tar -tzf "$ARCHIVE")
+
+tar -xzf "$ARCHIVE" -C "$TMP_DIR"
+
+shopt -s dotglob
+cp -a "$TMP_DIR"/* "$PWD"/
+shopt -u dotglob
+
+rm -rf "$TMP_DIR"
+
 log_event "restore" "$ARCHIVE"
 mkdir -p "$(dirname "$LOG_FILE")"
 echo "$TIMESTAMP restored $ARCHIVE" >> "$LOG_FILE"
