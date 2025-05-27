@@ -38,6 +38,9 @@ MEV-OG is an AI-native, adversarial crypto trading system built to compound $5K 
 | `strategies/cross_domain_arb` | 🚧 In progress | Cross-rollup + L1-L2 arbitrage execution bot |
 | `strategies/cross_rollup_superbot` | 🚧 In progress | Advanced cross-rollup sandwich/arb with DRP and mutation |
 | `strategies/l3_app_rollup_mev` | 🚧 In progress | L3/app-rollup sandwiches and bridge-race MEV |
+| `strategies/l3_sequencer_mev` | 🚧 In progress | L3 sequencer sandwich and reorg arbitrage |
+| `strategies/nft_liquidation` | 🚧 In progress | NFT lending liquidation sniping |
+| `strategies/rwa_settlement` | 🚧 In progress | Cross-venue RWA settlement |
 | `infra/sim_harness` | ✅ | Simulates forks, chaos, and tx latency/failure |
 | `ai/mutator` | ✅ | Self-prunes, mutates, and re-tunes strategies |
 | `ai/mutator/main.py` | ✅ | Orchestrates AI mutation cycles and audit-driven promotion |
@@ -178,6 +181,48 @@ bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
 ```
 
+### l3_sequencer_mev Runbook
+
+```bash
+# Start metrics server
+python -m core.metrics --port $METRICS_PORT &
+# Run fork simulation
+bash scripts/simulate_fork.sh --target=strategies/l3_sequencer_mev
+# Run a mutation and audit cycle
+python ai/mutator/main.py --logs-dir logs
+# Export DRP snapshot and rollback if needed
+bash scripts/export_state.sh
+bash scripts/rollback.sh --archive=<exported-archive>
+```
+
+### nft_liquidation Runbook
+
+```bash
+# Start metrics server
+python -m core.metrics --port $METRICS_PORT &
+# Run fork simulation
+bash scripts/simulate_fork.sh --target=strategies/nft_liquidation
+# Run a mutation and audit cycle
+python ai/mutator/main.py --logs-dir logs
+# Export DRP snapshot and rollback if needed
+bash scripts/export_state.sh
+bash scripts/rollback.sh --archive=<exported-archive>
+```
+
+### rwa_settlement Runbook
+
+```bash
+# Start metrics server
+python -m core.metrics --port $METRICS_PORT &
+# Run fork simulation
+bash scripts/simulate_fork.sh --target=strategies/rwa_settlement
+# Run a mutation and audit cycle
+python ai/mutator/main.py --logs-dir logs
+# Export DRP snapshot and rollback if needed
+bash scripts/export_state.sh
+bash scripts/rollback.sh --archive=<exported-archive>
+```
+
 ### AI Mutation Workflow
 
 1. Collect logs from all strategies.
@@ -198,6 +243,9 @@ common error log `logs/errors.log`. Metrics are scraped from the same
 
 `l3_app_rollup_mev` logs to `logs/l3_app_rollup_mev.json` and shares the common
 error log `logs/errors.log`. Metrics use the global `/metrics` endpoint.
+`l3_sequencer_mev` logs to `logs/l3_sequencer_mev.json` and shares the common error log `logs/errors.log`.
+`nft_liquidation` logs to `logs/nft_liquidation.json` and shares the common error log `logs/errors.log`.
+`rwa_settlement` logs to `logs/rwa_settlement.json` and shares the common error log `logs/errors.log`.
 
 ## Mutation Workflow
 
