@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.l3_sequencer_mev import L3SequencerMEV, PoolConfig
+from agents.capital_lock import CapitalLock
 from core.oracles.uniswap_feed import PriceData
 
 
@@ -73,7 +74,7 @@ class DummyFeed:
 
 def setup_strat(threshold=0.001):
     pools = {"l3": PoolConfig("0xpool", "ethereum")}
-    strat = L3SequencerMEV(pools, threshold=threshold)
+    strat = L3SequencerMEV(pools, threshold=threshold, capital_lock=CapitalLock(1000, 1e9, 0))
     return strat
 
 

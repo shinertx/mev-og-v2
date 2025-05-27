@@ -37,6 +37,7 @@ except Exception:  # pragma: no cover - allow missing dependency
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager
 from core.logger import log_error
+from agents.capital_lock import CapitalLock
 
 from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
@@ -112,11 +113,13 @@ class CrossDomainArb:
 
     DEFAULT_THRESHOLD = 0.003
 
-    def __init__(self, pools: Dict[str, PoolConfig], threshold: float | None = None) -> None:
+    def __init__(self, pools: Dict[str, PoolConfig], threshold: float | None = None, *, capital_lock: CapitalLock | None = None) -> None:
         self.feed = UniswapV3Feed()
         self.pools = pools
         self.threshold = threshold if threshold is not None else self.DEFAULT_THRESHOLD
         self.last_prices: Dict[str, float] = {}
+
+        self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
 
         # transaction execution setup
         w3 = self.feed.web3s.get("ethereum") if self.feed.web3s else None
@@ -174,6 +177,8 @@ class CrossDomainArb:
                 "opportunity": True,
                 "spread": spread,
                 "action": action,
+                "buy": min_domain,
+                "sell": max_domain,
             }
         return None
 
@@ -205,6 +210,18 @@ class CrossDomainArb:
         prices = {k: d.price for k, d in price_data.items()}
         opp = self._detect_opportunity(prices)
         if opp:
+            if not self.capital_lock.trade_allowed():
+                msg = "capital lock: trade not allowed"
+                log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
+                _log({
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "strategy_id": STRATEGY_ID,
+                    "risk_level": "high",
+                    "event": "capital_lock",
+                    "error": msg,
+                })
+                return None
+
             METRICS["opportunities"] += 1
             METRICS["spreads"].append(float(opp["spread"]))
             _send_alert({"strategy": STRATEGY_ID, **opp})
@@ -221,8 +238,18 @@ class CrossDomainArb:
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
 
+            profit = prices[opp["sell"]] - prices[opp["buy"]]
+            self.capital_lock.record_trade(profit)
+
             for label, data in price_data.items():
-                self._record(self.pools[label].domain, data, True, float(opp["spread"]), str(opp["action"]), tx_id=str(tx_hash))
+                self._record(
+                    self.pools[label].domain,
+                    data,
+                    True,
+                    float(opp["spread"]),
+                    str(opp["action"]),
+                    tx_id=str(tx_hash),
+                )
         else:
             METRICS["fails"] += 1
 

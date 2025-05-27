@@ -28,6 +28,7 @@ from core.oracles.nft_liquidation_feed import NFTLiquidationFeed, AuctionData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
 from core.tx_engine.nonce_manager import NonceManager
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+from agents.capital_lock import CapitalLock
 
 LOG_FILE = Path(os.getenv("NFT_LIQ_LOG", "logs/nft_liquidation.json"))
 LOG = StructuredLogger("nft_liquidation", log_file=str(LOG_FILE))
@@ -50,6 +51,7 @@ class NFTLiquidationMEV:
         auctions: Dict[str, AuctionConfig],
         *,
         discount: float | None = None,
+        capital_lock: CapitalLock | None = None,
     ) -> None:
         self.feed = NFTLiquidationFeed()
         self.auctions = auctions
@@ -61,6 +63,8 @@ class NFTLiquidationMEV:
         self.tx_builder = TransactionBuilder(w3, self.nonce_manager)
         self.executor = os.getenv("NFT_LIQ_EXECUTOR", "0x0000000000000000000000000000000000000000")
         self.sample_tx = HexBytes(b"\x01")
+
+        self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
 
     # ------------------------------------------------------------------
     def snapshot(self, path: str) -> None:
@@ -149,6 +153,18 @@ class NFTLiquidationMEV:
 
         opp = self._detect(all_auctions)
         if opp:
+            if not self.capital_lock.trade_allowed():
+                msg = "capital lock: trade not allowed"
+                LOG.log(
+                    "capital_lock",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="high",
+                    error=msg,
+                )
+                log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
+                return None
+
             metrics.record_opportunity(0.0, opp.value - opp.price, 0.0)
             pre = os.getenv("NFT_LIQ_STATE_PRE", "state/nft_liq_pre.json")
             post = os.getenv("NFT_LIQ_STATE_POST", "state/nft_liq_post.json")
@@ -161,6 +177,8 @@ class NFTLiquidationMEV:
             tx_id = self._bundle_and_send(opp)
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
+
+            self.capital_lock.record_trade(opp.value - opp.price)
             self.last_seen[opp.nft] = opp.auction_id
             self._record(opp, True, action="snipe", tx_id=tx_id)
             return {"opportunity": True, "auction_id": opp.auction_id, "nft": opp.nft}
