@@ -25,7 +25,7 @@ jobs:
       - name: Lint
         run: ruff check .
       - name: Type check
-        run: mypy .
+        run: mypy --strict .
       - name: Run tests
         run: pytest -v
       - name: Fork simulation
@@ -41,7 +41,7 @@ jobs:
       - name: Canary tests
         run: |
           ruff check .
-          mypy .
+          mypy --strict .
           pytest -v
           bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
           bash scripts/export_state.sh --dry-run

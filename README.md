@@ -370,6 +370,7 @@ main
 ## CI/CD & Canary Deployment
 
 GitHub Actions workflow `main.yml` runs linting, typing, tests, fork simulations and DRP checks on every push and pull request. Each batch is tagged `canary-<sha>-<date>` and must pass the full suite. Promotion to production requires `FOUNDER_APPROVED=1`.
+Type checking uses `mypy --strict` and CI fails on any reported type error.
 
 ## DRP Recovery
 

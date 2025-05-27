@@ -28,7 +28,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TypedDict, cast
 
 from core.logger import StructuredLogger, log_error
 from core import metrics
@@ -56,6 +56,15 @@ class BridgeConfig:
 
     cost: float  # estimated fee in the traded asset
     latency_sec: int = 0
+
+
+class Opportunity(TypedDict):
+    opportunity: bool
+    spread: float
+    profit: float
+    action: str
+    buy: str
+    sell: str
 
 
 class CrossRollupSuperbot:
@@ -121,7 +130,7 @@ class CrossRollupSuperbot:
         fee = self.bridge_costs.get(bridge_key, BridgeConfig(0.0)).cost
         return (spread * amount) - fee
 
-    def _detect_opportunity(self, prices: Dict[str, float]) -> Optional[Dict[str, object]]:
+    def _detect_opportunity(self, prices: Dict[str, float]) -> Optional[Opportunity]:
         domains = list(prices.keys())
         if len(domains) < 2:
             return None
@@ -134,14 +143,14 @@ class CrossRollupSuperbot:
         if profit <= 0:
             return None
         action = f"bundle_buy:{buy}_sell:{sell}"
-        return {
+        return cast(Opportunity, {
             "opportunity": True,
             "spread": spread,
             "profit": profit,
             "action": action,
             "buy": buy,
             "sell": sell,
-        }
+        })
 
     # ------------------------------------------------------------------
     def _bundle_and_send(self, action: str) -> str:
@@ -157,7 +166,7 @@ class CrossRollupSuperbot:
         return str(tx_hash)
 
     # ------------------------------------------------------------------
-    def run_once(self) -> Optional[Dict[str, object]]:
+    def run_once(self) -> Optional[Opportunity]:
         if kill_switch_triggered():
             record_kill_event(STRATEGY_ID)
             LOG.log(
@@ -221,7 +230,7 @@ class CrossRollupSuperbot:
         return opp
 
     # ------------------------------------------------------------------
-    def mutate(self, params: Dict[str, object]) -> None:
+    def mutate(self, params: Dict[str, Any]) -> None:
         """Update strategy parameters at runtime."""
         if "threshold" in params:
             try:

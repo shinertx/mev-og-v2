@@ -19,7 +19,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional, TypedDict, cast
 
 from core.logger import StructuredLogger, log_error
 from core import metrics
@@ -37,6 +37,14 @@ STRATEGY_ID = "rwa_settlement"
 class VenueConfig:
     venue: str
     asset: str
+
+
+class Opportunity(TypedDict):
+    opportunity: bool
+    spread: float
+    action: str
+    buy: str
+    sell: str
 
 
 class RWASettlementMEV:
@@ -90,7 +98,7 @@ class RWASettlementMEV:
         )
 
     # ------------------------------------------------------------------
-    def _detect_opportunity(self, prices: Dict[str, float]) -> Optional[Dict[str, object]]:
+    def _detect_opportunity(self, prices: Dict[str, float]) -> Optional[Opportunity]:
         venues = list(prices.keys())
         if len(venues) < 2:
             return None
@@ -100,7 +108,7 @@ class RWASettlementMEV:
         if spread < self.threshold:
             return None
         action = f"rwa_settle:{buy}->{sell}"
-        return {"opportunity": True, "spread": spread, "action": action, "buy": buy, "sell": sell}
+        return cast(Opportunity, {"opportunity": True, "spread": spread, "action": action, "buy": buy, "sell": sell})
 
     def _bundle_and_send(self, action: str) -> str:
         tx_hash = self.tx_builder.send_transaction(
@@ -113,7 +121,7 @@ class RWASettlementMEV:
         return str(tx_hash)
 
     # ------------------------------------------------------------------
-    def run_once(self) -> Optional[Dict[str, object]]:
+    def run_once(self) -> Optional[Opportunity]:
         if kill_switch_triggered():
             record_kill_event(STRATEGY_ID)
             LOG.log(
@@ -169,7 +177,7 @@ class RWASettlementMEV:
         return None
 
     # ------------------------------------------------------------------
-    def mutate(self, params: Dict[str, object]) -> None:
+    def mutate(self, params: Dict[str, Any]) -> None:
         if "threshold" in params:
             try:
                 self.threshold = float(params["threshold"])
