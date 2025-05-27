@@ -8,6 +8,16 @@ MEV-OG is an AI-native, adversarial crypto trading system built to compound $5K 
 
 ---
 
+## Table of Contents
+
+- [System Architecture](#system-architecture)
+- [Modules](#modules)
+- [Environment Configuration](#environment-configuration)
+- [Strategy Runbooks](#strategy-runbooks)
+- [Mutation Workflow](#mutation-workflow)
+- [DRP Recovery](#drp-recovery)
+- [CI/CD](#cicd--canary-deployment)
+
 ## System Architecture
 
 - **Language:** Rust (execution bots), Python (AI orchestration, analysis)
@@ -44,21 +54,53 @@ MEV-OG is an AI-native, adversarial crypto trading system built to compound $5K 
 
 ---
 
-## How to Run
+## Founder Runbook
 
+Follow this sequence to operate MEV-OG locally.
+
+1. **Install dependencies**
+   ```bash
+   poetry install
+   docker compose up
+   ```
+2. **Configure `.env`** – copy `.env.example` then set
+   `FOUNDER_APPROVED`, `KILL_SWITCH`, `OPENAI_API_KEY` and `METRICS_PORT`.
+3. **Copy and customize `config.example.yaml`**
+   ```bash
+   cp config.example.yaml config.yaml
+   # edit config.yaml to match your environment
+   ```
+4. **Run fork simulations for each strategy**
+   ```bash
+   bash scripts/simulate_fork.sh --target=strategies/<module>
+   ```
+5. **Run tests**
+   ```bash
+   pytest -v
+   foundry test
+   ```
+6. **Execute the mutation workflow**
+   ```bash
+   python ai/mutator/main.py
+   ```
+7. **Promote when checks pass**
+   ```bash
+   python ai/promote.py
+   ```
+8. **Export state**
+   ```bash
+   bash scripts/export_state.sh
+   ```
+9. **Roll back if needed**
+   ```bash
+   bash scripts/rollback.sh
+   ```
+
+Start the metrics endpoint with:
 ```bash
-# Install dependencies
-poetry install
-docker compose up
-
-# Run local fork simulation
-foundry anvil --fork-url $MAINNET_RPC --fork-block-number <block>
-
-# Run tests
-pytest -v
-# Run a mutation cycle
-python ai/mutator/main.py --logs-dir logs
+python -m core.metrics --port $METRICS_PORT
 ```
+and point Prometheus to `http://localhost:$METRICS_PORT/metrics` for monitoring.
 
 ### Environment Configuration
 
@@ -101,7 +143,7 @@ errors to `logs/errors.log`. DRP state files are controlled by the
 
 ```bash
 # Start metrics server
-python -m core.metrics &
+python -m core.metrics --port $METRICS_PORT &
 # Run fork simulation
 bash scripts/simulate_fork.sh --target=strategies/cross_rollup_superbot
 # Run a mutation and audit cycle
@@ -111,15 +153,26 @@ bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
 ```
 
+
 `cross_rollup_superbot` logs to `logs/cross_rollup_superbot.json` and shares the
 common error log `logs/errors.log`. Metrics are scraped from the same
 `/metrics` endpoint.
+
+## Mutation Workflow
+
+Run automated mutation cycles and promote only after all checks pass.
+
+```bash
+python ai/mutator/main.py
+python ai/promote.py  # requires FOUNDER_APPROVED=1
+```
+
 
 ## CI/CD & Canary Deployment
 
 GitHub Actions workflow `main.yml` runs linting, typing, tests, fork simulations and DRP checks on every push and pull request. Each batch is tagged `canary-<sha>-<date>` and must pass the full suite. Promotion to production requires `FOUNDER_APPROVED=1`.
 
-## DRP Rollback
+## DRP Recovery
 
 Run `scripts/rollback.sh` to restore logs, keys and active strategies from the latest archive in `export/`. All events are logged to `logs/rollback.log` and `logs/errors.log`.
 
