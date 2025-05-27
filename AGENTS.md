@@ -58,6 +58,12 @@ Every PR or batch/module must pass:
 - Rollback: `bash scripts/rollback.sh --archive=<path>`
 - Mutation cycle: `python ai/mutator/main.py --logs-dir logs`
 
+### l3_app_rollup_mev Runbook
+- Fork simulation: `bash scripts/simulate_fork.sh --target=strategies/l3_app_rollup_mev`
+- Export state: `bash scripts/export_state.sh`
+- Rollback: `bash scripts/rollback.sh --archive=<path>`
+- Mutation cycle: `python ai/mutator/main.py --logs-dir logs`
+
 ---
 
 ## Codex Behavior Log

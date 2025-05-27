@@ -37,6 +37,7 @@ MEV-OG is an AI-native, adversarial crypto trading system built to compound $5K 
 |--------|--------|-------------|
 | `strategies/cross_domain_arb` | 🚧 In progress | Cross-rollup + L1-L2 arbitrage execution bot |
 | `strategies/cross_rollup_superbot` | 🚧 In progress | Advanced cross-rollup sandwich/arb with DRP and mutation |
+| `strategies/l3_app_rollup_mev` | 🚧 In progress | L3/app-rollup sandwiches and bridge-race MEV |
 | `infra/sim_harness` | ✅ | Simulates forks, chaos, and tx latency/failure |
 | `ai/mutator` | ✅ | Self-prunes, mutates, and re-tunes strategies |
 | `ai/mutator/main.py` | ✅ | Orchestrates AI mutation cycles and audit-driven promotion |
@@ -163,6 +164,20 @@ bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
 ```
 
+### l3_app_rollup_mev Runbook
+
+```bash
+# Start metrics server
+python -m core.metrics --port $METRICS_PORT &
+# Run fork simulation
+bash scripts/simulate_fork.sh --target=strategies/l3_app_rollup_mev
+# Run a mutation and audit cycle
+python ai/mutator/main.py --logs-dir logs
+# Export DRP snapshot and rollback if needed
+bash scripts/export_state.sh
+bash scripts/rollback.sh --archive=<exported-archive>
+```
+
 ### AI Mutation Workflow
 
 1. Collect logs from all strategies.
@@ -180,6 +195,9 @@ Logs must include `timestamp`, `tx_id`, `strategy_id`, `mutation_id`,
 `cross_rollup_superbot` logs to `logs/cross_rollup_superbot.json` and shares the
 common error log `logs/errors.log`. Metrics are scraped from the same
 `/metrics` endpoint.
+
+`l3_app_rollup_mev` logs to `logs/l3_app_rollup_mev.json` and shares the common
+error log `logs/errors.log`. Metrics use the global `/metrics` endpoint.
 
 ## Mutation Workflow
 
