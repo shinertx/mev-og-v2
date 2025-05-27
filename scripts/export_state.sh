@@ -52,13 +52,27 @@ fi
 
 # export mode
 ITEMS=()
+ROOT_DIR="$(pwd)"
 for d in logs state active keys; do
     if [[ -e "$d" ]]; then
-        ITEMS+=("$d")
+        real="$(realpath "$d")"
+        case "$real" in
+            "$ROOT_DIR"/*) ITEMS+=("$d") ;;
+            *) echo "Skipping unsafe path $d" >&2 ;;
+        esac
     fi
 done
+EXCLUDES=()
+while IFS= read -r link; do
+    target="$(realpath "$link")"
+    case "$target" in
+        "$ROOT_DIR"/*) ;;
+        *) EXCLUDES+=("--exclude=$link") ;;
+    esac
+done < <(find "${ITEMS[@]}" -type l -print)
+
 if [[ ${#ITEMS[@]} -gt 0 ]]; then
-    tar -czf "$EXPORT_DIR/$ARCHIVE" "${ITEMS[@]}"
+    tar -czf "$EXPORT_DIR/$ARCHIVE" "${EXCLUDES[@]}" "${ITEMS[@]}"
     echo "Export created at $EXPORT_DIR/$ARCHIVE"
 else
     echo "Warning: nothing to export" >&2

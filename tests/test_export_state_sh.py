@@ -65,3 +65,25 @@ def test_dry_run(tmp_path):
     assert not export_dir.exists()
     entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "dry-run"
+
+
+def test_symlink_outside_repo_skipped(tmp_path):
+    logs_dir = tmp_path / "logs"
+    logs_dir.mkdir()
+    (logs_dir / "link").symlink_to("/etc/passwd")
+
+    export_dir = tmp_path / "export"
+    log_file = tmp_path / "export_log.json"
+    env = os.environ.copy()
+    env.update({
+        "EXPORT_DIR": str(export_dir),
+        "EXPORT_LOG_FILE": str(log_file),
+        "PWD": str(tmp_path)
+    })
+    os.chdir(tmp_path)
+
+    run_script([], env)
+    archive = list(export_dir.glob("drp_export_*.tar.gz"))[0]
+    with tarfile.open(archive, "r:gz") as tar:
+        names = tar.getnames()
+        assert "logs/link" not in names
