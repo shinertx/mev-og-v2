@@ -42,8 +42,10 @@ from core.oracles.intent_feed import IntentFeed, IntentData
 from core.mempool_monitor import MempoolMonitor
 from core.node_selector import NodeSelector
 from ai.intent_classifier import classify_intent
+from ai.intent_ghost import ghost_intent
 from adapters.flashloan_adapter import FlashloanAdapter
 from adapters.pool_scanner import PoolScanner, PoolInfo
+from adapters.social_alpha import scrape_social_keywords
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 
 LOG_FILE = Path(os.getenv("CROSS_ARB_LOG", "logs/cross_domain_arb.json"))
@@ -128,12 +130,21 @@ class CrossDomainArb:
         self.node_selector = NodeSelector(nodes or {}) if nodes else None
         self.flashloan = FlashloanAdapter(os.getenv("FLASHLOAN_API", "http://localhost:9001"))
         self.pool_scanner = PoolScanner(os.getenv("POOL_SCANNER_API", "http://localhost:9002"))
-        self.edges_enabled = edges_enabled or {
+        default_edges = {
             "l1_sandwich": True,
             "intent": True,
             "flashloan": False,
             "auto_discover": True,
+            "ghosting": False,
+            "social_alpha": False,
+            "stealth_mode": False,
+            "hedge": False,
         }
+        self.edges_enabled = default_edges
+        if edges_enabled:
+            self.edges_enabled.update(edges_enabled)
+
+        self.metrics: Dict[str, float] = {"recent_alpha": 0.0}
 
     # ------------------------------------------------------------------
     def _estimate_gas_cost(self) -> float:
@@ -169,6 +180,32 @@ class CrossDomainArb:
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                 )
+        for info in self.pool_scanner.scan_l3():
+            if info.pool not in self.pools:
+                self.pools[info.pool] = PoolConfig(info.pool, info.domain)
+                LOG.log(
+                    "new_l3_pool",
+                    pool=info.pool,
+                    domain=info.domain,
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                )
+        if self.edges_enabled.get("social_alpha", False):
+            pools = scrape_social_keywords(["bridge", "swap", "launch", "L3"])
+            for info in pools:
+                pool = info.get("pool")
+                dom = info.get("domain")
+                if pool and pool not in self.pools:
+                    self.pools[pool] = PoolConfig(pool, dom)
+                    LOG.log(
+                        "add_social_pool",
+                        pool=pool,
+                        domain=dom,
+                        strategy_id=STRATEGY_ID,
+                        mutation_id=os.getenv("MUTATION_ID", "dev"),
+                        risk_level="low",
+                    )
 
     # ------------------------------------------------------------------
     def _check_l1_sandwich(self) -> bool:
@@ -259,6 +296,66 @@ class CrossDomainArb:
             log_error(STRATEGY_ID, f"flashloan: {exc}", event="flashloan_fail")
 
     # ------------------------------------------------------------------
+    def _maybe_ghost(self) -> None:
+        if not self.edges_enabled.get("ghosting", False):
+            return
+        fake_intent = {"intent_id": "bait", "domain": "arb", "action": "swap", "price": 0}
+        ghost_intent(os.getenv("INTENT_API_URL", "http://localhost:9003"), fake_intent)
+
+    # ------------------------------------------------------------------
+    def hedge_risk(self, size: float, asset: str = "ETH") -> None:
+        if not self.edges_enabled.get("hedge", False):
+            return
+        try:
+            import requests  # type: ignore
+
+            resp = requests.post(
+                "http://insurance-api/buy",
+                json={"size": size, "asset": asset},
+                timeout=3,
+            )
+            resp.raise_for_status()
+            LOG.log(
+                "hedge",
+                size=size,
+                asset=asset,
+                status="ok",
+                strategy_id=STRATEGY_ID,
+                mutation_id=os.getenv("MUTATION_ID", "dev"),
+                risk_level="low",
+            )
+        except Exception as exc:  # pragma: no cover - network
+            LOG.log(
+                "hedge_fail",
+                error=str(exc),
+                strategy_id=STRATEGY_ID,
+                mutation_id=os.getenv("MUTATION_ID", "dev"),
+                risk_level="low",
+            )
+
+    # ------------------------------------------------------------------
+    def should_trade_now(self) -> bool:
+        if not self.edges_enabled.get("stealth_mode", True):
+            return True
+        recent_alpha = self.metrics.get("recent_alpha", 0.0)
+        gas = self._estimate_gas_cost()
+        active = recent_alpha > 0.1 and gas < 0.005
+        if not active:
+            LOG.log(
+                "stealth_mode",
+                reason="low_alpha or high_gas",
+                active=False,
+                strategy_id=STRATEGY_ID,
+                mutation_id=os.getenv("MUTATION_ID", "dev"),
+                risk_level="low",
+            )
+        return active
+
+    # ------------------------------------------------------------------
+    def evaluate_pnl(self) -> float:
+        return sum(self.capital_lock.trades)
+
+    # ------------------------------------------------------------------
     def snapshot(self, path: str) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as fh:
@@ -321,6 +418,10 @@ class CrossDomainArb:
             )
             return None
 
+        if not self.should_trade_now():
+            return None
+
+        self._maybe_ghost()
         self._auto_discover()
 
         if self.node_selector:
@@ -354,11 +455,13 @@ class CrossDomainArb:
 
         prices = {k: d.price for k, d in price_data.items()}
         opp = self._detect_opportunity(prices)
+        self.metrics["recent_alpha"] = float(opp["spread"]) if opp else 0.0
         if opp:
             profit = self._compute_profit(opp["buy"], opp["sell"], prices)
             if profit <= 0:
                 metrics.record_fail()
                 return None
+            self.hedge_risk(profit, "ETH")
             if not self.capital_lock.trade_allowed():
                 msg = "capital lock: trade not allowed"
                 log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")

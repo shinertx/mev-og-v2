@@ -33,3 +33,16 @@ class PoolScanner:
         except Exception as exc:  # pragma: no cover - network errors
             LOG.log("scan_fail", risk_level="high", error=str(exc))
             return []
+
+    def scan_l3(self) -> List[PoolInfo]:
+        """Discover L3/app rollup pools."""
+        try:
+            import requests  # type: ignore
+
+            resp = requests.get(f"{self.api_url}/l3_pools", timeout=5)
+            resp.raise_for_status()
+            data = resp.json()
+            return [PoolInfo(**d) for d in data]
+        except Exception as exc:  # pragma: no cover - network errors
+            LOG.log("scan_l3_fail", risk_level="high", error=str(exc))
+            return []
