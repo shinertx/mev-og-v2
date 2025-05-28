@@ -47,6 +47,7 @@ from adapters.flashloan_adapter import FlashloanAdapter
 from adapters.pool_scanner import PoolScanner, PoolInfo
 from adapters.social_alpha import scrape_social_keywords
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+from ai.mutation_log import log_mutation
 
 LOG_FILE = Path(os.getenv("CROSS_ARB_LOG", "logs/cross_domain_arb.json"))
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -532,6 +533,7 @@ class CrossDomainArb:
 
         if "threshold" in params:
             try:
+                old = self.threshold
                 self.threshold = float(params["threshold"])
                 LOG.log(
                     "mutate",
@@ -540,6 +542,13 @@ class CrossDomainArb:
                     risk_level="low",
                     param="threshold",
                     value=self.threshold,
+                )
+                log_mutation(
+                    "param_mutation",
+                    strategy_id=STRATEGY_ID,
+                    param="threshold",
+                    before=old,
+                    after=self.threshold,
                 )
             except Exception as exc:  # pragma: no cover - input validation
                 log_error(STRATEGY_ID, f"mutate threshold: {exc}", event="mutate_error")

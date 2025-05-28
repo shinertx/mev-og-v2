@@ -3,6 +3,8 @@ pytest
 hexbytes
 requests
 flake8
+# dashboard
+flask
 # Flashbots bundle submission
 flashbots
 # Add any others your code imports
