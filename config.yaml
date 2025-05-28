@@ -1,6 +1,6 @@
 # --- Network Settings ---
-network: sepolia           # goerli, sepolia, mainnet, arbitrum, optimism, base, etc.
-mode: test                 # test or live
+network: sepolia  # goerli, sepolia, mainnet, arbitrum, optimism, base, etc.
+mode: test        # test or live
 
 # --- Wallets (public addresses only; secrets in .env) ---
 wallet_address: "0xA061e51F27F49EeD5F6F1Afed049206764Be7A9c"
@@ -8,55 +8,55 @@ uniswap_wallet_address: "0x67Da2453139cA6D3D6989AB3BC3fd0583E9F7B3d"
 
 # --- RPC Endpoints (HTTP) ---
 rpc_urls:
-  mainnet: "https://mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  sepolia: "https://sepolia.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  goerli: "https://goerli.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  arbitrum_mainnet: "https://arbitrum-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  arbitrum_sepolia: "https://arbitrum-sepolia.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  optimism_mainnet: "https://optimism-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  optimism_sepolia: "https://optimism-sepolia.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  base_mainnet: "https://base-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  base_sepolia: "https://base-sepolia.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  polygon_mainnet: "https://polygon-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  blast_mainnet: "https://blast-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  blast_sepolia: "https://blast-sepolia.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  palm_mainnet: "https://palm-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  palm_testnet: "https://palm-testnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  avalanche_mainnet: "https://avalanche-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  starknet_mainnet: "https://starknet-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  starknet_sepolia: "https://starknet-sepolia.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  celo_mainnet: "https://celo-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  zksync_mainnet: "https://zksync-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  zksync_sepolia: "https://zksync-sepolia.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  bsc_mainnet: "https://bsc-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  bsc_testnet: "https://bsc-testnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  mantle_mainnet: "https://mantle-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  mantle_sepolia: "https://mantle-sepolia.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  opbnb_mainnet: "https://opbnb-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  opbnb_testnet: "https://opbnb-testnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  scroll_mainnet: "https://scroll-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  scroll_sepolia: "https://scroll-sepolia.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  swellchain_mainnet: "https://swellchain-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  swellchain_testnet: "https://swellchain-testnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  unichain_mainnet: "https://unichain-mainnet.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
-  unichain_sepolia: "https://unichain-sepolia.infura.io/v3/cf60a211730449a09b2b9ece9b496c21"
+  mainnet: "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  sepolia: "https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  goerli: "https://goerli.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  arbitrum_mainnet: "https://arbitrum-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  arbitrum_sepolia: "https://arbitrum-sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  optimism_mainnet: "https://optimism-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  optimism_sepolia: "https://optimism-sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  base_mainnet: "https://base-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  base_sepolia: "https://base-sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  polygon_mainnet: "https://polygon-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  blast_mainnet: "https://blast-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  blast_sepolia: "https://blast-sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  palm_mainnet: "https://palm-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  palm_testnet: "https://palm-testnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  avalanche_mainnet: "https://avalanche-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  starknet_mainnet: "https://starknet-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  starknet_sepolia: "https://starknet-sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  celo_mainnet: "https://celo-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  zksync_mainnet: "https://zksync-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  zksync_sepolia: "https://zksync-sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  bsc_mainnet: "https://bsc-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  bsc_testnet: "https://bsc-testnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  mantle_mainnet: "https://mantle-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  mantle_sepolia: "https://mantle-sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  opbnb_mainnet: "https://opbnb-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  opbnb_testnet: "https://opbnb-testnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  scroll_mainnet: "https://scroll-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  scroll_sepolia: "https://scroll-sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  swellchain_mainnet: "https://swellchain-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  swellchain_testnet: "https://swellchain-testnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  unichain_mainnet: "https://unichain-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  unichain_sepolia: "https://unichain-sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"
   # Extra example: Alchemy Sepolia (alternative provider)
   sepolia_alchemy: "https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY"
 
 # --- WebSocket Endpoints ---
 wss_urls:
-  mainnet: "wss://mainnet.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
-  sepolia: "wss://sepolia.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
-  arbitrum_mainnet: "wss://arbitrum-mainnet.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
-  arbitrum_sepolia: "wss://arbitrum-sepolia.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
-  optimism_mainnet: "wss://optimism-mainnet.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
-  optimism_sepolia: "wss://optimism-sepolia.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
-  linea_mainnet: "wss://linea-mainnet.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
-  linea_sepolia: "wss://linea-sepolia.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
-  polygon_mainnet: "wss://polygon-mainnet.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
-  base_mainnet: "wss://base-mainnet.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
-  base_sepolia: "wss://base-sepolia.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
-  blast_mainnet: "wss://blast-mainnet.infura.io/ws/v3/cf60a211730449a09b2b9ece9b496c21"
+  mainnet: "wss://mainnet.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
+  sepolia: "wss://sepolia.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
+  arbitrum_mainnet: "wss://arbitrum-mainnet.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
+  arbitrum_sepolia: "wss://arbitrum-sepolia.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
+  optimism_mainnet: "wss://optimism-mainnet.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
+  optimism_sepolia: "wss://optimism-sepolia.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
+  linea_mainnet: "wss://linea-mainnet.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
+  linea_sepolia: "wss://linea-sepolia.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
+  polygon_mainnet: "wss://polygon-mainnet.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
+  base_mainnet: "wss://base-mainnet.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
+  base_sepolia: "wss://base-sepolia.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
+  blast_mainnet: "wss://blast-mainnet.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
   # Note: Some chains (e.g., blast_sepolia) may not have websocket endpoints
 
 # --- Contract Addresses (examples, add per chain as needed) ---
@@ -71,12 +71,12 @@ contracts:
 
 # --- Trading/Execution Settings ---
 gas_limit: 3500000
-slippage_bps: 50            # 0.5% slippage
+slippage_bps: 50  # 0.5% slippage
 trade_amount_usd: 100
 
 # --- Notification Settings ---
 notifier:
-  telegram_token: ""        # Set in .env
+  telegram_token: ""      # Set in .env
   telegram_chat_id: ""
   ops_alert_webhook: ""
   email: ""
@@ -85,7 +85,7 @@ notifier:
 risk:
   max_drawdown_pct: 5
   max_loss_usd: 200
-capital_lock_enabled: true
+  capital_lock_enabled: true
 
 # --- Kill Switch ---
 kill_switch_enabled: true
@@ -93,8 +93,3 @@ kill_switch_enabled: true
 # --- Strategy Parameters ---
 target_profit: 0.02
 starting_capital: 2000.0
-
-
-
-2/2
-
