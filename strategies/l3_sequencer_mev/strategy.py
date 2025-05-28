@@ -29,6 +29,7 @@ from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
 from core.tx_engine.nonce_manager import NonceManager
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+from agents.capital_lock import CapitalLock
 
 LOG_FILE = Path(os.getenv("L3_SEQ_LOG", "logs/l3_sequencer_mev.json"))
 LOG = StructuredLogger("l3_sequencer_mev", log_file=str(LOG_FILE))
@@ -64,6 +65,7 @@ class L3SequencerMEV:
         threshold: float | None = None,
         time_band_sec: int = 12,
         reorg_window: int = 1,
+        capital_lock: CapitalLock | None = None,
     ) -> None:
         self.feed = UniswapV3Feed()
         self.pools = pools
@@ -78,6 +80,8 @@ class L3SequencerMEV:
         self.tx_builder = TransactionBuilder(w3, self.nonce_manager)
         self.executor = os.getenv("L3_SEQ_EXECUTOR", "0x0000000000000000000000000000000000000000")
         self.sample_tx = HexBytes(b"\x01")
+
+        self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
 
     # ------------------------------------------------------------------
     def snapshot(self, path: str) -> None:
@@ -207,6 +211,19 @@ class L3SequencerMEV:
         prices = {k: d.price for k, d in price_data.items()}
         opp = self._detect_opportunity(prices, block, timestamp)
         if opp:
+            if not self.capital_lock.trade_allowed():
+                msg = "capital lock: trade not allowed"
+                LOG.log(
+                    "capital_lock",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="high",
+                    error=msg,
+                )
+                log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
+                self.last_block = block
+                return None
+
             metrics.record_opportunity(float(opp["spread"]), float(opp["profit"]), 0.0)
             pre = os.getenv("L3_SEQ_STATE_PRE", "state/l3_seq_pre.json")
             post = os.getenv("L3_SEQ_STATE_POST", "state/l3_seq_post.json")
@@ -219,6 +236,7 @@ class L3SequencerMEV:
             tx_id = self._bundle_and_send(str(opp["action"]))
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
+            self.capital_lock.record_trade(float(opp["profit"]))
             self.last_block = block
             for label, data in price_data.items():
                 self._record(

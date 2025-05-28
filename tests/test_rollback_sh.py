@@ -3,6 +3,7 @@ import subprocess
 import tarfile
 import json
 import shutil
+import io
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "rollback.sh"
@@ -109,4 +110,52 @@ def test_restore_encrypted(tmp_path):
     assert (tmp_path / "logs" / "log.txt").exists()
     entries = [json.loads(line) for line in (tmp_path / "rb.log").read_text().splitlines()]
     assert entries[-1]["event"] == "restore"
+
+
+def test_malicious_archive_rejected(tmp_path):
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    bad = tmp_path / "bad"
+    bad.mkdir()
+    (bad / "x.txt").write_text("x")
+    archive = export_dir / "bad.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(bad / "x.txt", arcname="../../x.txt")
+    env = os.environ.copy()
+    env.update({
+        "ERROR_LOG_FILE": str(tmp_path / "err.log"),
+        "ROLLBACK_LOG_FILE": str(tmp_path / "rb.log"),
+        "PWD": str(tmp_path),
+    })
+    os.chdir(tmp_path)
+    with pytest.raises(subprocess.CalledProcessError):
+        run_script([f"--archive={archive}"], env)
+    entries = [json.loads(line) for line in (tmp_path / "rb.log").read_text().splitlines()]
+    err_lines = (tmp_path / "err.log").read_text().splitlines()
+    assert "unsafe_path" in err_lines[-1]
+    assert entries[-1]["event"] == "failed"
+
+
+def test_invalid_chars_rejected(tmp_path):
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    archive = export_dir / "invalid.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        data = b"x"
+        info = tarfile.TarInfo("logs/bad:evil.txt")
+        info.size = len(data)
+        tar.addfile(info, io.BytesIO(data))
+    env = os.environ.copy()
+    env.update({
+        "ERROR_LOG_FILE": str(tmp_path / "err.log"),
+        "ROLLBACK_LOG_FILE": str(tmp_path / "rb.log"),
+        "PWD": str(tmp_path),
+    })
+    os.chdir(tmp_path)
+    with pytest.raises(subprocess.CalledProcessError):
+        run_script([f"--archive={archive}"], env)
+    entries = [json.loads(line) for line in (tmp_path / "rb.log").read_text().splitlines()]
+    err_lines = (tmp_path / "err.log").read_text().splitlines()
+    assert "unsafe_path" in err_lines[-1]
+    assert entries[-1]["event"] == "failed"
 

@@ -94,8 +94,33 @@ if [[ "$ARCHIVE" == *.gpg ]]; then
     fi
 fi
 
-# Extract archive relative to repo root
- tar -xzf "$ARCHIVE"
+# Extract archive in a temporary directory to avoid path traversal
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+# Verify archive entries for unsafe paths or characters
+while IFS= read -r entry; do
+    if [[ "$entry" == /* || "$entry" == *"../"* || "$entry" =~ [^a-zA-Z0-9._/-] ]]; then
+        mkdir -p "$(dirname "$LOG_FILE")"
+        echo "$TIMESTAMP rollback_failed unsafe_path $entry" >> "$LOG_FILE"
+        log_event "failed" "$ARCHIVE"
+        echo "Unsafe entry $entry" >&2
+        exit 1
+    fi
+done < <(tar -tzf "$ARCHIVE")
+
+# Extract once validated
+tar -xzf "$ARCHIVE" -C "$TMP_DIR"
+
+# Atomically move expected directories back into repo root
+for d in logs state active keys; do
+    if [[ -d "$TMP_DIR/$d" ]]; then
+        rm -rf "$d.tmp"
+        mv "$TMP_DIR/$d" "$d.tmp"
+        rm -rf "$d"
+        mv "$d.tmp" "$d"
+    fi
+done
 
 log_event "restore" "$ARCHIVE"
 mkdir -p "$(dirname "$LOG_FILE")"

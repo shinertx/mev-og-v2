@@ -7,6 +7,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.l3_app_rollup_mev import L3AppRollupMEV, PoolConfig, BridgeConfig
+from agents.capital_lock import CapitalLock
 from core.oracles.uniswap_feed import PriceData
 from core.oracles.intent_feed import IntentData
 
@@ -89,7 +90,7 @@ def setup_strat(threshold=0.01):
         "zksync": PoolConfig("0xpool", "zksync"),
     }
     bridges = {("zksync", "arbitrum"): BridgeConfig(0.0001, latency_sec=10)}
-    strat = L3AppRollupMEV(pools, bridges, threshold=threshold)
+    strat = L3AppRollupMEV(pools, bridges, threshold=threshold, capital_lock=CapitalLock(1000, 1e9, 0))
     return strat
 
 
