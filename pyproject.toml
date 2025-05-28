@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "mev-og-v2"
+version = "0.1.0"
+description = "MEV-OG trading infrastructure and strategies"
+authors = ["MEV-OG"]
+readme = "README.md"
+packages = [
+    { include = "core" },
+    { include = "agents" },
+    { include = "ai" },
+    { include = "strategies" },
+    { include = "infra" },
+    { include = "scripts" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+web3 = "6.20.4"
+hexbytes = "0.3.1"
+requests = "2.32.3"
+flask = "3.1.1"
+flashbots = "2.0.0"
+pyyaml = "6.0.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "8.3.5"
+flake8 = "7.2.0"
+mypy = "1.15.0"
+
+[tool.poetry.scripts]
+lint = "scripts.cli:lint"
+typecheck = "scripts.cli:type_check"
+test = "scripts.cli:tests"
+sim = "scripts.cli:sim_harness"
+mutate = "scripts.cli:mutate"
+audit = "scripts.cli:audit"
+export-state = "scripts.cli:export_state"
+
+[build-system]
+requires = ["poetry-core>=1.4"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+config_file = "mypy.ini"
+strict = true

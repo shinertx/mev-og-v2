@@ -75,7 +75,8 @@ Follow this sequence to operate MEV-OG locally.
 1. **Install dependencies**
    ```bash
    poetry install
-   docker compose up
+   docker compose build
+   docker compose up -d
    ```
 2. **Configure `.env`** – copy `.env.example` then set
    `FOUNDER_APPROVED`, `KILL_SWITCH`, `OPENAI_API_KEY` and `METRICS_PORT`.
@@ -84,28 +85,35 @@ Follow this sequence to operate MEV-OG locally.
    cp config.example.yaml config.yaml
    # edit config.yaml to match your environment
    ```
-4. **Run fork simulations for each strategy**
+4. **Provision dev VM (optional)**
+   ```bash
+   cd infra/terraform
+   terraform init
+   terraform apply -var="ami=<ami-id>" -var="key_name=<ssh-key>"
+   cd ../..
+   ```
+5. **Run fork simulations for each strategy**
    ```bash
    bash scripts/simulate_fork.sh --target=strategies/<module>
    ```
-5. **Run tests**
+6. **Run tests**
    ```bash
    pytest -v
    foundry test
    ```
-6. **Execute the mutation workflow**
+7. **Execute the mutation workflow**
    ```bash
    python ai/mutator/main.py
    ```
-7. **Promote when checks pass**
+8. **Promote when checks pass**
    ```bash
    python ai/promote.py
    ```
-8. **Export state**
+9. **Export state**
    ```bash
    bash scripts/export_state.sh
    ```
-9. **Roll back if needed**
+10. **Roll back if needed**
    ```bash
    bash scripts/rollback.sh
    ```
@@ -377,6 +385,14 @@ main
 
 GitHub Actions workflow `main.yml` runs linting, typing, tests, fork simulations and DRP checks on every push and pull request. Each batch is tagged `canary-<sha>-<date>` and must pass the full suite. Promotion to production requires `FOUNDER_APPROVED=1`.
 Type checking uses `mypy --strict` and CI fails on any reported type error.
+
+Local checks can be invoked via Poetry:
+```bash
+poetry run lint
+poetry run typecheck
+poetry run test
+poetry run sim     # uses $SIM_TARGET if set
+```
 
 ## DRP Recovery
 
