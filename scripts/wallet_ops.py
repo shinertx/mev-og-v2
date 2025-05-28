@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -32,7 +31,6 @@ def _founder_confirm() -> bool:
 
 
 # ---------------------------------------------------------------------------
-from pathlib import Path
 
 
 def _export_state(dry_run: bool) -> None:

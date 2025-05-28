@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Meta-orchestrator running multiple strategy variants."""
+
+from __future__ import annotations
 
 import random
 from typing import Any, Dict, Type
@@ -39,7 +39,7 @@ class MetaOrchestrator:
             except Exception:
                 continue
         scores = {aid: getattr(agent, "evaluate_pnl", lambda: 0.0)() for aid, agent in self.active_agents.items()}
-        keep = sorted(scores, key=scores.get, reverse=True)[: max(1, self.num_agents // 2)]
+        keep = sorted(scores, key=lambda aid: scores[aid], reverse=True)[: max(1, self.num_agents // 2)]
         pruned = [aid for aid in list(self.active_agents) if aid not in keep]
         for aid in pruned:
             log_mutation("pruned_agent", agent_id=aid, pnl=scores.get(aid, 0.0), reason="low_performance")

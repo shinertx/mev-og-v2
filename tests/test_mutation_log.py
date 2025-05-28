@@ -5,7 +5,6 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from ai.mutation_manager import MutationManager
-from ai import mutation_log
 
 
 class Dummy:
@@ -22,7 +21,6 @@ def test_mutation_logging(tmp_path, monkeypatch):
     import importlib
     import ai.mutation_log
     importlib.reload(ai.mutation_log)
-    from ai.mutation_log import log_mutation  # noqa: E402
     mm = MutationManager({"threshold": 0.1}, num_agents=2)
     mm.spawn_agents(Dummy)
     mm.score_and_prune()

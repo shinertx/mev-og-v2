@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Dict, Iterator
+from typing import Dict, List, cast
+from hexbytes import HexBytes
 
 from core.logger import StructuredLogger
 
@@ -20,23 +21,24 @@ class MempoolMonitor:
     def __init__(self, web3: Web3 | None) -> None:
         self.web3 = web3
 
-    def listen_bridge_txs(self, limit: int = 10) -> Iterator[Dict[str, object]]:
-        """Yield pending bridge transactions up to ``limit``."""
+    def listen_bridge_txs(self, limit: int = 10) -> List[Dict[str, object]]:
+        """Return a list of pending bridge transactions up to ``limit``."""
         if self.web3 is None:
-            return iter([])
+            return []
+        results: List[Dict[str, object]] = []
         try:
             filt = self.web3.eth.filter("pending")
             count = 0
             while count < limit:
                 hashes = filt.get_new_entries()
                 for h in hashes:
-                    tx = self.web3.eth.get_transaction(h)
+                    tx = self.web3.eth.get_transaction(HexBytes(cast(bytes, h)))
                     if tx and tx.get("to"):
-                        yield dict(tx)
+                        results.append(dict(tx))
                         count += 1
                         if count >= limit:
                             break
         except Exception as exc:  # pragma: no cover - network errors
             LOG.log("mempool_fail", risk_level="high", error=str(exc))
-            return iter([])
-        return iter([])
+            return []
+        return results
