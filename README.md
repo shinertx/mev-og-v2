@@ -164,7 +164,7 @@ the values used in tests and the simulation harness:
 | `FORK_BLOCK` | `19741234` | Fork block for sim harness |
 | `FOUNDER_APPROVED` | `0` | 1 allows promote to production |
 | `INTENT_FEED_URL` | `http://localhost:9000` | L3 intent feed |
-| `KILL_SWITCH_FLAG_FILE` | `/flags/kill_switch.txt` | Kill switch trigger file |
+| `KILL_SWITCH_FLAG_FILE` | `./flags/kill_switch.txt` | Kill switch trigger file |
 | `KILL_SWITCH_LOG_FILE` | `/logs/kill_log.json` | Kill switch audit log |
 | `L3_APP_EXECUTOR` | `0x000...` | Executor for l3_app_rollup_mev |
 | `L3_APP_ROLLUP_LOG` | `logs/l3_app_rollup_mev.json` | l3_app_rollup_mev log |
@@ -383,7 +383,7 @@ Run `scripts/rollback.sh` to restore logs, keys and active strategies from the l
 ## kill_switch.sh Usage
 
 `scripts/kill_switch.sh` manually toggles the system kill switch. By default it
-creates a flag file at `/flags/kill_switch.txt` and writes audit entries to
+creates a flag file at `./flags/kill_switch.txt` and writes audit entries to
 `logs/kill_log.json`.
 
 ```bash

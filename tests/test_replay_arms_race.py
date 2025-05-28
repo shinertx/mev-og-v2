@@ -18,3 +18,18 @@ def test_replay(tmp_path):
     res = subprocess.run([sys.executable, str(SCRIPT), "--log", str(log)], capture_output=True, text=True, env=env, check=True)
     out = json.loads(res.stdout.strip())
     assert out["wins"] == 1
+
+
+def test_missing_log_file(tmp_path):
+    log = tmp_path / "missing.json"
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    res = subprocess.run([
+        sys.executable,
+        str(SCRIPT),
+        "--log",
+        str(log),
+    ], capture_output=True, text=True, env=env, check=True)
+    out = json.loads(res.stdout.strip())
+    assert out == {"wins": 0, "losses": 0}
+    assert log.exists()
