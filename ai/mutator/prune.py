@@ -18,6 +18,7 @@ import os
 from typing import Any, Dict, List
 
 from core.logger import StructuredLogger
+from ai.mutation_log import log_mutation
 
 LOGGER = StructuredLogger("strategy_prune")
 
@@ -49,5 +50,11 @@ def prune_strategies(metrics: Dict[str, Dict[str, Any]], audit_feedback: Dict[st
                 risk_level="high",
                 error=None,
                 info={"pnl": pnl, "risk": risk, "chaos_fail": chaos_fail, "audit_fail": audit_fail},
+            )
+            log_mutation(
+                "prune_strategy",
+                strategy_id=sid,
+                before={"pnl": pnl, "risk": risk},
+                reason="decayed_alpha" if pnl <= 0 else "high_risk",
             )
     return flagged

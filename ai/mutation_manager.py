@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Type
 
 from core.logger import StructuredLogger
+from .mutation_log import log_mutation
 
 LOG = StructuredLogger("mutation_manager")
 
@@ -30,6 +31,7 @@ class MutationManager:
             agent = agent_class(**mutated)
             self.agents.append(agent)
             LOG.log("spawn_agent", agent_id=i, params=mutated)
+            log_mutation("spawn_agent", agent_id=i, params=mutated)
 
     # --------------------------------------------------------------
     def score_and_prune(self) -> None:
@@ -37,4 +39,7 @@ class MutationManager:
         self.scores = {i: getattr(agent, "evaluate_pnl", lambda: 0.0)() for i, agent in enumerate(self.agents)}
         keep = sorted(self.scores, key=lambda k: self.scores[k], reverse=True)[: max(1, self.num_agents // 2)]
         LOG.log("prune_agents", kept=keep, scores=self.scores)
+        pruned = [i for i in range(len(self.scores)) if i not in keep]
+        for pid in pruned:
+            log_mutation("prune_agent", agent_id=pid, pnl=self.scores.get(pid, 0.0), reason="low_score")
         self.agents = [self.agents[i] for i in keep]
