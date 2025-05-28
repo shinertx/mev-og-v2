@@ -6,8 +6,14 @@ This quick-start guide summarizes how to set up and run the project. For detaile
 
 ```bash
 poetry install          # installs Python packages
+pre-commit install      # set up git hooks
 docker compose build    # build service images
 docker compose up -d    # launches local infrastructure
+```
+You can use the Makefile shortcuts as well:
+```bash
+make build
+make up
 ```
 
 Copy the sample environment and configuration:
@@ -34,12 +40,16 @@ Fork simulations and tests must pass before promotion:
 bash scripts/simulate_fork.sh --target=strategies/<module>
 pytest -v
 foundry test
+# or use
+make simulate
+make test
 ```
 
 Run a mutation cycle if simulations succeed:
 
 ```bash
 python ai/mutator/main.py
+make mutate
 ```
 
 ## 3. Promotion
@@ -50,6 +60,7 @@ Set `FOUNDER_APPROVED=1` to allow promotion and then execute:
 python ai/promote.py            # single promotion
 # or
 python scripts/batch_ops.py promote <strategy> --source-dir staging --dest-dir active
+make promote
 ```
 
 ## 4. DRP Export and Rollback
@@ -58,6 +69,7 @@ Create a Disaster Recovery Package (DRP) after successful tests:
 
 ```bash
 bash scripts/export_state.sh
+make export
 ```
 
 Set `DRP_ENC_KEY` to encrypt the archive with `openssl` or `gpg`. The same
@@ -67,6 +79,7 @@ Restore from an archive if needed:
 
 ```bash
 bash scripts/rollback.sh --archive=<exported-archive>
+make down
 ```
 
 ## 5. Kill Switch and Metrics
