@@ -75,8 +75,14 @@ Follow this sequence to operate MEV-OG locally.
 1. **Install dependencies**
    ```bash
    poetry install
+   pre-commit install
    docker compose build
    docker compose up -d
+   ```
+   Makefile shortcuts are available:
+   ```bash
+   make build
+   make up
    ```
 2. **Configure `.env`** – copy `.env.example` then set
    `FOUNDER_APPROVED`, `KILL_SWITCH`, `OPENAI_API_KEY` and `METRICS_PORT`.
@@ -95,27 +101,39 @@ Follow this sequence to operate MEV-OG locally.
 5. **Run fork simulations for each strategy**
    ```bash
    bash scripts/simulate_fork.sh --target=strategies/<module>
+   # or
+   make simulate
    ```
 6. **Run tests**
    ```bash
    pytest -v
    foundry test
+   # or simply
+   make test
    ```
 7. **Execute the mutation workflow**
    ```bash
    python ai/mutator/main.py
+   # or
+   make mutate
    ```
 8. **Promote when checks pass**
    ```bash
    python ai/promote.py
+   # or
+   make promote
    ```
 9. **Export state**
    ```bash
    bash scripts/export_state.sh
+   # or
+   make export
    ```
 10. **Roll back if needed**
    ```bash
    bash scripts/rollback.sh
+   # stop containers with
+   make down
    ```
 
 Start the metrics endpoint with:

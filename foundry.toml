@@ -1,0 +1,7 @@
+[profile.default]
+src = "contracts"
+out = "contracts/out"
+libs = ["contracts/lib"]
+test = "contracts/test"
+fs_permissions = [{ access = "read", path = "./" }]
+
