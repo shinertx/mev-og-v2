@@ -88,7 +88,6 @@ def test_export_encrypted(tmp_path):
     )
     openssl_path.chmod(0o755)
 
-
     env = os.environ.copy()
     env.update({
         "EXPORT_DIR": str(export_dir),
@@ -106,3 +105,4 @@ def test_export_encrypted(tmp_path):
     entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "export"
 
+    
