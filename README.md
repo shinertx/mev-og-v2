@@ -6,7 +6,9 @@ MEV-OG is an AI-native, adversarial crypto trading system built to compound $5K 
 
 > Fully autonomous. AI-CTO operated. Founder-controlled capital gates only.
 
----
+> NOTE: All operational law, workflow, and validation in this file derive from PROJECT_BIBLE.md.  
+> Any contradiction: PROJECT_BIBLE.md is the source of truth.
+
 
 ## Table of Contents
 

@@ -1,6 +1,9 @@
 # AGENTS.md — Codex & LLM Instructions for MEV-OG
 (Synced to PROJECT_BIBLE.md v3.1. All changes must be reconciled before PR or deploy.)
 
+> NOTE: All operational law, workflow, and validation in this file derive from PROJECT_BIBLE.md.  
+> Any contradiction: PROJECT_BIBLE.md is the source of truth.
+
 ## Objective
 
 Codex/LLM/AI agents are responsible for code mutation, testing, chaos/DRP, red teaming, audit, and automated disaster recovery.  
