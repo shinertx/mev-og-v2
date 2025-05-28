@@ -1,0 +1,66 @@
+[[package]]
+name = "web3"
+version = "6.20.4"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "hexbytes"
+version = "0.3.1"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "requests"
+version = "2.32.3"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "flask"
+version = "3.1.1"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "flashbots"
+version = "2.0.0"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "pyyaml"
+version = "6.0.1"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "pytest"
+version = "8.3.5"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "flake8"
+version = "7.2.0"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "mypy"
+version = "1.15.0"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[metadata]
+lock-version = "2.0"
+python-versions = "^3.11"

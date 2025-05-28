@@ -6,6 +6,7 @@ This quick-start guide summarizes how to set up and run the project. For detaile
 
 ```bash
 poetry install          # installs Python packages
+docker compose build    # build service images
 docker compose up -d    # launches local infrastructure
 ```
 
@@ -14,6 +15,15 @@ Copy the sample environment and configuration:
 ```bash
 cp .env.example .env
 cp config.example.yaml config.yaml
+```
+
+Optionally provision a dev instance via Terraform:
+
+```bash
+cd infra/terraform
+terraform init
+terraform apply -var="ami=<ami-id>" -var="key_name=<ssh-key>"
+cd ../..
 ```
 
 ## 2. Run Tests and Simulations
