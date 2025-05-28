@@ -11,7 +11,7 @@ ENV_VAR = "KILL_SWITCH"
 def _flag_file() -> Path:
     """Return path to the kill switch flag file."""
 
-    return Path(os.getenv("KILL_SWITCH_FLAG_FILE", "/flags/kill_switch.txt"))
+    return Path(os.getenv("KILL_SWITCH_FLAG_FILE", "./flags/kill_switch.txt"))
 
 
 def _log_file() -> Path:

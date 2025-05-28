@@ -12,7 +12,12 @@ from ai.mutation_log import log_mutation
 
 
 def load_txs(path: str) -> List[Dict[str, Any]]:
-    data = json.loads(Path(path).read_text())
+    file = Path(path)
+    if not file.exists():
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text("[]")
+        return []
+    data = json.loads(file.read_text())
     return data if isinstance(data, list) else []
 
 

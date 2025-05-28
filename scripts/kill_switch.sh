@@ -27,7 +27,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 ENV_FILE="${ENV_FILE:-.env}"
-FLAG_FILE="${KILL_SWITCH_FLAG_FILE:-/flags/kill_switch.txt}"
+FLAG_FILE="${KILL_SWITCH_FLAG_FILE:-./flags/kill_switch.txt}"
 LOG_FILE="${KILL_SWITCH_LOG_FILE:-/logs/kill_log.json}"
 USER_NAME="$(whoami 2>/dev/null || echo unknown)"
 TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
