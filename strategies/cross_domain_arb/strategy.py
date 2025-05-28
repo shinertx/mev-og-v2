@@ -44,7 +44,7 @@ from core.node_selector import NodeSelector
 from ai.intent_classifier import classify_intent
 from ai.intent_ghost import ghost_intent
 from adapters.flashloan_adapter import FlashloanAdapter
-from adapters.pool_scanner import PoolScanner, PoolInfo
+from adapters.pool_scanner import PoolScanner
 from adapters.social_alpha import scrape_social_keywords
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from ai.mutation_log import log_mutation

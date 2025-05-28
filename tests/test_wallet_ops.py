@@ -45,9 +45,9 @@ def test_fund_dry_run(tmp_path):
         env,
     )
     assert result.returncode == 0
-    logs = [json.loads(l) for l in Path(env["WALLET_OPS_LOG"]).read_text().splitlines()]
+    logs = [json.loads(line) for line in Path(env["WALLET_OPS_LOG"]).read_text().splitlines()]
     assert logs[-1]["event"] == "fund"
-    export_entries = [json.loads(l) for l in Path(env["EXPORT_LOG_FILE"]).read_text().splitlines()]
+    export_entries = [json.loads(line) for line in Path(env["EXPORT_LOG_FILE"]).read_text().splitlines()]
     assert len(export_entries) == 2
 
 
@@ -77,7 +77,7 @@ def test_no_approval(tmp_path):
         input_data="n\n",
     )
     assert result.returncode != 0
-    logs = [json.loads(l) for l in Path(env["WALLET_OPS_LOG"]).read_text().splitlines()]
+    logs = [json.loads(line) for line in Path(env["WALLET_OPS_LOG"]).read_text().splitlines()]
     assert logs[-1]["event"] == "founder_confirm"
     assert logs[-1]["approved"] is False
 
@@ -108,7 +108,7 @@ def test_tx_fail(tmp_path):
         env,
     )
     assert result.returncode != 0
-    logs = [json.loads(l) for l in Path(env["WALLET_OPS_LOG"]).read_text().splitlines()]
+    logs = [json.loads(line) for line in Path(env["WALLET_OPS_LOG"]).read_text().splitlines()]
     assert logs[-1]["event"] == "fund_fail"
     assert logs[-1]["error"]
 
@@ -137,7 +137,7 @@ def test_insufficient_funds(tmp_path):
         env,
     )
     assert result.returncode != 0
-    logs = [json.loads(l) for l in Path(env["WALLET_OPS_LOG"]).read_text().splitlines()]
+    logs = [json.loads(line) for line in Path(env["WALLET_OPS_LOG"]).read_text().splitlines()]
     assert logs[-1]["event"] == "withdraw-all_fail"
     assert "insufficient" in logs[-1]["error"]
 

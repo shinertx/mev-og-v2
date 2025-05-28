@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from statistics import mean
-from typing import Dict, List
+from typing import Dict, List, TypedDict
 
 from core.logger import StructuredLogger
 
@@ -15,14 +15,19 @@ class NodeSelector:
 
     def __init__(self, nodes: Dict[str, str]) -> None:
         self.nodes = nodes
-        self.stats: Dict[str, Dict[str, List[float] | int]] = {
+        class _Stats(TypedDict):
+            latencies: List[float]
+            success: int
+            fail: int
+
+        self.stats: Dict[str, _Stats] = {
             n: {"latencies": [], "success": 0, "fail": 0} for n in nodes
         }
 
     def record(self, node: str, success: bool, latency: float) -> None:
         if node not in self.stats:
             return
-        self.stats[node]["latencies"].append(latency)  # type: ignore[arg-type]
+        self.stats[node]["latencies"].append(latency)
         if success:
             self.stats[node]["success"] = int(self.stats[node]["success"]) + 1
         else:

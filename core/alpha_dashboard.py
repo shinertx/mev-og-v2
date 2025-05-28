@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 """Lightweight Alpha/PnL dashboard using Flask.
 
 This server exposes a JSON endpoint with recent performance data
 for live strategies. It is intended for founder/ops monitoring and
 runs independently from the core orchestrator.
 """
+
+from __future__ import annotations
 
 import os
 from threading import Thread
@@ -15,7 +15,9 @@ try:
     from flask import Flask, jsonify  # type: ignore
 except Exception:  # pragma: no cover - optional dep
     Flask = None  # type: ignore
-    jsonify = lambda x: x  # type: ignore
+    def jsonify(data: Any) -> Any:  # type: ignore
+        """Fallback when Flask is unavailable."""
+        return data
 
 
 class AlphaDashboard:
