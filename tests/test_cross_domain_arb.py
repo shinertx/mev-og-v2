@@ -282,6 +282,8 @@ class DummyScanner:
         self.pools = pools
     def scan(self):
         return self.pools
+    def scan_l3(self):
+        return []
 
 
 def test_sandwich_execution(monkeypatch):
@@ -375,3 +377,63 @@ def test_alpha_decay(monkeypatch):
     strat._compute_profit = lambda *a, **k: -1
     result = strat.run_once()
     assert result is None
+
+
+def test_stealth_mode(monkeypatch):
+    pools = {"eth": PoolConfig("0xpool", "ethereum")}
+    strat = CrossDomainArb(
+        pools,
+        {},
+        threshold=0.0,
+        capital_lock=CapitalLock(1000, 1e9, 0),
+        edges_enabled={"stealth_mode": True},
+    )
+    strat.feed = DummyFeed({"ethereum": 100})
+    strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
+    strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
+    strat.tx_builder.send_transaction = lambda *a, **k: b"h"
+    strat._estimate_gas_cost = lambda: 1.0
+    result = strat.run_once()
+    assert result is None
+
+
+def test_social_alpha_auto_discover(monkeypatch):
+    pools = {"eth": PoolConfig("0xpool", "ethereum")}
+    strat = CrossDomainArb(
+        pools,
+        {},
+        threshold=0.0,
+        capital_lock=CapitalLock(1000, 1e9, 0),
+        edges_enabled={"social_alpha": True},
+    )
+    strat.feed = DummyFeed({"ethereum": 100})
+    strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
+    strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
+    strat.tx_builder.send_transaction = lambda *a, **k: b"h"
+    monkeypatch.setattr(
+        "strategies.cross_domain_arb.strategy.scrape_social_keywords",
+        lambda k: [{"domain": "arbitrum", "pool": "0x123"}],
+    )
+    strat.pool_scanner = DummyScanner([])
+    strat.run_once()
+    assert "0x123" in strat.pools
+
+
+def test_l3_pool_discovery(monkeypatch):
+    pools = {"eth": PoolConfig("0xpool", "ethereum")}
+    strat = CrossDomainArb(
+        pools,
+        {},
+        threshold=0.0,
+        capital_lock=CapitalLock(1000, 1e9, 0),
+    )
+    strat.feed = DummyFeed({"ethereum": 100})
+    strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
+    strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
+    strat.tx_builder.send_transaction = lambda *a, **k: b"h"
+    class SC(DummyScanner):
+        def scan_l3(self):
+            return [PoolInfo("0xl3", "l3_rollup")]
+    strat.pool_scanner = SC([])
+    strat.run_once()
+    assert "0xl3" in strat.pools
