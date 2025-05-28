@@ -15,6 +15,7 @@ from agents.capital_lock import CapitalLock
 from core.oracles.uniswap_feed import PriceData
 from core.oracles.intent_feed import IntentData
 from adapters.pool_scanner import PoolInfo
+from core.mempool_monitor import MempoolMonitor
 
 
 class DummyPool:
@@ -39,8 +40,10 @@ class DummyPool:
 
 
 class DummyEth:
-    def __init__(self, price):
+    def __init__(self, price, pending_tx=None):
         self.contract_obj = DummyPool(price)
+        self._pending_tx = pending_tx
+        self._filter = None
 
     def contract(self, address, abi):
         return self.contract_obj
@@ -54,6 +57,26 @@ class DummyEth:
     def estimate_gas(self, tx):
         return 21000
 
+    def filter(self, filter_type):
+        class DummyFilter:
+            def __init__(self, tx_hash):
+                self.tx_hash = tx_hash
+                self.calls = 0
+
+            def get_new_entries(self):
+                self.calls += 1
+                if self.tx_hash and self.calls == 1:
+                    return [self.tx_hash]
+                if not self.tx_hash and self.calls > 1:
+                    raise RuntimeError("stop")
+                return []
+
+        self._filter = DummyFilter(self._pending_tx)
+        return self._filter
+
+    def get_transaction(self, tx_hash):
+        return {"hash": tx_hash, "to": "0x1"}
+
     class account:
         @staticmethod
         def decode_transaction(tx):
@@ -61,14 +84,15 @@ class DummyEth:
 
 
 class DummyWeb3:
-    def __init__(self, price):
-        self.eth = DummyEth(price)
+    def __init__(self, price, pending_tx=None):
+        self.eth = DummyEth(price, pending_tx)
 
 
 class DummyFeed:
-    def __init__(self, prices):
+    def __init__(self, prices, pending=None):
         self.prices = prices
-        self.web3s = {d: DummyWeb3(p) for d, p in prices.items()}
+        pending = pending or {}
+        self.web3s = {d: DummyWeb3(p, pending.get(d)) for d, p in prices.items()}
 
     def fetch_price(self, pool, domain):
         if isinstance(self.prices[domain], Exception):
@@ -249,11 +273,6 @@ def test_drp_snapshots(tmp_path):
     assert Path(os.environ["CROSS_ARB_TX_PRE"]).exists()
     assert Path(os.environ["CROSS_ARB_TX_POST"]).exists()
 
-class DummyMempoolMonitor:
-    def __init__(self, txs):
-        self.txs = txs
-    def listen_bridge_txs(self, limit=10):
-        return iter(self.txs)
 
 class DummyIntentFeed:
     def __init__(self, intents):
@@ -289,14 +308,27 @@ class DummyScanner:
 def test_sandwich_execution(monkeypatch):
     pools = {"eth": PoolConfig("0xpool", "ethereum"), "arb": PoolConfig("0xpool", "arbitrum")}
     strat = CrossDomainArb(pools, {}, threshold=0.01, capital_lock=CapitalLock(1000, 1e9, 0))
-    strat.feed = DummyFeed({"ethereum": 100, "arbitrum": 102})
+    strat.feed = DummyFeed({"ethereum": 100, "arbitrum": 102}, pending={"ethereum": "0x1"})
     strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
     strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
+    strat.mempool_monitor = MempoolMonitor(strat.feed.web3s["ethereum"])
     calls = []
     strat.tx_builder.send_transaction = lambda *a, **k: calls.append(True) or b"h"
-    strat.mempool_monitor = DummyMempoolMonitor([{"hash": "0xbridge"}])
     strat.run_once()
     assert len(calls) >= 3  # sandwich + trade
+
+
+def test_no_pending_tx(monkeypatch):
+    pools = {"eth": PoolConfig("0xpool", "ethereum")}
+    strat = CrossDomainArb(pools, {}, threshold=0.0, capital_lock=CapitalLock(1000, 1e9, 0))
+    strat.feed = DummyFeed({"ethereum": 100}, pending={"ethereum": None})
+    strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
+    strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
+    strat.mempool_monitor = MempoolMonitor(strat.feed.web3s["ethereum"])
+    result = strat._check_l1_sandwich()
+    calls = strat.feed.web3s["ethereum"].eth._filter.calls
+    assert result is True
+    assert calls <= 2
 
 
 def test_intent_classification(monkeypatch):
@@ -356,13 +388,13 @@ def test_auto_discover(monkeypatch):
 def test_bridge_failure(monkeypatch):
     pools = {"eth": PoolConfig("0xpool", "ethereum"), "arb": PoolConfig("0xpool", "arbitrum")}
     strat = CrossDomainArb(pools, {}, threshold=0.01, capital_lock=CapitalLock(1000, 1e9, 0))
-    strat.feed = DummyFeed({"ethereum": 100, "arbitrum": 102})
+    strat.feed = DummyFeed({"ethereum": 100, "arbitrum": 102}, pending={"ethereum": "0x1"})
     strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
     strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
+    strat.mempool_monitor = MempoolMonitor(strat.feed.web3s["ethereum"])
     def fail(*a, **k):
         raise RuntimeError("tx fail")
     strat.tx_builder.send_transaction = fail
-    strat.mempool_monitor = DummyMempoolMonitor([{"hash": "0xbridge"}])
     result = strat.run_once()
     assert result is None
 
