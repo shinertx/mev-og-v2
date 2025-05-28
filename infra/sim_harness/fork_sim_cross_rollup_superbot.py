@@ -25,9 +25,9 @@ RPC_ARB = os.getenv("RPC_ARBITRUM_URL", "http://localhost:8547")
 RPC_OPT = os.getenv("RPC_OPTIMISM_URL", "http://localhost:8548")
 
 POOLS = {
-    "eth": PoolConfig(Web3.to_checksum_address(os.getenv("POOL_ETHEREUM", "0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8"), "ethereum"),
-    "arb": PoolConfig(Web3.to_checksum_address(os.getenv("POOL_ARBITRUM", "0xb3f8e4262c5bfcc0a304143cfb33c7a9a64e0fe0"), "arbitrum"),
-    "opt": PoolConfig(Web3.to_checksum_address(os.getenv("POOL_OPTIMISM", "0x85149247691df622eaf1a8bd0c4bd90d38a83a1f"), "optimism"),
+    "eth": PoolConfig(Web3.to_checksum_address(os.getenv("POOL_ETHEREUM", "0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8")), "ethereum"),
+    "arb": PoolConfig(Web3.to_checksum_address(os.getenv("POOL_ARBITRUM", "0xb3f8e4262c5bfcc0a304143cfb33c7a9a64e0fe0")), "arbitrum"),
+    "opt": PoolConfig(Web3.to_checksum_address(os.getenv("POOL_OPTIMISM", "0x85149247691df622eaf1a8bd0c4bd90d38a83a1f")), "optimism"),
 }
 
 BRIDGES = {
