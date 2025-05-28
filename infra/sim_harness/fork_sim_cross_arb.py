@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from strategies.cross_domain_arb.strategy import CrossDomainArb, PoolConfig
+from strategies.cross_domain_arb.strategy import CrossDomainArb, PoolConfig, BridgeConfig
 
 try:  # pragma: no cover
     from web3 import Web3
@@ -26,13 +26,15 @@ POOLS = {
     "opt": PoolConfig(os.getenv("POOL_OPTIMISM", "0x85149247691df622eaf1a8bd0c4bd90d38a83a1f"), "optimism"),
 }
 
+BRIDGE_COSTS = {}
+
 
 def main() -> None:  # pragma: no cover
     w3 = Web3(Web3.HTTPProvider(RPC_ETH))
     w3.middleware_onion.add(geth_poa_middleware)
     if w3.eth.block_number < FORK_BLOCK:
         raise SystemExit("RPC must be forked at or after block %s" % FORK_BLOCK)
-    strategy = CrossDomainArb(POOLS)
+    strategy = CrossDomainArb(POOLS, BRIDGE_COSTS)
     found = False
     for _ in range(10):
         result = strategy.run_once()

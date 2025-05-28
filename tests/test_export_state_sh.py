@@ -90,10 +90,6 @@ def test_export_encrypted(tmp_path):
 
 
     env = os.environ.copy()
-    env.update({
-        "EXPORT_DIR": str(export_dir),
-        "EXPORT_LOG_FILE": str(log_file),
-
     env.update(
         {
             "EXPORT_DIR": str(export_dir),

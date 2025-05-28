@@ -23,11 +23,8 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from statistics import mean
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple, TypedDict, List
 
 try:  # webhook optional
     import requests
@@ -36,10 +33,17 @@ except Exception:  # pragma: no cover - allow missing dependency
 
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager
-from core.logger import log_error
+from core.logger import StructuredLogger, log_error
+from core import metrics
 from agents.capital_lock import CapitalLock
 
 from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
+from core.oracles.intent_feed import IntentFeed, IntentData
+from core.mempool_monitor import MempoolMonitor
+from core.node_selector import NodeSelector
+from ai.intent_classifier import classify_intent
+from adapters.flashloan_adapter import FlashloanAdapter
+from adapters.pool_scanner import PoolScanner, PoolInfo
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 
 LOG_FILE = Path(os.getenv("CROSS_ARB_LOG", "logs/cross_domain_arb.json"))
@@ -48,45 +52,25 @@ logging.basicConfig(level=logging.INFO)
 
 STRATEGY_ID = "cross_domain_arb"
 
-# Metrics storage
-METRICS = {
-    "opportunities": 0,
-    "fails": 0,
-    "spreads": [],
-}
+LOG = StructuredLogger("cross_domain_arb", log_file=str(LOG_FILE))
 
 
-class _MetricsHandler(BaseHTTPRequestHandler):
-    """HTTP handler serving in-memory metrics."""
-    def do_GET(self) -> None:  # pragma: no cover - simple server
-        if self.path != "/metrics":
-            self.send_response(404)
-            self.end_headers()
-            return
-        avg_spread = mean(METRICS["spreads"]) if METRICS["spreads"] else 0.0
-        body = (
-            f"opportunities_total {METRICS['opportunities']}\n"
-            f"fails_total {METRICS['fails']}\n"
-            f"spread_average {avg_spread}\n"
-        ).encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+class BridgeConfig(TypedDict, total=False):
+    """Bridge cost assumptions between domains."""
+
+    cost: float
+    latency_sec: int
 
 
-def start_metrics_server(port: int = 8000) -> HTTPServer:
-    """Start background metrics server for Prometheus scraping."""
-    server = HTTPServer(("0.0.0.0", port), _MetricsHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    return server
+def start_metrics_server(port: int = 8000) -> metrics.MetricsServer:
+    """Backward compatible helper to start metrics server."""
+    srv = metrics.MetricsServer(port=port)
+    srv.start()
+    return srv
 
 
-def _log(entry: Dict[str, object]) -> None:
-    with LOG_FILE.open("a") as fh:
-        fh.write(json.dumps(entry) + "\n")
+def _log(event: str, **entry: object) -> None:
+    LOG.log(event, strategy_id=STRATEGY_ID, mutation_id=os.getenv("MUTATION_ID", "dev"), risk_level="low", **entry)
 
 
 def _send_alert(payload: Dict[str, object]) -> None:
@@ -96,6 +80,7 @@ def _send_alert(payload: Dict[str, object]) -> None:
         return
     try:  # pragma: no cover - network
         requests.post(url, json=payload, timeout=5)
+        metrics.record_alert()
     except Exception as exc:  # pragma: no cover - network
         logging.warning("webhook failed: %s", exc)
         log_error(STRATEGY_ID, f"webhook failed: {exc}", event="webhook_fail")
@@ -109,13 +94,23 @@ class PoolConfig:
 
 
 class CrossDomainArb:
-    """Detect price spreads across domains."""
+    """Detect price spreads across domains and execute cost-aware trades."""
 
     DEFAULT_THRESHOLD = 0.003
 
-    def __init__(self, pools: Dict[str, PoolConfig], threshold: float | None = None, *, capital_lock: CapitalLock | None = None) -> None:
+    def __init__(
+        self,
+        pools: Dict[str, PoolConfig],
+        bridge_costs: Dict[Tuple[str, str], BridgeConfig],
+        threshold: float | None = None,
+        *,
+        nodes: Optional[Dict[str, str]] = None,
+        edges_enabled: Optional[Dict[str, bool]] = None,
+        capital_lock: CapitalLock | None = None,
+    ) -> None:
         self.feed = UniswapV3Feed()
         self.pools = pools
+        self.bridge_costs = bridge_costs
         self.threshold = threshold if threshold is not None else self.DEFAULT_THRESHOLD
         self.last_prices: Dict[str, float] = {}
 
@@ -127,6 +122,141 @@ class CrossDomainArb:
         self.tx_builder = TransactionBuilder(w3, self.nonce_manager)
         self.executor = os.getenv("ARB_EXECUTOR_ADDR", "0x0000000000000000000000000000000000000000")
         self.sample_tx = HexBytes(b"\x01")
+
+        self.intent_feed = IntentFeed()
+        self.mempool_monitor = MempoolMonitor(w3)
+        self.node_selector = NodeSelector(nodes or {}) if nodes else None
+        self.flashloan = FlashloanAdapter(os.getenv("FLASHLOAN_API", "http://localhost:9001"))
+        self.pool_scanner = PoolScanner(os.getenv("POOL_SCANNER_API", "http://localhost:9002"))
+        self.edges_enabled = edges_enabled or {
+            "l1_sandwich": True,
+            "intent": True,
+            "flashloan": False,
+            "auto_discover": True,
+        }
+
+    # ------------------------------------------------------------------
+    def _estimate_gas_cost(self) -> float:
+        try:
+            gas_price = getattr(self.tx_builder.web3.eth, "gas_price", 0)
+            gas_estimate = self.tx_builder.web3.eth.estimate_gas({})
+            return float(gas_price * gas_estimate) / 1e18
+        except Exception:
+            return float(os.getenv("GAS_COST_OVERRIDE", "0"))
+
+    def _compute_profit(self, buy: str, sell: str, prices: Dict[str, float]) -> float:
+        price_buy = prices[buy]
+        price_sell = prices[sell]
+        spread = price_sell - price_buy
+        bridge_fee = self.bridge_costs.get((buy, sell), {}).get("cost", 0.0)
+        slippage_pct = float(os.getenv("SLIPPAGE_PCT", "0"))
+        slippage = price_buy * slippage_pct
+        gas_cost = self._estimate_gas_cost()
+        return spread - gas_cost - bridge_fee - slippage
+
+    # ------------------------------------------------------------------
+    def _auto_discover(self) -> None:
+        if not self.edges_enabled.get("auto_discover", True):
+            return
+        for info in self.pool_scanner.scan():
+            if info.pool not in self.pools:
+                self.pools[info.pool] = PoolConfig(info.pool, info.domain)
+                LOG.log(
+                    "new_pool",
+                    pool=info.pool,
+                    domain=info.domain,
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                )
+
+    # ------------------------------------------------------------------
+    def _check_l1_sandwich(self) -> bool:
+        if not self.edges_enabled.get("l1_sandwich", True):
+            return True
+        for tx in self.mempool_monitor.listen_bridge_txs(limit=1):
+            pre = os.getenv("CROSS_ARB_STATE_PRE", "state/cross_arb_pre.json")
+            post = os.getenv("CROSS_ARB_STATE_POST", "state/cross_arb_post.json")
+            tx_pre = os.getenv("CROSS_ARB_TX_PRE", "state/tx_pre.json")
+            tx_post = os.getenv("CROSS_ARB_TX_POST", "state/tx_post.json")
+            for p in (pre, post, tx_pre, tx_post):
+                Path(p).parent.mkdir(parents=True, exist_ok=True)
+            self.snapshot(pre)
+            self.tx_builder.snapshot(tx_pre)
+            try:
+                front = self.tx_builder.send_transaction(
+                    self.sample_tx,
+                    self.executor,
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                )
+                back = self.tx_builder.send_transaction(
+                    self.sample_tx,
+                    self.executor,
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                )
+            except Exception as exc:
+                log_error(STRATEGY_ID, f"sandwich tx fail: {exc}", event="sandwich_fail")
+                metrics.record_fail()
+                return False
+            self.tx_builder.snapshot(tx_post)
+            self.snapshot(post)
+            LOG.log(
+                "sandwich",
+                tx_id=str(front),
+                related=str(back),
+                bridge_tx=str(tx.get("hash")),
+                strategy_id=STRATEGY_ID,
+                mutation_id=os.getenv("MUTATION_ID", "dev"),
+                risk_level="low",
+            )
+            metrics.record_opportunity(0.0, 0.0, 0.0)
+            return True
+        return True
+    # ------------------------------------------------------------------
+    def _process_intents(self) -> None:
+        if not self.edges_enabled.get("intent", True):
+            return
+        for domain in self.pools:
+            try:
+                intents: List[IntentData] = self.intent_feed.fetch_intents(domain)
+            except Exception as exc:
+                log_error(STRATEGY_ID, f"intent fetch: {exc}", event="intent_fetch", domain=domain)
+                continue
+            for intent in intents:
+                dest = classify_intent(intent.__dict__)
+                LOG.log(
+                    "intent_route",
+                    intent_id=intent.intent_id,
+                    predicted=dest,
+                    domain=domain,
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                )
+
+    # ------------------------------------------------------------------
+    def _execute_flashloan(self, buy: str, sell: str) -> None:
+        if not self.edges_enabled.get("flashloan", False):
+            return
+        token = "ETH"
+        amount = float(os.getenv("FLASHLOAN_AMOUNT", "1"))
+        try:
+            res = self.flashloan.trigger(token, amount)
+            LOG.log(
+                "flashloan",
+                token=token,
+                amount=amount,
+                result=str(res),
+                strategy_id=STRATEGY_ID,
+                mutation_id=os.getenv("MUTATION_ID", "dev"),
+                risk_level="low",
+            )
+        except Exception as exc:
+            log_error(STRATEGY_ID, f"flashloan: {exc}", event="flashloan_fail")
 
     # ------------------------------------------------------------------
     def snapshot(self, path: str) -> None:
@@ -140,26 +270,23 @@ class CrossDomainArb:
                 self.last_prices = json.load(fh)
 
     # ------------------------------------------------------------------
-    def _record(self, domain: str, data: PriceData, opportunity: bool, spread: float, action: str = "", tx_id: str = "") -> None:
-        entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "domain": domain,
-            "price": data.price,
-            "opportunity": opportunity,
-            "spread": spread,
-            "action": action,
-            "tx_id": tx_id,
-            "strategy_id": STRATEGY_ID,
-            "risk_level": "low",
-            "mutation_id": os.getenv("MUTATION_ID", "dev"),
-            "block_number": data.block,
-            "block_age_sec": data.block_age,
-        }
-        _log(entry)
+    def _record(self, domain: str, data: PriceData, opportunity: bool, spread: float, action: str = "", tx_id: str = "", pnl: float = 0.0) -> None:
+        _log(
+            "price",
+            domain=domain,
+            price=data.price,
+            opportunity=opportunity,
+            spread=spread,
+            action=action,
+            tx_id=tx_id,
+            block=data.block,
+            block_age=data.block_age,
+            pnl=pnl,
+        )
 
     def _detect_opportunity(self, prices: Dict[str, float]) -> Optional[Dict[str, object]]:
         domains = list(prices.keys())
-        if not domains:
+        if len(domains) < 2:
             return None
         min_domain = min(domains, key=lambda d: prices[d])
         max_domain = max(domains, key=lambda d: prices[d])
@@ -186,7 +313,25 @@ class CrossDomainArb:
     def run_once(self) -> Optional[Dict[str, object]]:
         if kill_switch_triggered():
             record_kill_event(STRATEGY_ID)
+            LOG.log(
+                "killed",
+                strategy_id=STRATEGY_ID,
+                mutation_id=os.getenv("MUTATION_ID", "dev"),
+                risk_level="high",
+            )
             return None
+
+        self._auto_discover()
+
+        if self.node_selector:
+            node = self.node_selector.best()
+            LOG.log(
+                "node_selected",
+                node=node,
+                strategy_id=STRATEGY_ID,
+                mutation_id=os.getenv("MUTATION_ID", "dev"),
+                risk_level="low",
+            )
 
         price_data: Dict[str, PriceData] = {}
         for label, cfg in self.pools.items():
@@ -195,7 +340,7 @@ class CrossDomainArb:
             except Exception as exc:  # pragma: no cover - dependency errors
                 logging.warning("price fetch failed: %s", exc)
                 log_error(STRATEGY_ID, str(exc), event="price_fetch")
-                METRICS["fails"] += 1
+                metrics.record_fail()
                 return None
             price_data[label] = data
             self.last_prices[label] = data.price
@@ -204,27 +349,35 @@ class CrossDomainArb:
         if any(d.block_age > int(os.getenv("PRICE_FRESHNESS_SEC", "30")) for d in price_data.values()):
             logging.warning("stale price detected")
             log_error(STRATEGY_ID, "stale price detected", event="stale_price")
-            METRICS["fails"] += 1
+            metrics.record_fail()
             return None
 
         prices = {k: d.price for k, d in price_data.items()}
         opp = self._detect_opportunity(prices)
         if opp:
+            profit = self._compute_profit(opp["buy"], opp["sell"], prices)
+            if profit <= 0:
+                metrics.record_fail()
+                return None
             if not self.capital_lock.trade_allowed():
                 msg = "capital lock: trade not allowed"
                 log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
-                _log({
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "strategy_id": STRATEGY_ID,
-                    "risk_level": "high",
-                    "event": "capital_lock",
-                    "error": msg,
-                })
+                LOG.log(
+                    "capital_lock",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="high",
+                    error=msg,
+                )
                 return None
 
-            METRICS["opportunities"] += 1
-            METRICS["spreads"].append(float(opp["spread"]))
-            _send_alert({"strategy": STRATEGY_ID, **opp})
+            if not self._check_l1_sandwich():
+                return None
+            self._process_intents()
+            self._execute_flashloan(str(opp["buy"]), str(opp["sell"]))
+
+            metrics.record_opportunity(float(opp["spread"]), profit, 0.0)
+            _send_alert({"strategy": STRATEGY_ID, **opp, "profit": profit})
 
             pre = os.getenv("CROSS_ARB_STATE_PRE", "state/cross_arb_pre.json")
             post = os.getenv("CROSS_ARB_STATE_POST", "state/cross_arb_post.json")
@@ -234,11 +387,21 @@ class CrossDomainArb:
                 Path(p).parent.mkdir(parents=True, exist_ok=True)
             self.snapshot(pre)
             self.tx_builder.snapshot(tx_pre)
-            tx_hash = self.tx_builder.send_transaction(self.sample_tx, self.executor, strategy_id=STRATEGY_ID, mutation_id=os.getenv("MUTATION_ID", "dev"), risk_level="low")
+            start_time = datetime.now(timezone.utc)
+            tx_hash = self.tx_builder.send_transaction(
+                self.sample_tx,
+                self.executor,
+                strategy_id=STRATEGY_ID,
+                mutation_id=os.getenv("MUTATION_ID", "dev"),
+                risk_level="low",
+            )
+            latency = (datetime.now(timezone.utc) - start_time).total_seconds()
+            if self.node_selector:
+                node = self.node_selector.best()
+                self.node_selector.record(node, True, latency)
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
 
-            profit = prices[opp["sell"]] - prices[opp["buy"]]
             self.capital_lock.record_trade(profit)
 
             for label, data in price_data.items():
@@ -249,9 +412,10 @@ class CrossDomainArb:
                     float(opp["spread"]),
                     str(opp["action"]),
                     tx_id=str(tx_hash),
+                    pnl=profit,
                 )
         else:
-            METRICS["fails"] += 1
+            metrics.record_fail()
 
         return opp
 
@@ -266,5 +430,13 @@ class CrossDomainArb:
         if "threshold" in params:
             try:
                 self.threshold = float(params["threshold"])
+                LOG.log(
+                    "mutate",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    param="threshold",
+                    value=self.threshold,
+                )
             except Exception as exc:  # pragma: no cover - input validation
                 log_error(STRATEGY_ID, f"mutate threshold: {exc}", event="mutate_error")
