@@ -24,6 +24,7 @@ from pkgutil import extend_path
 import json
 import os
 import subprocess
+import uuid
 from pathlib import Path
 from typing import Dict
 
@@ -116,6 +117,7 @@ class MutationRunner:
             scores=result.get("scores", []),
             pruned=result.get("pruned", []),
             audit=audit_summary,
+            trace_id=os.getenv("TRACE_ID", str(uuid.uuid4())),
         )
 
         for sid in metrics:
@@ -139,6 +141,7 @@ class MutationRunner:
                 continue
 
             tests_pass = self._run_checks(sid)
+            trace = os.getenv("TRACE_ID", str(uuid.uuid4()))
             if tests_pass and os.getenv("FOUNDER_APPROVED") == "1":
                 src = self.repo_root / "strategies" / sid
                 dst = self.repo_root / "active" / sid
@@ -147,6 +150,7 @@ class MutationRunner:
                     dst,
                     True,
                     {"audit": audit_summary, "online": online_resp},
+                    trace_id=trace,
                 )
             elif not tests_pass:
                 log_error(
@@ -154,6 +158,7 @@ class MutationRunner:
                     "tests failed",
                     strategy_id=sid,
                     event="promote_block",
+                    trace_id=trace,
                 )
             else:
                 log_error(
@@ -161,6 +166,7 @@ class MutationRunner:
                     "founder approval required",
                     strategy_id=sid,
                     event="promote_gate",
+                    trace_id=trace,
                 )
 
 

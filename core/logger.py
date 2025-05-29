@@ -88,10 +88,13 @@ class StructuredLogger:
         mutation_id: str = "",
         risk_level: str = "",
         error: str | None = None,
+        trace_id: str | None = None,
         **extra: Any,
     ) -> None:
         """Append log entry to file and send to hooks."""
 
+        if trace_id is None:
+            trace_id = os.getenv("TRACE_ID", "")
         entry: Dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": event,
@@ -101,6 +104,7 @@ class StructuredLogger:
             "mutation_id": mutation_id,
             "risk_level": risk_level,
             "error": error,
+            "trace_id": trace_id,
         }
         entry.update(extra)
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -115,6 +119,7 @@ class StructuredLogger:
                     self.module,
                     f"hook error: {exc}",
                     event="hook_fail",
+                    trace_id=trace_id,
                 )
         if error:
             log_error(
@@ -125,6 +130,7 @@ class StructuredLogger:
                 strategy_id=strategy_id,
                 mutation_id=mutation_id,
                 risk_level=risk_level,
+                trace_id=trace_id,
             )
         if error or risk_level == "high":
             _send_alert(f"{self.module}:{event}:{error or ''}")

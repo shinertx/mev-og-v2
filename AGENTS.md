@@ -44,10 +44,10 @@ This file is the single source of truth for mutation, validation, and integratio
   * Logs to `logs/<strategy>.json`
   * Errors to `logs/errors.log`
   * Metrics to Prometheus-compatible endpoint
-* Mutation cycles are run via `ai/mutator/main.py` and require **explicit founder approval (`FOUNDER_APPROVED=1`) before any live promotion**.
+* Mutation cycles are run via `ai/mutator/main.py` and require **explicit founder approval (`FOUNDER_APPROVED=1`) and a `TRACE_ID` before any live promotion**.
 * Every cycle **must export an audit trail and DRP snapshot** using `scripts/export_state.sh`.
 * OpsAgent monitors health, pauses on failure, and sends alerts via webhooks.
-* CapitalLock enforces drawdown/loss thresholds; unlocks require **founder approval**.
+* CapitalLock enforces drawdown/loss thresholds; unlocks require **founder approval** and a `TRACE_ID` logged for each event.
 * Strategies **must call `capital_lock.trade_allowed()` before every trade**.
   If False, abort and log `"capital lock: trade not allowed"` to strategy log and `logs/errors.log` with risk level `"high"`.
 
@@ -58,8 +58,8 @@ This file is the single source of truth for mutation, validation, and integratio
   * Passing all tests (unit, integration, fork sim, chaos)
   * Passing audit agent checks (offline and online modes)
   * Producing structured mutation diff logs and audit artifacts
-  * Explicit founder gating, logged and archived in CI
-* All mutation and promotion events **must be traceable by unique IDs in logs and CI artifacts**.
+  * Explicit founder gating, logged and archived in CI with a `TRACE_ID`
+* All mutation and promotion events **must be traceable by unique IDs (`TRACE_ID`) in logs and CI artifacts**.
 
 ---
 
@@ -155,7 +155,7 @@ Every PR or batch/module must pass:
 * Start OpsAgent:
   `python -m agents.ops_agent` (health checks configured in config)
 * Use `scripts/batch_ops.py` to promote, pause, or rollback strategies.
-* CapitalLock state is shared via `agents.agent_registry` and unpaused **only when founder sets `FOUNDER_APPROVED=1` and calls unlock**.
+* CapitalLock state is shared via `agents.agent_registry` and unpaused **only when founder sets `FOUNDER_APPROVED=1` and calls unlock with a unique `TRACE_ID`**.
 * Example strategy integration:
 
 ```python

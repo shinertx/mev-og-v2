@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FOUNDER_APPROVED: ${{ secrets.FOUNDER_APPROVED }}
+      TRACE_ID: ${{ github.run_id }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -48,4 +49,9 @@ jobs:
           python ai/audit_agent.py --mode=offline --logs logs/cross_domain_arb.json
       - name: Promote
         if: env.FOUNDER_APPROVED == '1'
-        run: echo "Founder approval received. Ready for production." 
+        run: echo "Founder approval received. Ready for production."
+      - name: Upload Logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs-${{ env.TRACE_ID }}
+          path: logs/
