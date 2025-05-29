@@ -2,6 +2,7 @@
 
 Module purpose and system role:
     - Evaluate performance metrics for each strategy and produce a ranking.
+    - Penalize chaos drill failures and DR events so unstable modules are pruned.
     - Emit scores to JSON and structured logs for later mutation.
 
 Integration points and dependencies:
@@ -57,8 +58,18 @@ def score_strategies(
         drawdown = float(data.get("drawdown", 0.0))
         win_rate = float(data.get("win_rate", 0.0))
         failures = int(data.get("failures", 0))
+        chaos = int(data.get("chaos_failures", 0))
+        dr_triggers = int(data.get("dr_triggers", 0))
 
-        score = pnl + sharpe * 100 - drawdown * 50 + win_rate * 10 - failures * 20
+        score = (
+            pnl
+            + sharpe * 100
+            - drawdown * 50
+            + win_rate * 10
+            - failures * 20
+            - chaos * 10
+            - dr_triggers * 5
+        )
 
         vh = _version_hash(sid, data)
 
@@ -73,6 +84,8 @@ def score_strategies(
                 "drawdown": drawdown,
                 "win_rate": win_rate,
                 "failures": failures,
+                "chaos_failures": chaos,
+                "dr_triggers": dr_triggers,
             }
         )
 
