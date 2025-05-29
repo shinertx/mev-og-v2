@@ -19,7 +19,7 @@ import json
 from datetime import datetime, timezone
 import os
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, cast
 
 
 def make_json_safe(value: Any) -> Any:
@@ -37,7 +37,7 @@ def make_json_safe(value: Any) -> Any:
 try:  # optional dependency
     import requests  # type: ignore
 except Exception:  # pragma: no cover - optional
-    requests = None  # type: ignore
+    requests = cast(Any, None)
 
 
 def _error_log_file() -> Path:

@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import os
 from threading import Thread
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 try:
-    from flask import Flask, jsonify  # type: ignore
+    from flask import Flask, jsonify
 except Exception:  # pragma: no cover - optional dep
-    Flask = None  # type: ignore
-    def jsonify(data: Any) -> Any:  # type: ignore
+    Flask = cast(Any, None)
+    def jsonify(data: Any) -> Any:
         """Fallback when Flask is unavailable."""
         return data
 
