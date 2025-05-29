@@ -159,6 +159,14 @@ Every PR or batch/module must pass:
 * Results are written to `logs/chaos_drill.json` with per-adapter failure counts in `logs/drill_metrics.json`.
   CI fails if any secrets/PII are detected in logs or DRP exports.
 
+### adapter_chaos
+
+* Run targeted adapter chaos tests:
+  `pytest tests/test_adapters_chaos.py`
+* Manual simulation:
+  `python tests/test_adapters_chaos.py --simulate bridge_downtime`
+* Expect `fallback_success` events in module logs and OpsAgent alerts for each failure.
+
 ### OpsAgent & CapitalLock Runbook
 
 * Start OpsAgent:
