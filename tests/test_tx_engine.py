@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import threading
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
@@ -84,3 +85,19 @@ def test_agent_gates_block(tmp_path):
     with pytest.raises(RuntimeError):
         builder.send_transaction(HexBytes(b"\x01"), "0xabc")
     set_value("paused", False)
+
+def test_cross_agent_order_flow(tmp_path):
+    web3 = DummyWeb3()
+    nm = NonceManager(web3, cache_file=str(tmp_path / "nonce.json"))
+    b1 = TransactionBuilder(web3, nm, log_path=tmp_path / "a.json")
+    b2 = TransactionBuilder(web3, nm, log_path=tmp_path / "b.json")
+
+    def send(builder, tx):
+        builder.send_transaction(tx, "0xabc")
+
+    t1 = threading.Thread(target=send, args=(b1, HexBytes(b"\x01")))
+    t2 = threading.Thread(target=send, args=(b2, HexBytes(b"\x02")))
+    t1.start(); t2.start(); t1.join(); t2.join()
+
+    # nonces should be sequential across builders
+    assert nm.get_nonce("0xabc") == 2

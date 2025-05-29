@@ -106,3 +106,18 @@ def test_export_encrypted(tmp_path):
     assert entries[-1]["mode"] == "export"
 
     
+def test_malicious_env_input(tmp_path):
+    (tmp_path / "logs").mkdir()
+    (tmp_path / "logs" / "log.txt").write_text("log")
+    export_dir = tmp_path / "export;rm -rf evil"
+    log_file = tmp_path / "log.json"
+    env = os.environ.copy()
+    env.update({
+        "EXPORT_DIR": str(export_dir),
+        "EXPORT_LOG_FILE": str(log_file),
+        "PWD": str(tmp_path),
+    })
+    os.chdir(tmp_path)
+    run_script([], env)
+    archives = list(export_dir.glob("drp_export_*.tar.gz"))
+    assert len(archives) == 1

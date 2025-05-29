@@ -247,6 +247,15 @@ strat = Strategy(..., capital_lock=lock)
 
 ---
 
+## RED TEAM TEST CASES
+
+* **Nonce replay attacks:** `tests/test_nonce_manager.py::test_cross_agent_replay` verifies cached nonces cannot be replayed across agents.
+* **Cross-agent order flow conflicts:** `tests/test_tx_engine.py::test_cross_agent_order_flow` ensures concurrent builders share a single nonce stream.
+* **Malicious external input:** `tests/test_export_state_sh.py::test_malicious_env_input` checks environment variables cannot inject dangerous paths.
+* **Rate limiting and exploit handling:** `tests/test_rate_limiter.py` enforces call throttling with `core.rate_limiter.RateLimiter`.
+
+---
+
 ## LOG SCHEMA & TELEMETRY
 
 * Every log/event must include:
@@ -288,6 +297,7 @@ Example log entry:
 * 2025-05-26T17:46:21Z — Export snapshot and rollback restore test.
 * 2025-05-26T17:48:56Z — Snapshot after `cross_rollup_superbot` simulation.
 * 2025-05-26T18:23:14Z — Post-metrics server integration export.
+* 2025-05-29T04:45:17Z — Added red team tests for replay, order conflicts, malicious input, and rate limiting.
 
 ---
 
