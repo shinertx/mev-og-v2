@@ -7,7 +7,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 import ai.mutator.main as mut_main
-import os
 
 
 def test_mutation_cycle(monkeypatch, tmp_path):

@@ -1,8 +1,6 @@
 """Kill switch utilities for halting transaction execution."""
 
-import json
 import os
-from datetime import datetime, timezone
 from pathlib import Path
 
 from core.logger import StructuredLogger, log_error

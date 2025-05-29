@@ -1,7 +1,4 @@
-import json
-import logging
 import os
-import tempfile
 from pathlib import Path
 import sys
 import pytest
@@ -9,13 +6,9 @@ pytest.importorskip("hexbytes")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
-from strategies.cross_domain_arb import CrossDomainArb, PoolConfig, BridgeConfig
-from core import metrics
+from strategies.cross_domain_arb import CrossDomainArb, PoolConfig
 from agents.capital_lock import CapitalLock
 from core.oracles.uniswap_feed import PriceData
-from core.oracles.intent_feed import IntentData
-from adapters.pool_scanner import PoolInfo
-from core.mempool_monitor import MempoolMonitor
 
 
 class DummyPool:
