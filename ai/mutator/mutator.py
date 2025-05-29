@@ -15,6 +15,7 @@ Simulation/test hooks and kill conditions:
 from __future__ import annotations
 
 import os
+import uuid
 from typing import Any, Dict, List
 
 from core.logger import StructuredLogger
@@ -34,6 +35,17 @@ class Mutator:
     def run(self) -> Dict[str, Any]:
         """Return scores and list of pruned strategies."""
 
+        trace = os.getenv("TRACE_ID", str(uuid.uuid4()))
+        if os.getenv("FOUNDER_APPROVED") != "1":
+            LOGGER.log(
+                "mutation_blocked",
+                mutation_id=os.getenv("MUTATION_ID", "dev"),
+                strategy_id=",".join(self.metrics.keys()),
+                risk_level="high",
+                trace_id=trace,
+            )
+            return {"scores": [], "pruned": []}
+
         scores: List[Dict[str, Any]] = score_strategies(self.metrics)
         pruned = prune_strategies(self.metrics)
         LOGGER.log(
@@ -43,5 +55,6 @@ class Mutator:
             risk_level="low",
             scores=scores,
             pruned=pruned,
+            trace_id=trace,
         )
         return {"scores": scores, "pruned": pruned}

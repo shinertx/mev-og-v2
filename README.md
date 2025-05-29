@@ -208,6 +208,7 @@ the values used in tests and the simulation harness:
 | `L3_SEQ_TX_PRE` | `state/l3_seq_tx_pre.json` | Tx builder pre snapshot |
 | `METRICS_PORT` | `8000` | Port for Prometheus metrics |
 | `MUTATION_ID` | `dev` | Tag for current mutation cycle |
+| `TRACE_ID` | `<auto>` | Unique approval trace ID |
 | `NFT_FEED_URL` | `http://localhost:9000` | NFT liquidation feed |
 | `NFT_LIQ_EXECUTOR` | `0x000...` | Executor for nft_liquidation |
 | `NFT_LIQ_LOG` | `logs/nft_liquidation.json` | nft_liquidation log |
@@ -372,8 +373,8 @@ Paths default under `logs/` or `state/` unless overridden.
 2. Run `ai/audit_agent.py --mode=offline` and review results.
 3. If approved, run `ai/audit_agent.py --mode=online` with `OPENAI_API_KEY`.
 4. Execute `ai/mutator/main.py` to generate new parameters.
-5. Set `FOUNDER_APPROVED=1` and run `ai/promote.py` to move updated strategies
-   into `active/`.
+5. Set `FOUNDER_APPROVED=1` and export a `TRACE_ID` when running
+   `ai/promote.py` to move updated strategies into `active/`.
 6. Roll back with `ai/promote.rollback` or `scripts/rollback.sh` if needed.
 
 Logs must include `timestamp`, `tx_id`, `strategy_id`, `mutation_id`,
@@ -403,7 +404,7 @@ main
 
 ## CI/CD & Canary Deployment
 
-GitHub Actions workflow `main.yml` runs linting, typing, tests, fork simulations and DRP checks on every push and pull request. Each batch is tagged `canary-<sha>-<date>` and must pass the full suite. Promotion to production requires `FOUNDER_APPROVED=1`.
+GitHub Actions workflow `main.yml` runs linting, typing, tests, fork simulations and DRP checks on every push and pull request. Each batch is tagged `canary-<sha>-<date>` and must pass the full suite. Promotion to production requires `FOUNDER_APPROVED=1` and records the run under `TRACE_ID` in the uploaded artifacts.
 Type checking uses `mypy --strict` and CI fails on any reported type error.
 
 Local checks can be invoked via Poetry:
@@ -443,7 +444,8 @@ the flag and log paths.
 `agents/ops_agent.py` runs periodic health checks and pauses all strategies if
 any fail. Alerts are sent via `OPS_ALERT_WEBHOOK` and counted by the metrics
 server. `agents/capital_lock.py` enforces drawdown and loss limits; founder must
-approve unlock actions by setting `FOUNDER_APPROVED=1`.
+approve unlock actions by setting `FOUNDER_APPROVED=1` and providing a
+unique `TRACE_ID` for audit.
 
 
 Each strategy receives a `CapitalLock` instance from the orchestrator. Before
@@ -512,8 +514,8 @@ python scripts/wallet_ops.py withdraw-all --from 0xhot --to 0xbank
 python scripts/wallet_ops.py drain-to-cold --from 0xhot --to 0xcold
 ```
 
-Set `FOUNDER_APPROVED=1` or confirm interactively when prompted. On failure the
-script aborts and logs the error.
+Set `FOUNDER_APPROVED=1` and export a unique `TRACE_ID` or confirm interactively
+when prompted. On failure the script aborts and logs the error.
 
 ## Orchestrator CLI
 
@@ -555,7 +557,7 @@ Actions append to `logs/wallet_ops.log` for auditing.
 5. `bash scripts/simulate_fork.sh --target=strategies/<module>`
 6. `python ai/mutator/main.py --dry-run`
 7. Review `logs/errors.log` and DRP archive
-8. Set `FOUNDER_APPROVED=1` and run `python ai/mutator/main.py --mode live`
+8. Set `FOUNDER_APPROVED=1` and export a `TRACE_ID` then run `python ai/mutator/main.py --mode live`
 9. Check metrics at `http://localhost:$METRICS_PORT/metrics`
 10. Drain funds with `wallet_ops.py` if needed
 
@@ -563,7 +565,7 @@ Actions append to `logs/wallet_ops.log` for auditing.
 
 - **RPC failures:** confirm endpoints in `config.yaml` and ensure nodes are live.
 - **Metrics missing:** run `python -m core.metrics --port $METRICS_PORT`.
-- **Promotion blocked:** check `FOUNDER_APPROVED=1` and read `logs/errors.log`.
+- **Promotion blocked:** check `FOUNDER_APPROVED=1`, ensure a `TRACE_ID` is set and read `logs/errors.log`.
 - **Rollback:** `bash scripts/rollback.sh --archive=<archive>`.
 
 ## Green-light Checklist
