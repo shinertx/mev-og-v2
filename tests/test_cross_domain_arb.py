@@ -134,11 +134,12 @@ def test_should_trade_now_high_gas(monkeypatch):
             "0xdeadbeef00000000000000000000000000000000", "ethereum"
         )
     }
-    strat = CrossDomainArb(pools, {}, threshold=0.01, capital_lock=CapitalLock(1000, 1e9, 0))
+    strat = CrossDomainArb(pools, {"stealth_mode": True}, threshold=0.01, capital_lock=CapitalLock(1000, 1e9, 0))
     strat.feed = DummyFeed({"ethereum": 100})
     strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
     strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
     monkeypatch.setenv("GAS_COST_OVERRIDE", "1")
+    strat.metrics["recent_alpha"] = 1.0
     assert not strat.should_trade_now()
 
 

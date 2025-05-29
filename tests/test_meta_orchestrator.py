@@ -7,8 +7,8 @@ from core.meta_orchestrator import MetaOrchestrator
 
 
 class Dummy:
-    def __init__(self, threshold=0.1):
-        self.threshold = threshold
+    def __init__(self, **kwargs):
+        self.threshold = kwargs.get("threshold", 0.1)
         self.capital_lock = type("L", (), {"trades": [1.0]})()
         self.pools = {}
         self.edges_enabled = {"stealth_mode": False}
