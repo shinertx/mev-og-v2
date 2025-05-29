@@ -262,10 +262,20 @@ bash scripts/export_state.sh
 ```
 
 `cross_domain_arb` writes structured logs to `logs/cross_domain_arb.json` and
-errors to `logs/errors.log`. DRP state files are controlled by the
+errors to `logs/errors.log`. Each entry includes
+`timestamp`, `tx_id`, `strategy_id`, `mutation_id`, `risk_level`, `block` and a
+unique `trace_id`.
+DRP state files are controlled by the
 `CROSS_ARB_STATE_PRE`, `CROSS_ARB_STATE_POST`, `CROSS_ARB_TX_PRE` and
-`CROSS_ARB_TX_POST` environment variables. Metrics are served on
+`CROSS_ARB_TX_POST` environment variables.
+Metrics are served on
 `http://localhost:8000/metrics` for Prometheus to scrape.
+
+Example log:
+
+```json
+{"timestamp":"2025-01-01T00:00:00Z","event":"trade","tx_id":"0xabc","strategy_id":"cross_domain_arb","mutation_id":"42","risk_level":"low","block":123,"trace_id":"XYZ123"}
+```
 
 ### cross_rollup_superbot Runbook
 

@@ -31,10 +31,12 @@ FLAG_FILE="${KILL_SWITCH_FLAG_FILE:-./flags/kill_switch.txt}"
 LOG_FILE="${KILL_SWITCH_LOG_FILE:-/logs/kill_log.json}"
 USER_NAME="$(whoami 2>/dev/null || echo unknown)"
 TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+TRACE_ID="${TRACE_ID:-}"
 
 log_event() {
     mkdir -p "$(dirname "$LOG_FILE")"
-    printf '{"timestamp":"%s","mode":"%s","user":"%s","flag_file":"%s"}\n' "$TIMESTAMP" "$1" "$USER_NAME" "$FLAG_FILE" >> "$LOG_FILE"
+    printf '{"timestamp":"%s","mode":"%s","user":"%s","flag_file":"%s","trace_id":"%s"}\n' \
+        "$TIMESTAMP" "$1" "$USER_NAME" "$FLAG_FILE" "$TRACE_ID" >> "$LOG_FILE"
 }
 
 if [[ $DRY -eq 1 ]]; then

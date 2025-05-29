@@ -33,13 +33,34 @@ def _error_log_file() -> Path:
     return Path(os.getenv("ERROR_LOG_FILE", "logs/errors.log"))
 
 
-def log_error(module: str, error: str, **extra: Any) -> None:
+def log_error(
+    module: str,
+    error: str,
+    *,
+    tx_id: str = "",
+    strategy_id: str = "",
+    mutation_id: str = "",
+    risk_level: str = "",
+    block: int | str | None = None,
+    trace_id: str | None = None,
+    **extra: Any,
+) -> None:
     """Write structured error entry to ``logs/errors.log``."""
 
+    if trace_id is None:
+        trace_id = os.getenv("TRACE_ID", "")
+    if block is None:
+        block = os.getenv("BLOCK", "")
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "module": module,
         "error": error,
+        "tx_id": tx_id,
+        "strategy_id": strategy_id,
+        "mutation_id": mutation_id,
+        "risk_level": risk_level,
+        "block": block,
+        "trace_id": trace_id,
         **extra,
     }
     path = _error_log_file()
@@ -87,6 +108,7 @@ class StructuredLogger:
         strategy_id: str = "",
         mutation_id: str = "",
         risk_level: str = "",
+        block: int | str | None = None,
         error: str | None = None,
         trace_id: str | None = None,
         **extra: Any,
@@ -95,6 +117,8 @@ class StructuredLogger:
 
         if trace_id is None:
             trace_id = os.getenv("TRACE_ID", "")
+        if block is None:
+            block = os.getenv("BLOCK", "")
         entry: Dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": event,
@@ -103,6 +127,7 @@ class StructuredLogger:
             "strategy_id": strategy_id,
             "mutation_id": mutation_id,
             "risk_level": risk_level,
+            "block": block,
             "error": error,
             "trace_id": trace_id,
         }
@@ -120,6 +145,7 @@ class StructuredLogger:
                     f"hook error: {exc}",
                     event="hook_fail",
                     trace_id=trace_id,
+                    block=block,
                 )
         if error:
             log_error(
@@ -131,6 +157,7 @@ class StructuredLogger:
                 mutation_id=mutation_id,
                 risk_level=risk_level,
                 trace_id=trace_id,
+                block=block,
             )
         if error or risk_level == "high":
             _send_alert(f"{self.module}:{event}:{error or ''}")
