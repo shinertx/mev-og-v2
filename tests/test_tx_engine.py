@@ -97,7 +97,10 @@ def test_cross_agent_order_flow(tmp_path):
 
     t1 = threading.Thread(target=send, args=(b1, HexBytes(b"\x01")))
     t2 = threading.Thread(target=send, args=(b2, HexBytes(b"\x02")))
-    t1.start(); t2.start(); t1.join(); t2.join()
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
 
     # nonces should be sequential across builders
     assert nm.get_nonce("0xabc") == 2

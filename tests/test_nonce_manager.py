@@ -93,7 +93,10 @@ def test_reset_increment_race(tmp_path):
 
     t1 = threading.Thread(target=do_get)
     t2 = threading.Thread(target=do_reset)
-    t1.start(); t2.start(); t1.join(); t2.join()
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
 
     final = nm.get_nonce("0xabc")
     assert final >= 5

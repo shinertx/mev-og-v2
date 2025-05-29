@@ -24,7 +24,7 @@ def test_lock_and_unlock(monkeypatch, tmp_path):
     log_path = tmp_path / "lock.json"
     if not log_path.exists():
         pytest.skip("lock.json not created")
-    entries = [json.loads(l) for l in log_path.read_text().splitlines()]
+    entries = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert entries[-1]["event"] == "unlock"
     assert entries[-1]["trace_id"] == "t123"
 
@@ -39,7 +39,7 @@ def test_unlock_requires_founder(monkeypatch, tmp_path):
     log_path = tmp_path / "lock.json"
     if not log_path.exists():
         pytest.skip("lock.json not created")
-    entries = [json.loads(l) for l in log_path.read_text().splitlines()]
+    entries = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert entries[-1]["event"] == "unlock_rejected"
     assert entries[-1]["trace_id"] == "nope"
 
