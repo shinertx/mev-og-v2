@@ -10,7 +10,11 @@ from strategies.cross_domain_arb import PoolConfig, CrossDomainArb
 
 class DummyOrch:
     def __init__(self):
-        pools = {"eth": PoolConfig("0xpool", "ethereum")}
+        pools = {
+            "eth": PoolConfig(
+                "0xdeadbeef00000000000000000000000000000000", "ethereum"
+            )  # test-only
+        }
         strat = CrossDomainArb(pools, {}, capital_lock=CapitalLock(1000, 1e9, 0))
         self.strategies = {"dummy": strat}
 

@@ -34,8 +34,12 @@ def test_bundle_send(monkeypatch):
     monkeypatch.setitem(sys.modules, "flashbots", module)
 
     pools = {
-        "eth": PoolConfig("0xpool", "ethereum"),
-        "arb": PoolConfig("0xpool", "arbitrum"),
+        "eth": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "ethereum"
+        ),  # test-only
+        "arb": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "arbitrum"
+        ),  # test-only
     }
     bridges = {("ethereum", "arbitrum"): BridgeConfig(0.0)}
     strat = CrossRollupSuperbot(pools, bridges)

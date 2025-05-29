@@ -75,8 +75,12 @@ class DummyFeed:
 
 def setup_strat(threshold=0.01):
     pools = {
-        "eth": PoolConfig("0xpool", "ethereum"),
-        "arb": PoolConfig("0xpool", "arbitrum"),
+        "eth": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "ethereum"
+        ),  # test-only
+        "arb": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "arbitrum"
+        ),  # test-only
     }
     bridges = {("ethereum", "arbitrum"): BridgeConfig(0.0001)}
     strat = CrossRollupSuperbot(pools, bridges, threshold=threshold, capital_lock=CapitalLock(1000, 1e9, 0))

@@ -219,9 +219,9 @@ the values used in tests and the simulation harness:
 | `OPS_ALERT_WEBHOOK` | `<none>` | Webhook for OpsAgent alerts |
 | `POOL_ARBITRUM` | `0xb3f8e426...` | Arbitrum pool address |
 | `POOL_ETHEREUM` | `0x8ad599c3...` | Ethereum pool address |
-| `POOL_L3` | `0x0000000...` | L3 test pool |
+| `POOL_L3` | `0x6b3d1a6...` | Scroll ETH/USDC pool |
 | `POOL_OPTIMISM` | `0x8514924...` | Optimism pool address |
-| `POOL_ZKSYNC` | `0x0000000...` | zkSync test pool |
+| `POOL_ZKSYNC` | `0x8e5ce2f...` | zkSync ETH/USDC pool |
 | `PRICE_FRESHNESS_SEC` | `30` | Allowed staleness for price feeds |
 | `RPC_ARBITRUM_URL` | `http://localhost:8547` | Arbitrum RPC |
 | `RPC_ETHEREUM_URL` | `http://localhost:8545` | Ethereum RPC |

@@ -24,8 +24,15 @@ RPC_L2 = os.getenv("RPC_ARBITRUM_URL", "http://localhost:8547")
 RPC_L3 = os.getenv("RPC_ZKSYNC_URL", "http://localhost:8550")
 
 POOLS = {
-    "l2": PoolConfig(os.getenv("POOL_ARBITRUM", "0xb3f8e4262c5bfcc0a304143cfb33c7a9a64e0fe0"), "arbitrum"),
-    "l3": PoolConfig(os.getenv("POOL_ZKSYNC", "0x0000000000000000000000000000000000000000"), "zksync"),
+    "l2": PoolConfig(
+        os.getenv("POOL_ARBITRUM", "0xb3f8e4262c5bfcc0a304143cfb33c7a9a64e0fe0"),
+        "arbitrum",
+    ),
+    # zkSync ETH/USDC pool
+    "l3": PoolConfig(
+        os.getenv("POOL_ZKSYNC", "0x8e5cE2F599bEb742DB3A07b0C3aAf7c297C91701"),
+        "zksync",
+    ),
 }
 
 BRIDGES = {

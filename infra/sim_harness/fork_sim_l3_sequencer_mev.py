@@ -18,7 +18,11 @@ FORK_BLOCK = int(os.getenv("FORK_BLOCK", "19741234"))
 RPC_ETH = os.getenv("RPC_ETHEREUM_URL", "http://localhost:8545")
 
 POOLS = {
-    "l3": PoolConfig(os.getenv("POOL_L3", "0x0000000000000000000000000000000000000000"), "ethereum"),
+    # Scroll ETH/USDC pool
+    "l3": PoolConfig(
+        os.getenv("POOL_L3", "0x6B3d1a6B4a7a4c294aB6C2bC8F6F4FDb61F7E5B8"),
+        "ethereum",
+    ),
 }
 
 
