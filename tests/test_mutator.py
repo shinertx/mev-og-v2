@@ -11,28 +11,23 @@ from ai.mutator import score_strategies, prune_strategies
 def test_score_and_prune(tmp_path):
     metrics = {
         "stratA": {
-            "pnl": 10,
-            "returns": [1, 2, 3],
-            "risk": 0.5,
-            "volatility": 0.2,
-            "wins": 3,
-            "losses": 1,
-            "latencies": [0.1, 0.2],
-            "opportunities": 4,
+            "realized_pnl": 10,
+            "sharpe": 1.2,
+            "drawdown": 0.1,
+            "win_rate": 0.75,
+            "failures": 0,
         },
         "stratB": {
-            "pnl": -5,
-            "risk": 1.5,
-            "volatility": 0.5,
-            "wins": 0,
-            "losses": 2,
-            "latencies": [1.0],
-            "opportunities": 1,
-            "chaos_fail": True,
+            "realized_pnl": -5,
+            "sharpe": -0.3,
+            "drawdown": 0.5,
+            "win_rate": 0.2,
+            "failures": 2,
         },
     }
-    scores = score_strategies(metrics, output_path=str(tmp_path / "scores.json"))
+    scores = score_strategies(metrics, output_path=str(tmp_path / "scores.json"), top_n=1)
     assert scores[0]["strategy"] == "stratA"
+    assert "version" in scores[0]
 
     flagged = prune_strategies(metrics, audit_feedback={"stratB": True})
     assert "stratB" in flagged
