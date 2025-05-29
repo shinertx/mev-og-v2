@@ -5,6 +5,8 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
+from core.logger import log_error
+
 ENV_VAR = "KILL_SWITCH"
 
 
@@ -47,7 +49,11 @@ def kill_switch_triggered() -> bool:
 
 def record_kill_event(origin: str) -> None:
     """Append a structured kill event to the log file."""
-    source = "env" if os.getenv(ENV_VAR) == "1" else "file" if _flag_file().exists() else "unknown"
+    source = (
+        "env"
+        if os.getenv(ENV_VAR) == "1"
+        else "file" if _flag_file().exists() else "unknown"
+    )
     event = {
         "kill_event": True,
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -58,5 +64,5 @@ def record_kill_event(origin: str) -> None:
     with lf.open("a") as f:
         json.dump(event, f)
         f.write("\n")
-
-
+    # also log to the shared error log for DRP visibility
+    log_error(origin, "kill switch triggered", event="kill_switch", risk_level="high")
