@@ -81,6 +81,6 @@ def test_mutation_cycle_requires_founder(monkeypatch, tmp_path):
     runner.run_cycle()
 
     assert not promos
-    entries = [json.loads(l) for l in (logs / "errors.log").read_text().splitlines()]
+    entries = [json.loads(line) for line in (logs / "errors.log").read_text().splitlines()]
     assert entries[-1]["event"] == "promote_gate"
     assert entries[-1]["trace_id"] == "block"
