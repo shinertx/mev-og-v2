@@ -37,6 +37,7 @@ from core.tx_engine.builder import HexBytes, TransactionBuilder
 from core.tx_engine.nonce_manager import NonceManager, get_shared_nonce_manager
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from agents.capital_lock import CapitalLock
+import time
 
 LOG_FILE = Path(os.getenv("CROSS_ROLLUP_LOG", "logs/cross_rollup_superbot.json"))
 LOG = StructuredLogger("cross_rollup_superbot", log_file=str(LOG_FILE))

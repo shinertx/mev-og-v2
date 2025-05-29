@@ -15,6 +15,8 @@ from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from core.tx_engine.nonce_manager import get_shared_nonce_manager
 from agents.ops_agent import OpsAgent
 from agents.capital_lock import CapitalLock
+from agents.drp_agent import DRPAgent
+from agents.gatekeeper import gates_green
 
 LOGGER = StructuredLogger("orchestrator")
 
@@ -90,6 +92,7 @@ class StrategyOrchestrator:
             "capital_lock": self.capital_lock.trade_allowed,
         }
         self.ops_agent = OpsAgent(checks)
+        self.drp_agent = DRPAgent()
         self.nonce_manager = get_shared_nonce_manager()
         self.strategy_ids: List[str] = self.config.get("alpha", {}).get("enabled", [])
         self.strategy_params: Dict[str, Any] = self.config.get("alpha", {}).get("params", {})
@@ -114,31 +117,25 @@ class StrategyOrchestrator:
                 log_error("orchestrator", str(exc), strategy_id=sid, event="load_fail")
 
     # ---------------------------------------------------------------
-    def _snapshot_state(self) -> None:
+    def _snapshot_state(self) -> bool:
         cmd = ["bash", "scripts/export_state.sh"]
         if self.dry_run:
             cmd.append("--dry-run")
         try:
             subprocess.run(cmd, check=True, capture_output=True, text=True)
+            return True
         except FileNotFoundError:
             log_error("orchestrator", "export_state.sh missing", event="snapshot_fail")
         except subprocess.CalledProcessError as exc:
             log_error("orchestrator", f"snapshot fail: {exc.stderr}", event="snapshot_fail")
+        return False
 
     # ---------------------------------------------------------------
     def run_once(self) -> bool:
-        if self.config.get("kill_switch_enabled", True) and kill_switch_triggered():
-            record_kill_event("orchestrator")
-            LOGGER.log("kill_switch", risk_level="high")
-            return False
-
-        if self.config.get("capital_lock_enabled", True) and not self.capital_lock.trade_allowed():
-            LOGGER.log("capital_lock", risk_level="high")
-            return False
-
         self.ops_agent.run_checks()
-        if self.ops_agent.paused:
-            LOGGER.log("ops_pause", risk_level="high")
+        if not gates_green(self.capital_lock, self.ops_agent, self.drp_agent):
+            if kill_switch_triggered():
+                record_kill_event("orchestrator")
             return False
 
         if self.config.get("mode") == "live" and os.getenv("FOUNDER_APPROVED") != "1":
@@ -153,7 +150,8 @@ class StrategyOrchestrator:
                 self.ops_agent.auto_pause("strategy_fail")
                 return False
 
-        self._snapshot_state()
+        ok = self._snapshot_state()
+        self.drp_agent.record_export(ok)
         LOGGER.log("iteration_complete", risk_level="low")
         return True
 

@@ -32,6 +32,7 @@ from core.tx_engine.builder import HexBytes, TransactionBuilder
 from core.tx_engine.nonce_manager import NonceManager, get_shared_nonce_manager
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from agents.capital_lock import CapitalLock
+import time
 
 LOG_FILE = Path(os.getenv("L3_APP_ROLLUP_LOG", "logs/l3_app_rollup_mev.json"))
 LOG = StructuredLogger("l3_app_rollup_mev", log_file=str(LOG_FILE))
