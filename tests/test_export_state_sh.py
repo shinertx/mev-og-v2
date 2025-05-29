@@ -9,11 +9,17 @@ import tarfile
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "export_state.sh"
 
 
-def run_script(args, env):
-    return subprocess.run(["bash", str(SCRIPT)] + args, capture_output=True, text=True, env=env, check=True)
+def run_script(args: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["bash", str(SCRIPT)] + args,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
 
 
-def test_export_and_clean(tmp_path):
+def test_export_and_clean(tmp_path: Path) -> None:
     logs_dir = tmp_path / "logs"
     state_dir = tmp_path / "state"
     logs_dir.mkdir()
@@ -49,7 +55,7 @@ def test_export_and_clean(tmp_path):
     assert entries[-1]["mode"] == "clean"
 
 
-def test_dry_run(tmp_path):
+def test_dry_run(tmp_path: Path) -> None:
     export_dir = tmp_path / "export"
     log_file = tmp_path / "export_log.json"
     env = os.environ.copy()
@@ -66,7 +72,7 @@ def test_dry_run(tmp_path):
     entries = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert entries[-1]["mode"] == "dry-run"
 
-def test_export_encrypted(tmp_path):
+def test_export_encrypted(tmp_path: Path) -> None:
     (tmp_path / "logs").mkdir()
     (tmp_path / "logs" / "log.txt").write_text("log")
     export_dir = tmp_path / "export"
@@ -106,7 +112,7 @@ def test_export_encrypted(tmp_path):
     assert entries[-1]["mode"] == "export"
 
     
-def test_malicious_env_input(tmp_path):
+def test_malicious_env_input(tmp_path: Path) -> None:
     (tmp_path / "logs").mkdir()
     (tmp_path / "logs" / "log.txt").write_text("log")
     export_dir = tmp_path / "export;rm -rf evil"

@@ -99,6 +99,7 @@ class AuditAgent:
 
         openai_client.api_key = api_key
         resp = openai_client.ChatCompletion.create(
+
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
         )

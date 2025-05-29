@@ -9,16 +9,17 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from core.logger import StructuredLogger, register_hook
+import pytest
 
 
-def test_structured_logging(tmp_path, monkeypatch):
+def test_structured_logging(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     log_file = tmp_path / "log.json"
     err_file = tmp_path / "errors.log"
     monkeypatch.setenv("ERROR_LOG_FILE", str(err_file))
     logger = StructuredLogger("test_mod", log_file=str(log_file))
     captured = []
 
-    def hook(entry):
+    def hook(entry: dict[str, object]) -> None:
         captured.append(entry)
 
     register_hook(hook)

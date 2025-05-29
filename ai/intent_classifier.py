@@ -13,9 +13,10 @@ LOG = StructuredLogger("intent_classifier")
 def _live_classify(intent: Dict[str, Any]) -> str:
     """Use OpenAI to classify intent if configured."""
     try:
+
         import openai as openai_module
         openai_client = cast(Any, openai_module)
-
+    
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY not set")
@@ -25,6 +26,7 @@ def _live_classify(intent: Dict[str, Any]) -> str:
             f"{intent}"
         )
         resp = openai_client.ChatCompletion.create(
+
             model=os.getenv("INTENT_MODEL", "gpt-4o"),
             messages=[{"role": "user", "content": prompt}],
         )
