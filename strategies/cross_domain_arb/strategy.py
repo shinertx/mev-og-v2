@@ -32,7 +32,7 @@ except Exception:  # pragma: no cover - allow missing dependency
     requests = None  # type: ignore
 
 from core.tx_engine.builder import TransactionBuilder, HexBytes
-from core.tx_engine.nonce_manager import NonceManager
+from core.tx_engine.nonce_manager import NonceManager, get_shared_nonce_manager
 from core.logger import StructuredLogger, log_error
 from core import metrics
 from agents.capital_lock import CapitalLock
@@ -110,6 +110,7 @@ class CrossDomainArb:
         nodes: Optional[Dict[str, str]] = None,
         edges_enabled: Optional[Dict[str, bool]] = None,
         capital_lock: CapitalLock | None = None,
+        nonce_manager: NonceManager | None = None,
     ) -> None:
         self.feed = UniswapV3Feed()
         self.pools = pools
@@ -121,7 +122,7 @@ class CrossDomainArb:
 
         # transaction execution setup
         w3 = self.feed.web3s.get("ethereum") if self.feed.web3s else None
-        self.nonce_manager = NonceManager(w3)
+        self.nonce_manager = nonce_manager or get_shared_nonce_manager(w3)
         self.tx_builder = TransactionBuilder(w3, self.nonce_manager)
         self.executor = os.getenv("ARB_EXECUTOR_ADDR", "0x0000000000000000000000000000000000000000")
         self.sample_tx = HexBytes(b"\x01")

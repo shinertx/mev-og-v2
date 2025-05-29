@@ -25,7 +25,7 @@ from core.logger import StructuredLogger, log_error
 from core import metrics
 from core.oracles.rwa_feed import RWAFeed, RWAData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
-from core.tx_engine.nonce_manager import NonceManager
+from core.tx_engine.nonce_manager import NonceManager, get_shared_nonce_manager
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from agents.capital_lock import CapitalLock
 
@@ -59,6 +59,7 @@ class RWASettlementMEV:
         *,
         threshold: float | None = None,
         capital_lock: CapitalLock | None = None,
+        nonce_manager: NonceManager | None = None,
     ) -> None:
         self.feed = RWAFeed()
         self.venues = venues
@@ -66,7 +67,7 @@ class RWASettlementMEV:
         self.last_prices: Dict[str, float] = {}
 
         w3 = None
-        self.nonce_manager = NonceManager(w3)
+        self.nonce_manager = nonce_manager or get_shared_nonce_manager(w3)
         self.tx_builder = TransactionBuilder(w3, self.nonce_manager)
         self.executor = os.getenv("RWA_EXECUTOR", "0x0000000000000000000000000000000000000000")
         self.sample_tx = HexBytes(b"\x01")

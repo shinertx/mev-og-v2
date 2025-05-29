@@ -12,6 +12,7 @@ from typing import Any, Dict, List
 
 from core.logger import StructuredLogger, log_error
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+from core.tx_engine.nonce_manager import get_shared_nonce_manager
 from agents.ops_agent import OpsAgent
 from agents.capital_lock import CapitalLock
 
@@ -89,6 +90,7 @@ class StrategyOrchestrator:
             "capital_lock": self.capital_lock.trade_allowed,
         }
         self.ops_agent = OpsAgent(checks)
+        self.nonce_manager = get_shared_nonce_manager()
         self.strategy_ids: List[str] = self.config.get("alpha", {}).get("enabled", [])
         self.strategy_params: Dict[str, Any] = self.config.get("alpha", {}).get("params", {})
         self.strategies: Dict[str, Any] = {}
@@ -100,7 +102,8 @@ class StrategyOrchestrator:
             try:
                 module = importlib.import_module(f"strategies.{sid}.strategy")
                 cls = getattr(module, [n for n in dir(module) if n[0].isupper()][0])
-                params = self.strategy_params.get(sid, {})
+                params = self.strategy_params.get(sid, {}).copy()
+                params["nonce_manager"] = self.nonce_manager
                 strat = cls(**params)
                 setattr(strat, "wallet_address", self.config.get("wallet_address"))
                 setattr(strat, "ops_agent", self.ops_agent)
