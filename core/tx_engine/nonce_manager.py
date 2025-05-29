@@ -43,6 +43,7 @@ class NonceManager:
         self.log_path = Path(log_file)
         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
+        # reentrant lock protecting all nonce state mutations/reads
         self._nonce_lock = threading.RLock()
         self._nonces: Dict[str, int] = {}
         self._load_cache()
@@ -51,25 +52,27 @@ class NonceManager:
     # Internal helpers
     # ------------------------------------------------------------------
     def _load_cache(self) -> None:
-        """Load nonce cache from disk."""
+        """Load nonce cache from disk under lock."""
 
-        if self.cache_path.exists():
-            try:
-                data = json.loads(self.cache_path.read_text())
-                self._nonces = {k: int(v) for k, v in data.items()}
-            except Exception as exc:
-                self._nonces = {}
-                log_error("NonceManager", f"load_cache failed: {exc}")
-        else:
-            self.cache_path.write_text("{}")
+        with self._nonce_lock:
+            if self.cache_path.exists():
+                try:
+                    data = json.loads(self.cache_path.read_text())
+                    self._nonces = {k: int(v) for k, v in data.items()}
+                except Exception as exc:
+                    self._nonces = {}
+                    log_error("NonceManager", f"load_cache failed: {exc}")
+            else:
+                self.cache_path.write_text("{}")
 
     def _save_cache(self) -> None:
-        """Persist nonce cache to disk."""
-        try:
-            with self.cache_path.open("w") as fh:
-                json.dump(self._nonces, fh)
-        except Exception as exc:
-            log_error("NonceManager", f"save_cache failed: {exc}")
+        """Persist nonce cache to disk under lock."""
+        with self._nonce_lock:
+            try:
+                with self.cache_path.open("w") as fh:
+                    json.dump(self._nonces, fh)
+            except Exception as exc:
+                log_error("NonceManager", f"save_cache failed: {exc}")
 
     def _fetch_onchain_nonce(self, address: str) -> int:
         """Fetch the current on-chain nonce for ``address``."""
@@ -152,6 +155,19 @@ class NonceManager:
         with self._nonce_lock:
             self._nonces = {k: int(v) for k, v in data.items()}
             self._save_cache()
+
+    # ------------------------------------------------------------------
+    def nonce_state(self) -> Dict[str, int]:
+        """Return a copy of the current nonce cache for inspection."""
+
+        with self._nonce_lock:
+            return dict(self._nonces)
+
+    def peek_nonce(self, address: str) -> int | None:
+        """Return current cached nonce for ``address`` without incrementing."""
+
+        with self._nonce_lock:
+            return self._nonces.get(address)
 
 
 # ---------------------------------------------------------------------------

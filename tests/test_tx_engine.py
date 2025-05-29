@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 import pytest
+from agents.agent_registry import set_value
 
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager
@@ -44,6 +45,9 @@ def test_gas_estimation_and_nonce(tmp_path):
     web3 = DummyWeb3()
     nm = NonceManager(web3, cache_file=str(tmp_path / "nonce.json"))
     builder = TransactionBuilder(web3, nm, log_path=tmp_path / "log.json")
+    set_value("paused", False)
+    set_value("capital_locked", False)
+    set_value("drp_ready", True)
 
     tx = HexBytes(b"\x01\x02")
     result = builder.send_transaction(tx, "0xabc")
@@ -64,11 +68,16 @@ def test_kill_switch(tmp_path, monkeypatch):
     builder = TransactionBuilder(web3, nm, log_path=tmp_path / "log.json")
     kill_log = tmp_path / "kill.json"
     err_log = tmp_path / "errors.log"
+    set_value("paused", False)
+    set_value("capital_locked", False)
+    set_value("drp_ready", True)
     monkeypatch.setenv("KILL_SWITCH", "1")
     monkeypatch.setenv("KILL_SWITCH_LOG_FILE", str(kill_log))
     monkeypatch.setenv("ERROR_LOG_FILE", str(err_log))
     with pytest.raises(RuntimeError):
         builder.send_transaction(HexBytes(b"\x01"), "0xdef")
+    if not kill_log.exists():
+        pytest.fail("kill.json was not written")
     entries = [json.loads(line) for line in kill_log.read_text().splitlines()]
     assert entries[-1]["origin_module"] == "TransactionBuilder"
     err_lines = err_log.read_text().splitlines()
@@ -82,6 +91,8 @@ def test_agent_gates_block(tmp_path):
     builder = TransactionBuilder(web3, nm, log_path=tmp_path / "log.json")
     from agents.agent_registry import set_value
     set_value("paused", True)
+    set_value("capital_locked", False)
+    set_value("drp_ready", True)
     with pytest.raises(RuntimeError):
         builder.send_transaction(HexBytes(b"\x01"), "0xabc")
     set_value("paused", False)
@@ -91,6 +102,9 @@ def test_cross_agent_order_flow(tmp_path):
     nm = NonceManager(web3, cache_file=str(tmp_path / "nonce.json"))
     b1 = TransactionBuilder(web3, nm, log_path=tmp_path / "a.json")
     b2 = TransactionBuilder(web3, nm, log_path=tmp_path / "b.json")
+    set_value("paused", False)
+    set_value("capital_locked", False)
+    set_value("drp_ready", True)
 
     def send(builder, tx):
         builder.send_transaction(tx, "0xabc")
@@ -101,6 +115,7 @@ def test_cross_agent_order_flow(tmp_path):
     t2.start()
     t1.join()
     t2.join()
-
-    # nonces should be sequential across builders
+    print("final nonce state", nm.nonce_state())
+    assert nm.nonce_state().get("0xabc") == 1
+    # next nonce should be 2
     assert nm.get_nonce("0xabc") == 2
