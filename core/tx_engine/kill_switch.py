@@ -19,7 +19,7 @@ def _flag_file() -> Path:
 def _log_file() -> Path:
     """Return path to the kill switch log file."""
 
-    return Path(os.getenv("KILL_SWITCH_LOG_FILE", "/logs/kill_log.json"))
+    return Path(os.getenv("KILL_SWITCH_LOG_FILE", "logs/kill_log.json"))
 
 
 LOG = StructuredLogger("kill_switch", log_file=str(_log_file()))

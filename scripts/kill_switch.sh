@@ -2,7 +2,7 @@
 
 # Manual kill switch trigger script
 # Purpose: allow operators or DRP to enable/disable the system kill switch.
-# Logs all actions to /logs/kill_log.json in JSON format for audit.
+# Logs all actions to logs/kill_log.json in JSON format for audit.
 
 set -euo pipefail
 
@@ -28,7 +28,7 @@ done
 
 ENV_FILE="${ENV_FILE:-.env}"
 FLAG_FILE="${KILL_SWITCH_FLAG_FILE:-./flags/kill_switch.txt}"
-LOG_FILE="${KILL_SWITCH_LOG_FILE:-/logs/kill_log.json}"
+LOG_FILE="${KILL_SWITCH_LOG_FILE:-logs/kill_log.json}"
 USER_NAME="$(whoami 2>/dev/null || echo unknown)"
 TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 TRACE_ID="${TRACE_ID:-}"
