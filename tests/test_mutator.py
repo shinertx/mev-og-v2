@@ -16,6 +16,8 @@ def test_score_and_prune(tmp_path):
             "drawdown": 0.1,
             "win_rate": 0.75,
             "failures": 0,
+            "chaos_failures": 0,
+            "dr_triggers": 0,
         },
         "stratB": {
             "realized_pnl": -5,
@@ -23,6 +25,8 @@ def test_score_and_prune(tmp_path):
             "drawdown": 0.5,
             "win_rate": 0.2,
             "failures": 2,
+            "chaos_failures": 1,
+            "dr_triggers": 1,
         },
     }
     scores = score_strategies(metrics, output_path=str(tmp_path / "scores.json"), top_n=1)

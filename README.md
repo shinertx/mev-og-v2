@@ -459,6 +459,23 @@ bash scripts/kill_switch.sh --clean
 Environment variables `KILL_SWITCH_FLAG_FILE` and `KILL_SWITCH_LOG_FILE` control
 the flag and log paths.
 
+
+## Chaos/DR Drill
+
+Run the automated chaos/disaster recovery drill harness:
+
+```bash
+python infra/sim_harness/chaos_drill.py
+```
+
+This triggers the kill switch, pauses capital via OpsAgent, simulates a lost agent, and forces failure across every supported adapter (DEX, bridge, CEX, flashloan, intent, sequencer and node). After each event the drill exports state with `scripts/export_state.sh`, restores it with `scripts/rollback.sh`, and scans all logs/archives for secrets or PII. Any secret causes an immediate failure. Export archives are stored in `export/`, drill logs in `logs/chaos_drill.json`, and per-module failure counts in `logs/drill_metrics.json`.
+
+Validate locally with:
+
+```bash
+pytest tests/test_chaos_drill.py
+```
+
 ## OpsAgent & CapitalLock
 
 `agents/ops_agent.py` runs periodic health checks and pauses all strategies if

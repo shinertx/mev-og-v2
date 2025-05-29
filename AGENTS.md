@@ -150,6 +150,15 @@ Every PR or batch/module must pass:
 * Mutation cycle:
   `python ai/mutator/main.py --logs-dir logs`
 
+### chaos_drill
+
+* Run harness:
+  `python infra/sim_harness/chaos_drill.py`
+* Validate:
+  `pytest tests/test_chaos_drill.py`
+* Results are written to `logs/chaos_drill.json` with per-adapter failure counts in `logs/drill_metrics.json`.
+  CI fails if any secrets/PII are detected in logs or DRP exports.
+
 ### OpsAgent & CapitalLock Runbook
 
 * Start OpsAgent:

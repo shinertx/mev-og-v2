@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'
 
 jobs:
   build:
@@ -35,6 +37,8 @@ jobs:
         run: bash scripts/export_state.sh --dry-run
       - name: Offline audit
         run: python ai/audit_agent.py --mode=offline --logs logs/cross_domain_arb.json
+      - name: Chaos drill
+        run: python infra/sim_harness/chaos_drill.py
       - name: Tag canary
         run: |
           TAG="canary-${{ github.sha }}-$(date +%Y%m%d)"
