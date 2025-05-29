@@ -182,6 +182,18 @@ strat = Strategy(..., capital_lock=lock)
 - On failure, `_bundle_and_send` falls back to `TransactionBuilder.send_transaction`.
 - Bundle latency is returned for metrics and log entry enrichment.
 
+## Agent CLI Reference
+
+| Command | Purpose |
+|---------|---------|
+| `python ai/promote.py` | Promote tested strategies into the active set. Requires `FOUNDER_APPROVED=1` and `TRACE_ID`. |
+| `python scripts/batch_ops.py promote <strat>` | Batch promote one or more strategies. |
+| `python scripts/batch_ops.py pause <strat>` | Move a live strategy to the paused directory. |
+| `python scripts/batch_ops.py rollback <strat>` | Restore a strategy from audit logs. |
+| `bash scripts/kill_switch.sh` | Toggle the global kill switch. |
+| `bash scripts/export_state.sh` | Export logs and state into `$EXPORT_DIR`. |
+| `bash scripts/rollback.sh --archive=<file>` | Restore from a DRP archive. |
+
 ---
 
 ## CODE QUALITY POLICIES

@@ -152,12 +152,15 @@ MEV-OG reads settings from a `.env` file and `config.yaml`. Use
 ```
 OPENAI_API_KEY=<your-openai-key>          # Enables online audits
 FOUNDER_APPROVED=0                        # 1 allows promotion
+KILL_SWITCH=0                             # 1 halts all trading
 RPC_ETHEREUM_URL=<https://mainnet.ethereum.org>
 RPC_ARBITRUM_URL=<https://arbitrum.rpc>
 RPC_OPTIMISM_URL=<https://optimism.rpc>
-KILL_SWITCH_PATH=/tmp/mev_kill            # File trigger for halt
+KILL_SWITCH_FLAG_FILE=./flags/kill_switch.txt  # File trigger for halt
 METRICS_PORT=9102                         # Prometheus server port
 METRICS_TOKEN=<optional-token>            # Require auth header if set
+FLASHBOTS_AUTH_KEY=<hex-private-key>      # Required for bundle submission
+FLASHBOTS_RPC_URL=https://relay.flashbots.net
 ```
 
 Additional strategy values:
@@ -194,6 +197,7 @@ the values used in tests and the simulation harness:
 | `INTENT_FEED_URL` | `http://localhost:9000` | L3 intent feed |
 | `KILL_SWITCH_FLAG_FILE` | `./flags/kill_switch.txt` | Kill switch trigger file |
 | `KILL_SWITCH_LOG_FILE` | `/logs/kill_log.json` | Kill switch audit log |
+| `KILL_SWITCH` | `0` | Set to 1 to halt all trading |
 | `L3_APP_EXECUTOR` | `0x000...` | Executor for l3_app_rollup_mev |
 | `L3_APP_ROLLUP_LOG` | `logs/l3_app_rollup_mev.json` | l3_app_rollup_mev log |
 | `L3_APP_STATE_POST` | `state/l3_app_post.json` | Post DRP snapshot |
@@ -247,6 +251,12 @@ the values used in tests and the simulation harness:
 | `ORCH_LOGS_DIR` | `logs` | Directory for orchestrator logs |
 | `ORCH_MODE` | `dry-run` | Default run mode |
 | `WALLET_OPS_LOG` | `logs/wallet_ops.log` | Wallet operations audit log |
+| `EXPORT_DIR` | `export` | DRP export directory |
+| `EXPORT_LOG_FILE` | `logs/export_state.json` | DRP export audit log |
+| `ROLLBACK_LOG_FILE` | `logs/rollback.log` | Rollback audit log |
+| `FLASHBOTS_AUTH_KEY` | `<none>` | Private key for Flashbots bundles |
+| `FLASHBOTS_RPC_URL` | `https://relay.flashbots.net` | Flashbots/SUAVE relay |
+| `PRIORITY_FEE_GWEI` | `2` | Default EIP-1559 priority fee |
 
 ### cross_domain_arb Runbook
 
