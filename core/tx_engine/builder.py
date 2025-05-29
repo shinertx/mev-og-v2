@@ -27,6 +27,7 @@ from typing import Any, cast, SupportsIndex
 from .kill_switch import kill_switch_triggered, record_kill_event
 from .nonce_manager import NonceManager
 from core.logger import log_error
+from agents.agent_registry import get_value
 
 # simple HexBytes implementation
 class HexBytes(bytes):
@@ -125,6 +126,20 @@ class TransactionBuilder:
                 strategy_id=strategy_id,
             )
             raise RuntimeError("Kill switch active")
+
+        if (
+            get_value("paused", False)
+            or get_value("capital_locked", False)
+            or not get_value("drp_ready", True)
+        ):
+            log_error(
+                "TransactionBuilder",
+                "agent gates blocked",
+                tx_id=tx_id,
+                strategy_id=strategy_id,
+                event="gate_block",
+            )
+            raise RuntimeError("Agent gates blocked")
 
         # decode transaction for gas estimation
         try:

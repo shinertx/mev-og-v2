@@ -18,6 +18,10 @@ from pathlib import Path
 from typing import Any, Dict
 
 from core.logger import StructuredLogger, log_error
+from agents.capital_lock import CapitalLock
+from agents.ops_agent import OpsAgent
+from agents.drp_agent import DRPAgent
+from agents.gatekeeper import gates_green
 import os
 
 LOGGER = StructuredLogger("promote")
@@ -30,6 +34,9 @@ def promote_strategy(
     evidence: Dict[str, Any] | None = None,
     *,
     trace_id: str | None = None,
+    capital_lock: CapitalLock | None = None,
+    ops_agent: OpsAgent | None = None,
+    drp_agent: DRPAgent | None = None,
 ) -> bool:
     """Promote strategy ``src`` to ``dst`` if ``approved``."""
 
@@ -45,6 +52,15 @@ def promote_strategy(
             trace_id=trace_id,
         )
         return False
+    if capital_lock and ops_agent and drp_agent:
+        if not gates_green(capital_lock, ops_agent, drp_agent):
+            LOGGER.log(
+                "promotion_blocked",
+                strategy_id=src.name,
+                risk_level="high",
+                trace_id=trace_id,
+            )
+            return False
     try:
         if dst.exists():
             shutil.rmtree(dst)

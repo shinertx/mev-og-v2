@@ -73,3 +73,14 @@ def test_kill_switch(tmp_path, monkeypatch):
     err_lines = err_log.read_text().splitlines()
     assert err_lines
     monkeypatch.delenv("KILL_SWITCH")
+
+
+def test_agent_gates_block(tmp_path):
+    web3 = DummyWeb3()
+    nm = NonceManager(web3, cache_file=str(tmp_path / "nonce.json"))
+    builder = TransactionBuilder(web3, nm, log_path=tmp_path / "log.json")
+    from agents.agent_registry import set_value
+    set_value("paused", True)
+    with pytest.raises(RuntimeError):
+        builder.send_transaction(HexBytes(b"\x01"), "0xabc")
+    set_value("paused", False)
