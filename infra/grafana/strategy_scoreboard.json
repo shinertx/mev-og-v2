@@ -1,0 +1,28 @@
+{
+  "title": "Strategy Scoreboard",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Strategy Scores",
+      "targets": [
+        {"expr": "strategy_score", "legendFormat": "{{strategy}}"}
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Pruned Strategies",
+      "targets": [
+        {"expr": "prune_total"}
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Decay Alerts",
+      "targets": [
+        {"expr": "decay_alerts"}
+      ]
+    }
+  ],
+  "schemaVersion": 30,
+  "version": 1
+}

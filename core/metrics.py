@@ -29,6 +29,10 @@ _METRICS: Dict[str, Any] = {
     "spreads": [],
     "latencies": [],
     "alert_count": 0,
+    "strategy_scores": {},
+    "prune_total": 0,
+    "decay_alerts": 0,
+    "mutation_events": 0,
 }
 _LOCK = threading.Lock()
 _METRICS_TOKEN = os.getenv("METRICS_TOKEN")
@@ -54,6 +58,27 @@ def record_fail() -> None:
 def record_alert() -> None:
     with _LOCK:
         _METRICS["alert_count"] = cast(int, _METRICS["alert_count"]) + 1
+
+
+def record_strategy_score(sid: str, score: float) -> None:
+    with _LOCK:
+        scores = cast(Dict[str, float], _METRICS.setdefault("strategy_scores", {}))
+        scores[sid] = score
+
+
+def record_prune() -> None:
+    with _LOCK:
+        _METRICS["prune_total"] = cast(int, _METRICS.get("prune_total", 0)) + 1
+
+
+def record_decay_alert() -> None:
+    with _LOCK:
+        _METRICS["decay_alerts"] = cast(int, _METRICS.get("decay_alerts", 0)) + 1
+
+
+def record_mutation_event() -> None:
+    with _LOCK:
+        _METRICS["mutation_events"] = cast(int, _METRICS.get("mutation_events", 0)) + 1
 
 
 # ----------------------------------------------------------------------
@@ -85,7 +110,13 @@ class _Handler(BaseHTTPRequestHandler):
                 f"avg_spread {avg_spread}\n"
                 f"avg_latency_seconds {avg_latency}\n"
                 f"alert_count {_METRICS['alert_count']}\n"
+                f"prune_total {_METRICS['prune_total']}\n"
+                f"decay_alerts {_METRICS['decay_alerts']}\n"
+                f"mutation_events {_METRICS['mutation_events']}\n"
             ).encode()
+            scores = cast(Dict[str, float], _METRICS.get("strategy_scores", {}))
+            for sid, val in scores.items():
+                body += f"strategy_score{{strategy=\"{sid}\"}} {val}\n".encode()
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.send_header("Content-Length", str(len(body)))

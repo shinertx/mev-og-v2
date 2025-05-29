@@ -43,3 +43,14 @@ class MutationManager:
         for pid in pruned:
             log_mutation("prune_agent", agent_id=pid, pnl=self.scores.get(pid, 0.0), reason="low_score")
         self.agents = [self.agents[i] for i in keep]
+
+    # --------------------------------------------------------------
+    def handle_pruning(self, strategies: List[str], dry_run: bool = False) -> None:
+        """Trigger mutation cycle when strategies are pruned."""
+        if not strategies:
+            return
+        if dry_run:
+            LOG.log("mutation_dry_run", strategies=strategies)
+            return
+        log_mutation("trigger_mutation", strategies=strategies)
+        LOG.log("trigger_mutation", strategies=strategies)
