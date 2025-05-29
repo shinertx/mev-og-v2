@@ -19,77 +19,74 @@ import os
 from pathlib import Path
 from statistics import mean, stdev
 from typing import Any, Dict, List
+import hashlib
 
 from core.logger import StructuredLogger
 
 LOGGER = StructuredLogger("strategy_score")
 
 
-def score_strategies(metrics: Dict[str, Dict[str, Any]], output_path: str = "logs/strategy_scores.json") -> List[Dict[str, Any]]:
-    """Compute scores for strategies based on provided ``metrics``.
+def _version_hash(sid: str, data: Dict[str, Any]) -> str:
+    """Return a short SHA-256 hash for versioning."""
+
+    digest = hashlib.sha256(json.dumps({"sid": sid, "data": data}, sort_keys=True).encode()).hexdigest()
+    return digest[:8]
+
+
+def score_strategies(
+    metrics: Dict[str, Dict[str, Any]],
+    output_path: str = "logs/strategy_scores.json",
+    top_n: int = 5,
+) -> List[Dict[str, Any]]:
+    """Compute scores for strategies based solely on live metrics.
 
     Parameters
     ----------
     metrics:
-        Mapping of strategy_id to metric dictionary. Expected keys include
-        ``pnl``, ``returns``, ``risk``, ``volatility``, ``wins``, ``losses``,
-        ``latencies``, and ``opportunities``.
+        Mapping of ``strategy_id`` to metric dictionary loaded from live trade
+        results or databases. Expected keys are ``realized_pnl``, ``sharpe``,
+        ``drawdown``, ``win_rate`` and ``failures``. Optional ``parent_hash``
+        can track lineage between mutants.
     output_path:
         JSON file path where ranked scores will be written.
     """
 
     ranking: List[Dict[str, Any]] = []
     for sid, data in metrics.items():
-        pnl = float(data.get("pnl", 0.0))
-        returns = data.get("returns", [pnl])
-        sharpe = 0.0
-        if isinstance(returns, list) and len(returns) > 1:
-            try:
-                sharpe = mean(returns) / stdev(returns)
-            except Exception:
-                sharpe = 0.0
-        risk = float(data.get("risk", 0.0))
-        volatility = float(data.get("volatility", 0.0))
-        wins = int(data.get("wins", 0))
-        losses = int(data.get("losses", 0))
-        win_rate = wins / max(wins + losses, 1)
-        latencies = data.get("latencies", [])
-        avg_latency = mean(latencies) if isinstance(latencies, list) and latencies else 0.0
-        opportunities = int(data.get("opportunities", 0))
-        density = opportunities / max(len(latencies), 1)
+        pnl = float(data.get("realized_pnl", 0.0))
+        sharpe = float(data.get("sharpe", 0.0))
+        drawdown = float(data.get("drawdown", 0.0))
+        win_rate = float(data.get("win_rate", 0.0))
+        failures = int(data.get("failures", 0))
 
-        score = (
-            pnl
-            + sharpe * 100
-            + win_rate * 10
-            - risk * 100
-            - volatility * 10
-            - avg_latency * 0.1
-            + density * 5
-        )
+        score = pnl + sharpe * 100 - drawdown * 50 + win_rate * 10 - failures * 20
+
+        vh = _version_hash(sid, data)
+
         ranking.append(
             {
                 "strategy": sid,
+                "version": vh,
+                "parent": data.get("parent_hash"),
                 "score": score,
                 "pnl": pnl,
                 "sharpe": sharpe,
-                "risk": risk,
-                "volatility": volatility,
+                "drawdown": drawdown,
                 "win_rate": win_rate,
-                "avg_latency": avg_latency,
-                "opportunity_density": density,
+                "failures": failures,
             }
         )
 
     ranking.sort(key=lambda x: x["score"], reverse=True)
+    top = ranking[:top_n]
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as fh:
-        json.dump(ranking, fh, indent=2)
+        json.dump(top, fh, indent=2)
     LOGGER.log(
         "strategy_scores",
         strategy_id="scoring",
         mutation_id=os.getenv("MUTATION_ID", "dev"),
         risk_level="low",
-        scores=ranking,
+        scores=top,
     )
-    return ranking
+    return top
