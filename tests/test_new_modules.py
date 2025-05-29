@@ -39,7 +39,14 @@ def test_hedge_risk(monkeypatch):
     from strategies.cross_domain_arb import CrossDomainArb, PoolConfig
     from agents.capital_lock import CapitalLock
 
-    pools = {"eth": PoolConfig("0xpool", "ethereum"), "arb": PoolConfig("0xpool", "arbitrum")}
+    pools = {
+        "eth": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "ethereum"
+        ),  # test-only
+        "arb": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "arbitrum"
+        ),  # test-only
+    }
     strat = CrossDomainArb(pools, {}, threshold=0.0, capital_lock=CapitalLock(1000, 1e9, 0), edges_enabled={"hedge": True})
     called = {}
     def fake_post(url, json, timeout):

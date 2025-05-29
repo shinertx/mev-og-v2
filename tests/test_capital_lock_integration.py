@@ -71,8 +71,12 @@ class DummyFeed:
 
 def test_capital_lock_blocks_trade(tmp_path):
     pools = {
-        "eth": PoolConfig("0xpool", "ethereum"),
-        "arb": PoolConfig("0xpool", "arbitrum"),
+        "eth": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "ethereum"
+        ),  # test-only
+        "arb": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "arbitrum"
+        ),  # test-only
     }
     bridges = {("ethereum", "arbitrum"): BridgeConfig(0.0001)}
     lock = CapitalLock(max_drawdown_pct=5, max_loss_usd=50, balance_usd=1000)

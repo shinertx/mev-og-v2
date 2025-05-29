@@ -86,8 +86,12 @@ class DummyIntentFeed:
 
 def setup_strat(threshold=0.01):
     pools = {
-        "arbitrum": PoolConfig("0xpool", "arbitrum"),
-        "zksync": PoolConfig("0xpool", "zksync"),
+        "arbitrum": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "arbitrum"
+        ),  # test-only
+        "zksync": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "zksync"
+        ),  # test-only
     }
     bridges = {("zksync", "arbitrum"): BridgeConfig(0.0001, latency_sec=10)}
     strat = L3AppRollupMEV(pools, bridges, threshold=threshold, capital_lock=CapitalLock(1000, 1e9, 0))

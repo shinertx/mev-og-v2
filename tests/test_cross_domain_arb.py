@@ -107,9 +107,15 @@ def test_opportunity_detection():
     Avoids live RPC polling, infinite waits, or flakey failures.
     """
     pools = {
-        "eth": PoolConfig("0xpool", "ethereum"),
-        "arb": PoolConfig("0xpool", "arbitrum"),
-        "opt": PoolConfig("0xpool", "optimism"),
+        "eth": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "ethereum"
+        ),  # test-only
+        "arb": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "arbitrum"
+        ),  # test-only
+        "opt": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "optimism"
+        ),  # test-only
     }
     strat = CrossDomainArb(pools, {}, threshold=0.01, capital_lock=CapitalLock(1000, 1e9, 0))
     strat.feed = DummyFeed({"ethereum": 100, "arbitrum": 102, "optimism": 101})

@@ -73,7 +73,11 @@ class DummyFeed:
 
 
 def setup_strat(threshold=0.001):
-    pools = {"l3": PoolConfig("0xpool", "ethereum")}
+    pools = {
+        "l3": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "ethereum"
+        )  # test-only
+    }
     strat = L3SequencerMEV(pools, threshold=threshold, capital_lock=CapitalLock(1000, 1e9, 0))
     return strat
 
