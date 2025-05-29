@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, cast
 
 from core.logger import StructuredLogger, log_error
 
@@ -90,18 +90,18 @@ class AuditAgent:
     def run_online_audit(self, prompt: str) -> str:
         """Submit ``prompt`` to OpenAI and return the text response."""
 
-        import openai  # type: ignore  # imported here to simplify testing/mocking
+        import openai  # imported here to simplify testing/mocking
 
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY not set")
 
         openai.api_key = api_key
-        resp = openai.ChatCompletion.create(
+        resp = openai.ChatCompletion.create(  # type: ignore[attr-defined]
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
         )
-        message = resp.choices[0].message.content  # type: ignore[assignment]
+        message = cast(str, resp.choices[0].message.content)
         LOGGER.log(
             "online_audit",
             strategy_id="audit",

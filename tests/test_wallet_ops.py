@@ -7,7 +7,11 @@ from pathlib import Path
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "wallet_ops.py"
 
 
-def run_script(args, env, input_data=""):
+def run_script(
+    args: list[str],
+    env: dict[str, str],
+    input_data: str = "",
+) -> subprocess.CompletedProcess[str]:
     env = env.copy()
     env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
     return subprocess.run(
@@ -19,7 +23,7 @@ def run_script(args, env, input_data=""):
     )
 
 
-def test_fund_dry_run(tmp_path):
+def test_fund_dry_run(tmp_path: Path) -> None:
     os.chdir(tmp_path)
     env = os.environ.copy()
     env.update(
@@ -51,7 +55,7 @@ def test_fund_dry_run(tmp_path):
     assert len(export_entries) == 2
 
 
-def test_no_approval(tmp_path):
+def test_no_approval(tmp_path: Path) -> None:
     os.chdir(tmp_path)
     env = os.environ.copy()
     env.update(
@@ -82,7 +86,7 @@ def test_no_approval(tmp_path):
     assert logs[-1]["approved"] is False
 
 
-def test_tx_fail(tmp_path):
+def test_tx_fail(tmp_path: Path) -> None:
     os.chdir(tmp_path)
     env = os.environ.copy()
     env.update(
@@ -113,7 +117,7 @@ def test_tx_fail(tmp_path):
     assert logs[-1]["error"]
 
 
-def test_insufficient_funds(tmp_path):
+def test_insufficient_funds(tmp_path: Path) -> None:
     os.chdir(tmp_path)
     env = os.environ.copy()
     env.update(
