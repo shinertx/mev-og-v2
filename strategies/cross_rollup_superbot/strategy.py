@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, TypedDict, cast
 
-from core.logger import StructuredLogger, log_error
+from core.logger import StructuredLogger, log_error, make_json_safe
 from core import metrics
 from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
@@ -103,7 +103,10 @@ class CrossRollupSuperbot:
     def snapshot(self, path: str) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as fh:
-            json.dump({"last_prices": self.last_prices, "failed_pools": self.failed_pools}, fh)
+            json.dump(
+                make_json_safe({"last_prices": self.last_prices, "failed_pools": self.failed_pools}),
+                fh,
+            )
 
     def restore(self, path: str) -> None:
         if os.path.exists(path):

@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 import hashlib
 
-from core.logger import StructuredLogger
+from core.logger import StructuredLogger, make_json_safe
 
 LOGGER = StructuredLogger("strategy_score")
 
@@ -29,7 +29,10 @@ LOGGER = StructuredLogger("strategy_score")
 def _version_hash(sid: str, data: Dict[str, Any]) -> str:
     """Return a short SHA-256 hash for versioning."""
 
-    digest = hashlib.sha256(json.dumps({"sid": sid, "data": data}, sort_keys=True).encode()).hexdigest()
+    safe = make_json_safe({"sid": sid, "data": data})
+    digest = hashlib.sha256(
+        json.dumps(safe, sort_keys=True).encode()
+    ).hexdigest()
     return digest[:8]
 
 
@@ -93,7 +96,7 @@ def score_strategies(
     top = ranking[:top_n]
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as fh:
-        json.dump(top, fh, indent=2)
+        json.dump(make_json_safe(top), fh, indent=2)
     LOGGER.log(
         "strategy_scores",
         strategy_id="scoring",

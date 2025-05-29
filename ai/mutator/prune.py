@@ -19,7 +19,7 @@ from typing import Any, Dict, List
 import json
 import hashlib
 
-from core.logger import StructuredLogger
+from core.logger import StructuredLogger, make_json_safe
 from ai.mutation_log import log_mutation
 
 LOGGER = StructuredLogger("strategy_prune")
@@ -35,7 +35,8 @@ PRUNE_THRESH = {
 
 
 def _version_hash(sid: str, data: Dict[str, Any]) -> str:
-    digest = hashlib.sha256(json.dumps({"sid": sid, "data": data}, sort_keys=True).encode()).hexdigest()
+    safe = make_json_safe({"sid": sid, "data": data})
+    digest = hashlib.sha256(json.dumps(safe, sort_keys=True).encode()).hexdigest()
     return digest[:8]
 
 

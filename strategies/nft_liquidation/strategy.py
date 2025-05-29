@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from core.logger import StructuredLogger, log_error
+from core.logger import StructuredLogger, log_error, make_json_safe
 from core import metrics
 from core.oracles.nft_liquidation_feed import NFTLiquidationFeed, AuctionData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
@@ -72,7 +72,7 @@ class NFTLiquidationMEV:
     def snapshot(self, path: str) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as fh:
-            json.dump({"last_seen": self.last_seen}, fh)
+            json.dump(make_json_safe({"last_seen": self.last_seen}), fh)
 
     def restore(self, path: str) -> None:
         if os.path.exists(path):

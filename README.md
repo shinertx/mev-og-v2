@@ -286,6 +286,7 @@ Example log:
 ```json
 {"timestamp":"2025-01-01T00:00:00Z","event":"trade","tx_id":"0xabc","strategy_id":"cross_domain_arb","mutation_id":"42","risk_level":"low","block":123,"trace_id":"XYZ123"}
 ```
+All logs and DRP exports are sanitized with `make_json_safe()` so that every entry is valid JSON and audit-ready.
 
 ### cross_rollup_superbot Runbook
 

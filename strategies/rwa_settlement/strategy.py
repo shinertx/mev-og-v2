@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, TypedDict, cast
 
-from core.logger import StructuredLogger, log_error
+from core.logger import StructuredLogger, log_error, make_json_safe
 from core import metrics
 from core.oracles.rwa_feed import RWAFeed, RWAData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
@@ -79,7 +79,7 @@ class RWASettlementMEV:
     def snapshot(self, path: str) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as fh:
-            json.dump({"last_prices": self.last_prices}, fh)
+            json.dump(make_json_safe({"last_prices": self.last_prices}), fh)
 
     def restore(self, path: str) -> None:
         if os.path.exists(path):

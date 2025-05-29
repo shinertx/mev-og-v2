@@ -28,7 +28,7 @@ import uuid
 from pathlib import Path
 from typing import Dict
 
-from core.logger import StructuredLogger, log_error
+from core.logger import StructuredLogger, log_error, make_json_safe
 from ai.audit_agent import AuditAgent
 from ai.mutator import Mutator
 from ai.promote import promote_strategy
@@ -103,7 +103,7 @@ class MutationRunner:
         log_paths = [str(p) for p in self.logs_dir.glob("*.json") if p.name != "errors.log"]
         audit_summary = self.audit_agent.run_audit(log_paths)
 
-        prompt = json.dumps({"metrics": metrics, "audit": audit_summary})
+        prompt = json.dumps(make_json_safe({"metrics": metrics, "audit": audit_summary}))
         try:
             online_resp = self.audit_agent.run_online_audit(prompt)
         except Exception as exc:  # pragma: no cover - network errors
