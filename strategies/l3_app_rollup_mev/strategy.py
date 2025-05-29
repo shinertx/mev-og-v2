@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, TypedDict, cast
 
-from core.logger import StructuredLogger, log_error
+from core.logger import StructuredLogger, log_error, make_json_safe
 from core import metrics
 from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
 from core.oracles.intent_feed import IntentFeed, IntentData
@@ -105,7 +105,10 @@ class L3AppRollupMEV:
     def snapshot(self, path: str) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as fh:
-            json.dump({"last_prices": self.last_prices, "pending_bridges": self.pending_bridges}, fh)
+            json.dump(
+                make_json_safe({"last_prices": self.last_prices, "pending_bridges": self.pending_bridges}),
+                fh,
+            )
 
     def restore(self, path: str) -> None:
         if os.path.exists(path):

@@ -33,7 +33,7 @@ except Exception:  # pragma: no cover - allow missing dependency
 
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager, get_shared_nonce_manager
-from core.logger import StructuredLogger, log_error
+from core.logger import StructuredLogger, log_error, make_json_safe
 from core import metrics
 from agents.capital_lock import CapitalLock
 
@@ -364,7 +364,7 @@ class CrossDomainArb:
     def snapshot(self, path: str) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as fh:
-            json.dump(self.last_prices, fh)
+            json.dump(make_json_safe(self.last_prices), fh)
 
     def restore(self, path: str) -> None:
         if os.path.exists(path):

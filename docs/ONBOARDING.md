@@ -74,6 +74,8 @@ make export
 
 Set `DRP_ENC_KEY` to encrypt the archive with `openssl` or `gpg`. The same
 variable must be provided to `scripts/rollback.sh` for decryption.
+All log and state files are sanitized via `make_json_safe()` before export to
+guarantee valid JSON for audit agents.
 
 Restore from an archive if needed:
 

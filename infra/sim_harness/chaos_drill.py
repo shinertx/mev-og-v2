@@ -11,7 +11,7 @@ import tarfile
 from pathlib import Path
 
 from agents.ops_agent import OpsAgent
-from core.logger import StructuredLogger
+from core.logger import StructuredLogger, make_json_safe
 from core.tx_engine.kill_switch import flag_file, init_kill_switch
 from adapters import (
     BridgeAdapter,
@@ -70,7 +70,7 @@ def _update_metrics(module: str) -> None:
     metrics.setdefault(module, {"failures": 0})
     metrics[module]["failures"] += 1
     DRILL_METRICS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    DRILL_METRICS_FILE.write_text(json.dumps(metrics, indent=2))
+    DRILL_METRICS_FILE.write_text(json.dumps(make_json_safe(metrics), indent=2))
 
 
 def _scan_file(path: Path) -> None:

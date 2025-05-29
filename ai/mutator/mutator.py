@@ -20,7 +20,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List
 
-from core.logger import StructuredLogger, log_error
+from core.logger import StructuredLogger, log_error, make_json_safe
 from core.secret_manager import get_secret
 from ai.mutation_log import log_mutation
 from .score import score_strategies
@@ -80,7 +80,7 @@ class Mutator:
             raise
 
         summary = json.dumps(
-            {"strategy": strategy_id, "code": code[:2000], "config": config or {}}
+            make_json_safe({"strategy": strategy_id, "code": code[:2000], "config": config or {}})
         )
         response = self._model_call(summary)
         try:

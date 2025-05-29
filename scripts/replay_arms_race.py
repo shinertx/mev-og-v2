@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from ai.mutation_log import log_mutation
+from core.logger import make_json_safe
 
 
 def load_txs(path: str) -> List[Dict[str, Any]]:
@@ -39,7 +40,7 @@ def main() -> None:
     p.add_argument("--log", required=True, help="JSON file with tx data")
     args = p.parse_args()
     stats = replay(load_txs(args.log))
-    print(json.dumps(stats))
+    print(json.dumps(make_json_safe(stats)))
 
 
 if __name__ == "__main__":  # pragma: no cover - CLI entry
