@@ -47,6 +47,41 @@ def test_bundle_send(monkeypatch):
     strat.tx_builder.web3 = w3
     strat.nonce_manager.web3 = w3
     monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
-    txid = strat._bundle_and_send("test")
+    txid, latency = strat._bundle_and_send("test")
     assert txid == "hash"
+    assert latency >= 0
     assert w3.flashbots.sent
+
+def test_bundle_fallback(monkeypatch):
+    module = types.ModuleType("flashbots")
+
+    class FB:
+        def send_bundle(self, bundle, target_block):
+            raise RuntimeError("fail")
+
+    def flashbot(w3, account, endpoint_uri=None):
+        w3.flashbots = FB()
+
+    module.flashbot = flashbot
+    monkeypatch.setitem(sys.modules, "flashbots", module)
+
+    pools = {
+        "eth": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "ethereum"
+        ),
+        "arb": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "arbitrum"
+        ),
+    }
+    bridges = {("ethereum", "arbitrum"): BridgeConfig(0.0)}
+    strat = CrossRollupSuperbot(pools, bridges)
+    w3 = DummyWeb3()
+    strat.tx_builder.web3 = w3
+    strat.nonce_manager.web3 = w3
+    monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
+    def fake_send(tx, addr, **kw):
+        return b"f"
+    strat.tx_builder.send_transaction = fake_send
+    txid, latency = strat._bundle_and_send("test")
+    assert txid == "66"
+    assert latency >= 0

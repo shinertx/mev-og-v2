@@ -128,6 +128,20 @@ def test_opportunity_detection():
     assert "buy:ethereum" in result["action"]
 
 
+def test_should_trade_now_high_gas(monkeypatch):
+    pools = {
+        "eth": PoolConfig(
+            "0xdeadbeef00000000000000000000000000000000", "ethereum"
+        )
+    }
+    strat = CrossDomainArb(pools, {}, threshold=0.01, capital_lock=CapitalLock(1000, 1e9, 0))
+    strat.feed = DummyFeed({"ethereum": 100})
+    strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
+    strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
+    monkeypatch.setenv("GAS_COST_OVERRIDE", "1")
+    assert not strat.should_trade_now()
+
+
 # All other tests below similarly mock network and transactions,
 # no real RPC calls, no infinite waits, suitable for fast CI runs.
 # (Include the rest of your original tests exactly as is,

@@ -151,8 +151,9 @@ class CrossDomainArb:
     def _estimate_gas_cost(self) -> float:
         try:
             gas_price = getattr(self.tx_builder.web3.eth, "gas_price", 0)
+            priority_fee = int(float(os.getenv("PRIORITY_FEE_GWEI", "2")) * 1e9)
             gas_estimate = self.tx_builder.web3.eth.estimate_gas({})
-            return float(gas_price * gas_estimate) / 1e18
+            return float((gas_price + priority_fee) * gas_estimate) / 1e18
         except Exception:
             return float(os.getenv("GAS_COST_OVERRIDE", "0"))
 
@@ -221,6 +222,7 @@ class CrossDomainArb:
                 Path(p).parent.mkdir(parents=True, exist_ok=True)
             self.snapshot(pre)
             self.tx_builder.snapshot(tx_pre)
+            start_time = datetime.now(timezone.utc)
             try:
                 front = self.tx_builder.send_transaction(
                     self.sample_tx,
@@ -242,6 +244,7 @@ class CrossDomainArb:
                 return False
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
+            latency = (datetime.now(timezone.utc) - start_time).total_seconds()
             LOG.log(
                 "sandwich",
                 tx_id=str(front),
@@ -251,7 +254,7 @@ class CrossDomainArb:
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="low",
             )
-            metrics.record_opportunity(0.0, 0.0, 0.0)
+            metrics.record_opportunity(0.0, 0.0, latency)
             return True
         return True
     # ------------------------------------------------------------------
@@ -480,7 +483,7 @@ class CrossDomainArb:
             self._process_intents()
             self._execute_flashloan(str(opp["buy"]), str(opp["sell"]))
 
-            metrics.record_opportunity(float(opp["spread"]), profit, 0.0)
+            start_time = datetime.now(timezone.utc)
             _send_alert({"strategy": STRATEGY_ID, **opp, "profit": profit})
 
             pre = os.getenv("CROSS_ARB_STATE_PRE", "state/cross_arb_pre.json")
@@ -491,7 +494,6 @@ class CrossDomainArb:
                 Path(p).parent.mkdir(parents=True, exist_ok=True)
             self.snapshot(pre)
             self.tx_builder.snapshot(tx_pre)
-            start_time = datetime.now(timezone.utc)
             tx_hash = self.tx_builder.send_transaction(
                 self.sample_tx,
                 self.executor,
@@ -505,6 +507,8 @@ class CrossDomainArb:
                 self.node_selector.record(node, True, latency)
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
+
+            metrics.record_opportunity(float(opp["spread"]), profit, latency)
 
             self.capital_lock.record_trade(profit)
 

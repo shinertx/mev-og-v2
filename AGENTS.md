@@ -175,6 +175,13 @@ strat = Strategy(..., capital_lock=lock)
 * Mutation cycle:
   `python ai/mutator/main.py --logs-dir logs`
 
+### Gas/Latency Runbook
+
+- Flashbots bundles are constructed via `_bundle_and_send` in each strategy.
+- Adjust `PRIORITY_FEE_GWEI` to set the priority fee for bundles.
+- On failure, `_bundle_and_send` falls back to `TransactionBuilder.send_transaction`.
+- Bundle latency is returned for metrics and log entry enrichment.
+
 ---
 
 ## CODE QUALITY POLICIES
