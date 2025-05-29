@@ -1,11 +1,15 @@
+
 """Advanced live strategy benchmarking and pruning."""
+
 
 from __future__ import annotations
 
 import json
 import os
+
 from collections import defaultdict
 from typing import Any, Callable, Dict, List
+
 
 from core.logger import StructuredLogger
 from ai.mutator import score_strategies, prune_strategies
@@ -28,10 +32,12 @@ class ExternalSignalFetcher:
 
     # ------------------------------------------------------------------
     def _file_signals(self) -> Dict[str, float]:
+
         if not os.path.exists(self.path):
             return {}
         try:
             with open(self.path) as fh:
+
                 data = json.load(fh)
                 if isinstance(data, dict):
                     return {k: float(v) for k, v in data.items() if isinstance(v, (int, float))}
@@ -112,7 +118,9 @@ class StrategyScoreboard:
 
     # --------------------------------------------------------------
     def collect_metrics(self) -> Dict[str, Dict[str, float]]:
+
         """Return live metrics enriched with market signals."""
+
         ext = self.signal_fetcher.fetch()
         market_pnl = float(ext.get("market_pnl", 0.0))
         metrics: Dict[str, Dict[str, float]] = {}
@@ -134,6 +142,7 @@ class StrategyScoreboard:
 
     # --------------------------------------------------------------
     def prune_and_score(self) -> Dict[str, Any]:
+
         """Score strategies and auto-prune underperformers."""
         metrics = self.collect_metrics()
         signals = self.signal_fetcher.fetch()
@@ -166,15 +175,19 @@ class StrategyScoreboard:
         return {"scores": ranking, "pruned": pruned}
 
 
+
 if __name__ == "__main__":  # pragma: no cover - CLI entry
     import argparse
     from core.orchestrator import StrategyOrchestrator
+
 
     parser = argparse.ArgumentParser(description="Run strategy scoreboard")
     parser.add_argument("--config", default="config.yaml", help="Orchestrator config")
     args = parser.parse_args()
 
+
     orch = StrategyOrchestrator(args.config)
+
     board = StrategyScoreboard(orch)
     result = board.prune_and_score()
     print(json.dumps(result, indent=2))

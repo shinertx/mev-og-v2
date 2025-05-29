@@ -1,15 +1,17 @@
 from pathlib import Path
+
 import os
+
 import sys
 
 import pytest
 pytest.importorskip("hexbytes")
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from core.strategy_scoreboard import StrategyScoreboard, ExternalSignalFetcher
 from agents.capital_lock import CapitalLock
 from strategies.cross_domain_arb import PoolConfig, CrossDomainArb
+
 
 
 class DummyOps:
@@ -30,9 +32,9 @@ class DummyOrch:
         self.strategies = {"dummy": strat}
         self.ops_agent = DummyOps()
 
+
     def status(self):
         return {}
-
 
 def test_scoreboard_decay_prune(tmp_path, monkeypatch):
     signals = tmp_path / "signals.json"
@@ -58,5 +60,6 @@ def test_scoreboard_no_false_positive(tmp_path):
     sb = StrategyScoreboard(orch, fetcher)
     res = sb.prune_and_score()
     assert res["pruned"] == []
+
     assert Path("logs/scoreboard.json").exists()
 
