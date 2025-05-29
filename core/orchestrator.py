@@ -8,7 +8,7 @@ import os
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from core.logger import StructuredLogger, log_error
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
@@ -66,10 +66,10 @@ def load_config(path: str) -> Dict[str, Any]:
     try:
         import yaml  # type: ignore
     except Exception:  # pragma: no cover - optional
-        yaml = None  # type: ignore
+        yaml = cast(Any, None)
     text = Path(path).read_text()
     if yaml is not None:
-        return yaml.safe_load(text)
+        return cast(Dict[str, Any], yaml.safe_load(text))
     return _simple_yaml_load(text)
 
 
