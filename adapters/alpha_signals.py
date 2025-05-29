@@ -29,7 +29,6 @@ class DuneAnalyticsAdapter(SignalProvider):
         *,
         alt_api_url: str | None = None,
         alt_api_urls: List[str] | None = None,
-        alt_api_urls: List[str] | None = None,
         ops_agent: OpsAgent | None = None,
         fail_threshold: int = 3,
     ) -> None:
@@ -125,6 +124,7 @@ class WhaleAlertAdapter(SignalProvider):
         rate: float = 0.5,
         *,
         alt_api_url: str | None = None,
+        alt_api_urls: List[str] | None = None,
         ops_agent: OpsAgent | None = None,
         fail_threshold: int = 3,
     ) -> None:

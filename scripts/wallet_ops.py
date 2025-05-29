@@ -7,7 +7,7 @@ import argparse
 import os
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from core.logger import StructuredLogger, log_error
 
@@ -63,23 +63,23 @@ def _send_tx(from_addr: str, to_addr: str, amount: str, dry_run: bool) -> str:
         from core.tx_engine.nonce_manager import NonceManager
 
         class DummyEth:
-            def estimate_gas(self, tx):
+            def estimate_gas(self, tx: Any) -> int:
                 return 21000
 
-            def get_transaction_count(self, address):
+            def get_transaction_count(self, address: str) -> int:
                 return 0
 
-            def send_raw_transaction(self, tx):
+            def send_raw_transaction(self, tx: bytes) -> bytes:
                 return b"hash" + tx[-2:]
 
             class account:
                 @staticmethod
-                def decode_transaction(tx):
+                def decode_transaction(tx: bytes) -> dict[str, Any]:
                     return {}
 
         class DummyWeb3:
-            def __init__(self):
-                self.eth = DummyEth()
+            def __init__(self) -> None:
+                self.eth: DummyEth = DummyEth()
 
         web3 = DummyWeb3()
         nm = NonceManager(web3, cache_file="state/nonce_cache.json", log_file="logs/nonce_log.json")
@@ -98,7 +98,9 @@ def _send_tx(from_addr: str, to_addr: str, amount: str, dry_run: bool) -> str:
 
 
 # ---------------------------------------------------------------------------
-def _log_and_exit(event: str, from_addr: str, to_addr: str, amount: str, txid: str, error: Optional[str] = None) -> None:
+def _log_and_exit(
+    event: str, from_addr: str, to_addr: str, amount: str, txid: str, error: Optional[str] = None
+) -> None:
     LOGGER.log(event, from_address=from_addr, to_address=to_addr, amount=amount, txid=txid, error=error)
     if error:
         raise SystemExit(error)

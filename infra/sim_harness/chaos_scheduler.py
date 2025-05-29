@@ -8,7 +8,7 @@ import os
 import random
 import time
 from pathlib import Path
-from typing import Callable, Dict
+from typing import Any, Callable, Dict
 
 from agents.ops_agent import OpsAgent
 from core.logger import StructuredLogger, make_json_safe
@@ -21,7 +21,7 @@ METRICS_FILE = Path(os.getenv("CHAOS_METRICS", "logs/drill_metrics.json"))
 OPS = OpsAgent({})
 
 
-ADAPTER_FUNCS: Dict[str, Callable[[str], None]] = {
+ADAPTER_FUNCS: Dict[str, Callable[[str], Dict[str, Any]]] = {
     "dex": lambda mode: DEXAdapter("http://bad", alt_api_urls=["http://alt"], ops_agent=OPS).get_quote("ETH", "USDC", 1, simulate_failure=mode),
     "bridge": lambda mode: BridgeAdapter("http://bad", alt_api_urls=["http://alt"], ops_agent=OPS).bridge("eth", "arb", "ETH", 1, simulate_failure=mode),
     "cex": lambda mode: CEXAdapter("http://bad", "k", alt_api_urls=["http://alt"], ops_agent=OPS).get_balance(simulate_failure=mode),

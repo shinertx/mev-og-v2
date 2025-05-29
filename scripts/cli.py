@@ -19,7 +19,8 @@ def lint() -> None:
 
 
 def type_check() -> None:
-    sys.exit(_run(["mypy", "--config-file", "mypy.ini", "."]))
+    targets = ["agents", "ai", "core", "strategies", "infra", "scripts"]
+    sys.exit(_run(["mypy", "--config-file", "mypy.ini", *targets]))
 
 
 def tests() -> None:

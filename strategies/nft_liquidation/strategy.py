@@ -107,8 +107,8 @@ class NFTLiquidationMEV:
 
     def _bundle_and_send(self, auction: AuctionData) -> tuple[str, float]:
         try:
-            from eth_account import Account  # type: ignore
-            from flashbots import flashbot  # type: ignore
+            from eth_account import Account
+            from flashbots import flashbot
         except Exception as exc:  # pragma: no cover - import guard
             raise RuntimeError("flashbots package required") from exc
 

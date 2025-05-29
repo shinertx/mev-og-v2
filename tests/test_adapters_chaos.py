@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
-import types
+from types import ModuleType, SimpleNamespace
+from typing import Any
 import importlib.util
 import json
 
@@ -49,13 +50,13 @@ def _dummy_response(data: Any | None = None) -> Any:
 @pytest.fixture
 def log_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("ERROR_LOG_FILE", str(tmp_path / "errors.log"))
-    core_stub: Any = types.ModuleType("core")
+    core_stub: Any = ModuleType("core")
     setattr(core_stub, "logger", __import__("core.logger", fromlist=[""]))
     monkeypatch.setitem(sys.modules, "core", core_stub)
-    hb: Any = types.ModuleType("hexbytes")
+    hb: Any = ModuleType("hexbytes")
     setattr(hb, "HexBytes", bytes)
     monkeypatch.setitem(sys.modules, "hexbytes", hb)
-    rl: Any = types.ModuleType("core.rate_limiter")
+    rl: Any = ModuleType("core.rate_limiter")
     class RateLimiter:
         def __init__(self, rate: int) -> None:
             return None
@@ -65,7 +66,7 @@ def log_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
     setattr(rl, "RateLimiter", RateLimiter)
     monkeypatch.setitem(sys.modules, "core.rate_limiter", rl)
-    ss: Any = types.ModuleType("core.strategy_scoreboard")
+    ss: Any = ModuleType("core.strategy_scoreboard")
     class SignalProvider:
         pass
     setattr(ss, "SignalProvider", SignalProvider)
@@ -116,7 +117,7 @@ def test_multi_endpoint_fallback(monkeypatch, log_env):
     monkeypatch.setitem(
         sys.modules,
         "requests",
-        types.SimpleNamespace(get=fake_get, post=fake_get),
+        SimpleNamespace(get=fake_get, post=fake_get),
     )
     ops = DummyOps()
     DEXAdapter = _load("dex_adapter", "adapters/dex_adapter.py").DEXAdapter

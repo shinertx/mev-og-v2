@@ -61,8 +61,8 @@ class MutationManager:
         """Track adapter chaos events and emit mutation hooks."""
         count = self.chaos_counts.get(adapter, 0) + 1
         self.chaos_counts[adapter] = count
-        log_mutation("adapter_chaos_event", adapter=adapter, event=event, count=count)
-        LOG.log("adapter_chaos_event", adapter=adapter, event=event, count=count)
+        log_mutation("adapter_chaos_event", adapter=adapter, adapter_event=event, count=count)
+        LOG.log("adapter_chaos_event", adapter=adapter, adapter_event=event, count=count)
         if count >= 3:
             log_mutation("adapter_chaos_mutation", adapter=adapter)
             LOG.log("adapter_chaos_mutation", adapter=adapter)

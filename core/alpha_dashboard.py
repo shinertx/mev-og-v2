@@ -9,15 +9,17 @@ from __future__ import annotations
 
 import os
 from threading import Thread
-from typing import Any, Dict, cast
+from typing import Any, Callable, Dict, cast
 
 try:
-    from flask import Flask, jsonify
+    from flask import Flask as _Flask, jsonify as _jsonify
+    Flask: Any = _Flask
+    jsonify: Callable[..., Any] = cast(Callable[..., Any], _jsonify)
 except Exception:  # pragma: no cover - optional dep
     Flask = cast(Any, None)
-    def jsonify(data: Any) -> Any:
+    def jsonify(*args: Any, **kwargs: Any) -> Any:
         """Fallback when Flask is unavailable."""
-        return data
+        return args[0] if args else kwargs
 
 
 class AlphaDashboard:

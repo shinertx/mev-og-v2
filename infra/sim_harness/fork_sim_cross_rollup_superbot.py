@@ -61,7 +61,7 @@ def main() -> None:  # pragma: no cover
 
     # Debug print pool addresses to confirm checksum format
     for k, pool in POOLS.items():
-        print(f"Pool '{k}' address: {pool.address}")
+        print(f"Pool '{k}' address: {pool.pool}")
 
     strat = CrossRollupSuperbot(POOLS, BRIDGES)
     found = False

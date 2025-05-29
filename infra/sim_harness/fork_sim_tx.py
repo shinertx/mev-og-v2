@@ -26,7 +26,7 @@ FORK_BLOCK = 19338888
 RPC_URL = os.environ.get("MAINNET_RPC", "http://localhost:8545")
 
 
-def main():
+def main() -> None:
     w3 = Web3(Web3.HTTPProvider(RPC_URL))
     w3.middleware_onion.add(geth_poa_middleware)
     nonce_manager = NonceManager(w3)
@@ -41,5 +41,5 @@ def main():
     builder.send_transaction(raw_tx, w3.eth.accounts[0], strategy_id="sim", mutation_id="fork", risk_level="low")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover - CLI
     main()

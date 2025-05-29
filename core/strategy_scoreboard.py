@@ -8,18 +8,13 @@ import json
 import os
 
 from collections import defaultdict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 
 from core.logger import StructuredLogger
 from core import metrics
 from agents.multi_sig import MultiSigApproval
 from ai.mutation_manager import MutationManager
-from adapters.alpha_signals import (
-    DuneAnalyticsAdapter,
-    WhaleAlertAdapter,
-    CoinbaseWebSocketAdapter,
-)
 from ai.mutator import score_strategies, prune_strategies
 from ai.mutation_log import log_mutation
 
@@ -35,9 +30,17 @@ class ExternalSignalFetcher:
     """Aggregate multiple real-time signal providers."""
 
     def __init__(self, path: str | None = None, providers: List[SignalProvider] | None = None) -> None:
-        self.path = path or os.getenv("EXTERNAL_ALPHA_PATH", "data/external_signals.json")
+        self.path: str = cast(
+            str,
+            path or os.getenv("EXTERNAL_ALPHA_PATH", "data/external_signals.json"),
+        )
         self.providers = providers or []
         if not providers:
+            from adapters.alpha_signals import (
+                DuneAnalyticsAdapter,
+                WhaleAlertAdapter,
+                CoinbaseWebSocketAdapter,
+            )
             dune_key = os.getenv("DUNE_API_KEY")
             dune_query = os.getenv("DUNE_QUERY_ID")
             dune_url = os.getenv("DUNE_API_URL", "https://api.dune.com")
@@ -210,7 +213,7 @@ class StrategyScoreboard:
         os.makedirs(os.path.dirname(json_path), exist_ok=True)
         with open(json_path, "w") as fh:
             json.dump(ranking, fh, indent=2)
-        flagged = prune_strategies(metrics)
+        flagged = prune_strategies(metrics_map)
         for sid in list(scores):
             if self.model.decayed(sid):
                 metrics.record_decay_alert()
@@ -227,7 +230,7 @@ class StrategyScoreboard:
                 metrics.record_prune()
                 if hasattr(self.orchestrator, "ops_agent"):
                     self.orchestrator.ops_agent.notify(f"pruned {sid}")
-        score_strategies(metrics, output_path=json_path)
+        score_strategies(metrics_map, output_path=json_path)
         if self.mutator:
             dry = os.getenv("MUTATION_DRY_RUN") == "1"
             self.mutator.handle_pruning(pruned, dry_run=dry)
