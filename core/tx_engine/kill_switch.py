@@ -1,8 +1,6 @@
 """Kill switch utilities for halting transaction execution."""
 
-import json
 import os
-from datetime import datetime, timezone
 from pathlib import Path
 
 from core.logger import StructuredLogger, log_error
@@ -22,7 +20,6 @@ def _log_file() -> Path:
     return Path(os.getenv("KILL_SWITCH_LOG_FILE", "logs/kill_log.json"))
 
 
-LOG = StructuredLogger("kill_switch", log_file=str(_log_file()))
 
 
 def flag_file() -> Path:
@@ -50,16 +47,19 @@ def kill_switch_triggered() -> bool:
     return env_active or file_active
 
 
-def record_kill_event(origin: str) -> None:
+def record_kill_event(origin_module: str) -> None:
     """Append a structured kill event to the log file."""
     source = (
         "env"
         if os.getenv(ENV_VAR) == "1"
         else "file" if _flag_file().exists() else "unknown"
     )
-    LOG.log(
+    logger = StructuredLogger("kill_switch", log_file=str(_log_file()))
+    logger.log(
         "kill_switch",
-        strategy_id=origin,
+        origin_module=origin_module,
+        kill_event=True,
+        strategy_id=origin_module,
         mutation_id=os.getenv("MUTATION_ID", "dev"),
         risk_level="high",
         trace_id=os.getenv("TRACE_ID", ""),
@@ -67,10 +67,10 @@ def record_kill_event(origin: str) -> None:
         triggered_by=source,
     )
     log_error(
-        origin,
+        origin_module,
         "kill switch triggered",
         event="kill_switch",
-        strategy_id=origin,
+        strategy_id=origin_module,
         mutation_id=os.getenv("MUTATION_ID", "dev"),
         risk_level="high",
         trace_id=os.getenv("TRACE_ID", ""),

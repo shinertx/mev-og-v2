@@ -72,3 +72,17 @@ def test_dev_mode_cannot_bypass(tmp_path, monkeypatch):
     assert data[0]["origin_module"] == "test_dev"
     err_lines = err_file.read_text().splitlines()
     assert err_lines
+
+
+def test_kill_event_log_contains_origin(tmp_path, monkeypatch):
+    """Regression test for origin_module field presence."""
+    log_file = tmp_path / "log.json"
+    monkeypatch.setenv("KILL_SWITCH_LOG_FILE", str(log_file))
+    importlib.reload(ks)
+
+    ks.record_kill_event("test_regression")
+    ks.record_kill_event("test_regression2")
+    entries = [json.loads(line) for line in log_file.read_text().splitlines()]
+    assert entries
+    for entry in entries:
+        assert entry["origin_module"]
