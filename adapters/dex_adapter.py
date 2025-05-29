@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+import os
+import random
+from typing import Any, Dict, List
 
 from agents.ops_agent import OpsAgent
 
 from core.logger import StructuredLogger
+from ai.mutation_log import log_mutation
 
 LOGGER = StructuredLogger("dex_adapter")
 
@@ -19,11 +22,17 @@ class DEXAdapter:
         api_url: str,
         *,
         alt_api_url: str | None = None,
+        alt_api_urls: List[str] | None = None,
         ops_agent: OpsAgent | None = None,
         fail_threshold: int = 3,
     ) -> None:
         self.api_url = api_url.rstrip("/")
-        self.alt_api_url = alt_api_url.rstrip("/") if alt_api_url else None
+        alts = []
+        if alt_api_urls:
+            alts.extend(alt_api_urls)
+        if alt_api_url:
+            alts.append(alt_api_url)
+        self.alt_api_urls = [a.rstrip("/") for a in alts]
         self.ops_agent = ops_agent
         self.fail_threshold = fail_threshold
         self.failures = 0
@@ -63,17 +72,29 @@ class DEXAdapter:
             return resp.json()
         except Exception as exc:  # pragma: no cover - network errors
             self._alert("quote_fail", exc)
-            if self.alt_api_url:
+            for alt in random.sample(self.alt_api_urls, len(self.alt_api_urls)):
                 try:
-                    resp = requests.get(
-                        f"{self.alt_api_url}/quote", params=params, timeout=5
-                    )
+                    LOGGER.log("fallback_try", risk_level="low", alt=alt)
+                    resp = requests.get(f"{alt}/quote", params=params, timeout=5)
                     resp.raise_for_status()
-                    LOGGER.log("fallback_success", risk_level="low")
+                    LOGGER.log("fallback_success", risk_level="low", alt=alt)
                     self.failures = 0
+                    log_mutation(
+                        "adapter_chaos",
+                        adapter="dex_adapter",
+                        failure=simulate_failure or "runtime",
+                        fallback="success",
+                    )
                     return resp.json()
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
+            os.environ["OPS_CRITICAL_EVENT"] = "1"
+            log_mutation(
+                "adapter_chaos",
+                adapter="dex_adapter",
+                failure=simulate_failure or "runtime",
+                fallback="fail",
+            )
             raise
 
     # ------------------------------------------------------------------
@@ -100,16 +121,28 @@ class DEXAdapter:
             return resp.json()
         except Exception as exc:  # pragma: no cover - network errors
             self._alert("trade_fail", exc)
-            if self.alt_api_url:
+            for alt in random.sample(self.alt_api_urls, len(self.alt_api_urls)):
                 try:
-                    resp = requests.post(
-                        f"{self.alt_api_url}/swap", json=tx_data, timeout=5
-                    )
+                    LOGGER.log("fallback_try", risk_level="low", alt=alt)
+                    resp = requests.post(f"{alt}/swap", json=tx_data, timeout=5)
                     resp.raise_for_status()
-                    LOGGER.log("fallback_success", risk_level="low")
+                    LOGGER.log("fallback_success", risk_level="low", alt=alt)
                     self.failures = 0
+                    log_mutation(
+                        "adapter_chaos",
+                        adapter="dex_adapter",
+                        failure=simulate_failure or "runtime",
+                        fallback="success",
+                    )
                     return resp.json()
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
+            os.environ["OPS_CRITICAL_EVENT"] = "1"
+            log_mutation(
+                "adapter_chaos",
+                adapter="dex_adapter",
+                failure=simulate_failure or "runtime",
+                fallback="fail",
+            )
             raise
 

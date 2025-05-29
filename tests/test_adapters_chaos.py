@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 import types
 import importlib.util
+import json
 
 import pytest
 
@@ -11,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 class DummyOps:
     def __init__(self):
         self.msgs = []
+
     def notify(self, msg: str) -> None:
         self.msgs.append(msg)
 
@@ -93,6 +95,33 @@ def test_dex_adapter_fallback(monkeypatch, log_env):
     assert adapter.failures == 0
 
 
+def test_multi_endpoint_fallback(monkeypatch, log_env):
+    calls = []
+
+    def fake_get(url, *a, **k):
+        calls.append(url)
+        if "alt2" in url:
+            return _dummy_response({"ok": True})
+        raise RuntimeError("fail")
+
+    monkeypatch.setitem(
+        sys.modules,
+        "requests",
+        types.SimpleNamespace(get=fake_get, post=fake_get),
+    )
+    ops = DummyOps()
+    DEXAdapter = _load("dex_adapter", "adapters/dex_adapter.py").DEXAdapter
+    monkeypatch.setattr("random.sample", lambda l, k: l)
+    adapter = DEXAdapter(
+        "http://bad",
+        alt_api_urls=["http://alt1", "http://alt2"],
+        ops_agent=ops,
+    )
+    data = adapter.get_quote("ETH", "USDC", 1, simulate_failure="network")
+    assert data.get("ok") is True
+    assert any("alt1" in c for c in calls)
+
+
 def test_cex_adapter_circuit(monkeypatch, log_env):
     _setup_requests(monkeypatch, "alt", {"ok": True})
     ops = DummyOps()
@@ -156,6 +185,18 @@ def test_alpha_signal(monkeypatch, log_env):
     )
     data2 = whale.fetch(simulate_failure="network")
     assert data2 == {"whale_flow": 0.0}
+
+
+def test_chaos_scheduler(monkeypatch, tmp_path, log_env):
+    _setup_requests(monkeypatch, "alt")
+    scheduler = _load("chaos_scheduler", "infra/sim_harness/chaos_scheduler.py")
+    monkeypatch.setenv("CHAOS_ADAPTERS", "dex")
+    monkeypatch.setenv("CHAOS_MODES", "network")
+    monkeypatch.setenv("CHAOS_SCHED_LOG", str(tmp_path / "sched.json"))
+    monkeypatch.setenv("CHAOS_METRICS", str(tmp_path / "metrics.json"))
+    scheduler.run_once()
+    metrics = json.loads(Path(tmp_path / "metrics.json").read_text())
+    assert metrics["dex"]["failures"] >= 1
 
 
 if __name__ == "__main__":
