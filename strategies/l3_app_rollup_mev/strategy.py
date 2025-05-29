@@ -30,7 +30,7 @@ from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
 from core.oracles.intent_feed import IntentFeed, IntentData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
 from core.tx_engine.nonce_manager import NonceManager
-from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+from core.tx_engine import kill_switch as ks
 from agents.capital_lock import CapitalLock
 
 LOG_FILE = Path(os.getenv("L3_APP_ROLLUP_LOG", "logs/l3_app_rollup_mev.json"))
@@ -212,8 +212,10 @@ class L3AppRollupMEV:
 
     # ------------------------------------------------------------------
     def run_once(self) -> Optional[Opportunity]:
-        if kill_switch_triggered():
-            record_kill_event(STRATEGY_ID)
+        env_active = os.getenv("KILL_SWITCH") == "1"
+        file_active = Path(os.getenv("KILL_SWITCH_FLAG_FILE", "./flags/kill_switch.txt")).exists()
+        if env_active or file_active:
+            ks.record_kill_event(STRATEGY_ID)
             LOG.log(
                 "killed",
                 strategy_id=STRATEGY_ID,

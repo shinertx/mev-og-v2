@@ -7,6 +7,7 @@ from typing import Callable, Dict
 
 from core.logger import StructuredLogger
 from core import metrics
+from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from .agent_registry import set_value
 
 LOGGER = StructuredLogger("ops_agent")
@@ -21,6 +22,11 @@ class OpsAgent:
 
     # --------------------------------------------------------------
     def run_checks(self) -> None:
+        if kill_switch_triggered():
+            record_kill_event("ops_agent")
+            LOGGER.log("kill_switch", risk_level="high")
+            self.auto_pause(reason="kill_switch")
+            return
         failures = []
         for name, func in self.health_checks.items():
             try:

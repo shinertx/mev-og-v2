@@ -24,7 +24,7 @@ import time
 from pathlib import Path
 from typing import Any, cast, SupportsIndex
 
-from .kill_switch import kill_switch_triggered, record_kill_event
+from . import kill_switch as ks
 from .nonce_manager import NonceManager
 from core.logger import log_error
 
@@ -102,8 +102,10 @@ class TransactionBuilder:
         """Send ``signed_tx`` with retry and kill switch checks."""
 
         tx_id = signed_tx.hex()
-        if kill_switch_triggered():
-            record_kill_event("TransactionBuilder")
+        env_active = os.getenv("KILL_SWITCH") == "1"
+        file_active = Path(os.getenv("KILL_SWITCH_FLAG_FILE", "./flags/kill_switch.txt")).exists()
+        if env_active or file_active:
+            ks.record_kill_event("TransactionBuilder")
             entry = {
                 "tx_id": tx_id,
                 "from_address": from_address,

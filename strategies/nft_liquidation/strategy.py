@@ -27,7 +27,7 @@ from core import metrics
 from core.oracles.nft_liquidation_feed import NFTLiquidationFeed, AuctionData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
 from core.tx_engine.nonce_manager import NonceManager
-from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+from core.tx_engine import kill_switch as ks
 from agents.capital_lock import CapitalLock
 
 LOG_FILE = Path(os.getenv("NFT_LIQ_LOG", "logs/nft_liquidation.json"))
@@ -126,8 +126,10 @@ class NFTLiquidationMEV:
 
     # ------------------------------------------------------------------
     def run_once(self) -> Optional[Dict[str, object]]:
-        if kill_switch_triggered():
-            record_kill_event(STRATEGY_ID)
+        env_active = os.getenv("KILL_SWITCH") == "1"
+        file_active = Path(os.getenv("KILL_SWITCH_FLAG_FILE", "./flags/kill_switch.txt")).exists()
+        if env_active or file_active:
+            ks.record_kill_event(STRATEGY_ID)
             LOG.log(
                 "killed",
                 strategy_id=STRATEGY_ID,

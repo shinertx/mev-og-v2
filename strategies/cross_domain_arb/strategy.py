@@ -46,7 +46,7 @@ from ai.intent_ghost import ghost_intent
 from adapters.flashloan_adapter import FlashloanAdapter
 from adapters.pool_scanner import PoolScanner
 from adapters.social_alpha import scrape_social_keywords
-from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+from core.tx_engine import kill_switch as ks
 from ai.mutation_log import log_mutation
 
 LOG_FILE = Path(os.getenv("CROSS_ARB_LOG", "logs/cross_domain_arb.json"))
@@ -409,8 +409,10 @@ class CrossDomainArb:
 
     # ------------------------------------------------------------------
     def run_once(self) -> Optional[Dict[str, object]]:
-        if kill_switch_triggered():
-            record_kill_event(STRATEGY_ID)
+        env_active = os.getenv("KILL_SWITCH") == "1"
+        file_active = Path(os.getenv("KILL_SWITCH_FLAG_FILE", "./flags/kill_switch.txt")).exists()
+        if env_active or file_active:
+            ks.record_kill_event(STRATEGY_ID)
             LOG.log(
                 "killed",
                 strategy_id=STRATEGY_ID,

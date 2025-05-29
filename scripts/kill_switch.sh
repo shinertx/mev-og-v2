@@ -29,12 +29,15 @@ done
 ENV_FILE="${ENV_FILE:-.env}"
 FLAG_FILE="${KILL_SWITCH_FLAG_FILE:-./flags/kill_switch.txt}"
 LOG_FILE="${KILL_SWITCH_LOG_FILE:-/logs/kill_log.json}"
+ERROR_FILE="${ERROR_LOG_FILE:-logs/errors.log}"
 USER_NAME="$(whoami 2>/dev/null || echo unknown)"
 TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 log_event() {
     mkdir -p "$(dirname "$LOG_FILE")"
     printf '{"timestamp":"%s","mode":"%s","user":"%s","flag_file":"%s"}\n' "$TIMESTAMP" "$1" "$USER_NAME" "$FLAG_FILE" >> "$LOG_FILE"
+    mkdir -p "$(dirname "$ERROR_FILE")"
+    printf '{"timestamp":"%s","module":"kill_switch.sh","event":"%s","flag_file":"%s"}\n' "$TIMESTAMP" "$1" "$FLAG_FILE" >> "$ERROR_FILE"
 }
 
 if [[ $DRY -eq 1 ]]; then

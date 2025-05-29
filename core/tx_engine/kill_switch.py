@@ -58,5 +58,12 @@ def record_kill_event(origin: str) -> None:
     with lf.open("a") as f:
         json.dump(event, f)
         f.write("\n")
+    # also emit to generic error log for DRP visibility
+    try:
+        from core.logger import log_error
+
+        log_error(origin, "kill switch triggered", event="kill_switch", **event)
+    except Exception:
+        pass
 
 

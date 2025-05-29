@@ -90,8 +90,6 @@ def test_kill_switch(monkeypatch):
     strat.tx_builder.send_transaction = lambda *a, **k: b"hash"
     tmp = tempfile.mkdtemp()
     monkeypatch.setenv("KILL_SWITCH_LOG_FILE", str(Path(tmp) / "kill.json"))
-    monkeypatch.setattr(
-        "strategies.nft_liquidation.strategy.kill_switch_triggered", lambda: True
-    )
+    monkeypatch.setenv("KILL_SWITCH", "1")
     result = strat.run_once()
     assert result is None

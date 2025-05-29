@@ -124,7 +124,7 @@ class StrategyOrchestrator:
 
     # ---------------------------------------------------------------
     def run_once(self) -> bool:
-        if self.config.get("kill_switch_enabled", True) and kill_switch_triggered():
+        if kill_switch_triggered():
             record_kill_event("orchestrator")
             LOGGER.log("kill_switch", risk_level="high")
             return False
