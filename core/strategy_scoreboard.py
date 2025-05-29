@@ -95,13 +95,13 @@ class AlphaDecayModel:
         self._counter = 0
 
     # ------------------------------------------------------------------
-    def score(self, sid: str, metrics: Dict[str, float], signals: Dict[str, float]) -> float:
+    def score(self, sid: str, metric_data: Dict[str, float], signals: Dict[str, float]) -> float:
         base = (
-            metrics.get("realized_pnl", 0.0)
-            + metrics.get("edge_vs_market", 0.0) * 2
-            + metrics.get("win_rate", 0.0) * 10
-            - metrics.get("drawdown", 0.0) * 50
-            - metrics.get("failures", 0.0) * 20
+            metric_data.get("realized_pnl", 0.0)
+            + metric_data.get("edge_vs_market", 0.0) * 2
+            + metric_data.get("win_rate", 0.0) * 10
+            - metric_data.get("drawdown", 0.0) * 50
+            - metric_data.get("failures", 0.0) * 20
             + signals.get("whale_flow", 0.0) * 2
             + signals.get("news_sentiment", 0.0) * 5
         )
@@ -175,7 +175,7 @@ class StrategyScoreboard:
 
         ext = self.signal_fetcher.fetch()
         market_pnl = float(ext.get("market_pnl", 0.0))
-        metrics: Dict[str, Dict[str, float]] = {}
+        metrics_map: Dict[str, Dict[str, float]] = {}
         strategies = getattr(self.orchestrator, "strategies", {})
         for sid, strat in strategies.items():
             trades: List[float] = getattr(getattr(strat, "capital_lock", strat), "trades", [])
@@ -183,24 +183,24 @@ class StrategyScoreboard:
             losses = sum(1 for t in trades if t < 0)
             risk = losses / float(len(trades) or 1)
             edge = pnl - market_pnl
-            metrics[sid] = {
+            metrics_map[sid] = {
                 "realized_pnl": pnl,
                 "edge_vs_market": edge,
                 "win_rate": 1 - risk,
                 "drawdown": risk,
                 "failures": 0,
             }
-        return metrics
+        return metrics_map
 
     # --------------------------------------------------------------
     def prune_and_score(self) -> Dict[str, Any]:
 
         """Score strategies and auto-prune underperformers."""
-        metrics = self.collect_metrics()
+        metrics_map = self.collect_metrics()
         signals = self.signal_fetcher.fetch()
         scores = {}
         ranking: List[Dict[str, Any]] = []
-        for sid, data in metrics.items():
+        for sid, data in metrics_map.items():
             score = self.model.score(sid, data, signals)
             scores[sid] = score
             metrics.record_strategy_score(sid, score)

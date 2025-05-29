@@ -1,11 +1,12 @@
-import json
 import sys
 from pathlib import Path
 import types
+import importlib.util
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 
 class DummyOps:
     def __init__(self):
@@ -13,7 +14,6 @@ class DummyOps:
     def notify(self, msg: str) -> None:
         self.msgs.append(msg)
 
-import importlib.util
 
 BASE = Path(__file__).resolve().parents[1]
 
@@ -165,6 +165,7 @@ if __name__ == "__main__":
     parser.add_argument("--simulate", default="")
     args = parser.parse_args()
     if args.simulate == "bridge_downtime":
+        BridgeAdapter = _load("bridge_adapter", "adapters/bridge_adapter.py").BridgeAdapter
         BridgeAdapter("http://x").bridge("e", "a", "T", 1, simulate_failure="downtime")
     elif args.simulate:
         print("unknown simulation")

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, cast
+from typing import Dict, List, cast
 
 from agents.ops_agent import OpsAgent
 from hexbytes import HexBytes
