@@ -239,8 +239,14 @@ strat = Strategy(..., capital_lock=lock)
 
 * Every log/event must include:
 
-  * `timestamp` (UTC), `tx_id`, `strategy_id`, `mutation_id`, `risk_level`, `block`, `event`.
+  * `timestamp` (UTC), `tx_id`, `strategy_id`, `mutation_id`, `risk_level`, `block`, `trace_id`, `event`.
   * Where possible, Prometheus metrics hooks.
+
+Example log entry:
+
+```json
+{"timestamp":"2025-01-01T00:00:00Z","event":"mutate","tx_id":"0xabc","strategy_id":"cross_domain_arb","mutation_id":"42","risk_level":"low","block":123,"trace_id":"XYZ123"}
+```
 
 ---
 

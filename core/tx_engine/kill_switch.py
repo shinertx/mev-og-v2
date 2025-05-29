@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from core.logger import log_error
+from core.logger import StructuredLogger, log_error
 
 ENV_VAR = "KILL_SWITCH"
 
@@ -20,6 +20,9 @@ def _log_file() -> Path:
     """Return path to the kill switch log file."""
 
     return Path(os.getenv("KILL_SWITCH_LOG_FILE", "/logs/kill_log.json"))
+
+
+LOG = StructuredLogger("kill_switch", log_file=str(_log_file()))
 
 
 def flag_file() -> Path:
@@ -54,15 +57,22 @@ def record_kill_event(origin: str) -> None:
         if os.getenv(ENV_VAR) == "1"
         else "file" if _flag_file().exists() else "unknown"
     )
-    event = {
-        "kill_event": True,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "triggered_by": source,
-        "origin_module": origin,
-    }
-    lf = _log_file()
-    with lf.open("a") as f:
-        json.dump(event, f)
-        f.write("\n")
-    # also log to the shared error log for DRP visibility
-    log_error(origin, "kill switch triggered", event="kill_switch", risk_level="high")
+    LOG.log(
+        "kill_switch",
+        strategy_id=origin,
+        mutation_id=os.getenv("MUTATION_ID", "dev"),
+        risk_level="high",
+        trace_id=os.getenv("TRACE_ID", ""),
+        block=os.getenv("BLOCK", ""),
+        triggered_by=source,
+    )
+    log_error(
+        origin,
+        "kill switch triggered",
+        event="kill_switch",
+        strategy_id=origin,
+        mutation_id=os.getenv("MUTATION_ID", "dev"),
+        risk_level="high",
+        trace_id=os.getenv("TRACE_ID", ""),
+        block=os.getenv("BLOCK", ""),
+    )

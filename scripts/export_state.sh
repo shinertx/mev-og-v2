@@ -28,11 +28,13 @@ EXPORT_DIR="${EXPORT_DIR:-export}"
 LOG_FILE="${EXPORT_LOG_FILE:-logs/export_state.json}"
 USER_NAME="$(whoami 2>/dev/null || echo unknown)"
 TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+TRACE_ID="${TRACE_ID:-}"
 ARCHIVE="drp_export_${TIMESTAMP//:/-}.tar.gz"
 
 log_event() {
     mkdir -p "$(dirname "$LOG_FILE")"
-    printf '{"timestamp":"%s","mode":"%s","user":"%s","archive":"%s"}\n' "$TIMESTAMP" "$1" "$USER_NAME" "$EXPORT_DIR/$ARCHIVE" >> "$LOG_FILE"
+    printf '{"timestamp":"%s","mode":"%s","user":"%s","archive":"%s","trace_id":"%s"}\n' \
+        "$TIMESTAMP" "$1" "$USER_NAME" "$EXPORT_DIR/$ARCHIVE" "$TRACE_ID" >> "$LOG_FILE"
 }
 
 if [[ $DRY -eq 1 ]]; then
