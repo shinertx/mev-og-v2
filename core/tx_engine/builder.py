@@ -26,20 +26,26 @@ from typing import Any, cast, SupportsIndex
 
 from .kill_switch import kill_switch_triggered, record_kill_event
 from .nonce_manager import NonceManager
-from core.logger import log_error
+from core.logger import log_error, make_json_safe
 from agents.agent_registry import get_value
+
 
 # simple HexBytes implementation
 class HexBytes(bytes):
-    def hex(self, sep: str | bytes | None = None, bytes_per_sep: SupportsIndex = 1) -> str:
+    def hex(
+        self, sep: str | bytes | None = None, bytes_per_sep: SupportsIndex = 1
+    ) -> str:
         import binascii
+
         return binascii.hexlify(self).decode()
 
 
 class TransactionBuilder:
     """Builds and dispatches signed transactions with replay defense."""
 
-    def __init__(self, web3: Any, nonce_manager: NonceManager, log_path: str | None = None) -> None:
+    def __init__(
+        self, web3: Any, nonce_manager: NonceManager, log_path: str | None = None
+    ) -> None:
         """Create a new builder.
 
         Parameters
@@ -64,7 +70,7 @@ class TransactionBuilder:
         """Append ``entry`` as a JSON line to the transaction log."""
 
         with self.log_file.open("a") as fh:
-            fh.write(json.dumps(entry) + "\n")
+            fh.write(json.dumps(make_json_safe(entry)) + "\n")
         if entry.get("error"):
             log_error(
                 "TransactionBuilder",
@@ -194,7 +200,9 @@ class TransactionBuilder:
             try:
                 self.nonce_manager.get_nonce(from_address, tx_id=tx_id)
                 if hasattr(self.web3, "eth"):
-                    tx_hash = cast(HexBytes, self.web3.eth.send_raw_transaction(signed_tx))
+                    tx_hash = cast(
+                        HexBytes, self.web3.eth.send_raw_transaction(signed_tx)
+                    )
                 else:
                     tx_hash = HexBytes(b"testhash")
                 status = "sent"
@@ -203,7 +211,11 @@ class TransactionBuilder:
                         "tx_id": tx_id,
                         "from_address": from_address,
                         "gas_estimate": gas_with_margin,
-                        "tx_hash": tx_hash.hex() if isinstance(tx_hash, (bytes, bytearray)) else str(tx_hash),
+                        "tx_hash": (
+                            tx_hash.hex()
+                            if isinstance(tx_hash, (bytes, bytearray))
+                            else str(tx_hash)
+                        ),
                         "kill_triggered": False,
                         "status": status,
                         "event": status,

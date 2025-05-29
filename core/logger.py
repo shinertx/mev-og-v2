@@ -21,6 +21,19 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Dict, List
 
+
+def make_json_safe(value: Any) -> Any:
+    """Recursively convert ``value`` to JSON-serializable primitives."""
+
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, dict):
+        return {str(k): make_json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [make_json_safe(v) for v in value]
+    return f"<{value.__class__.__name__}>"
+
+
 try:  # optional dependency
     import requests  # type: ignore
 except Exception:  # pragma: no cover - optional
@@ -66,7 +79,7 @@ def log_error(
     path = _error_log_file()
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a") as fh:
-        fh.write(json.dumps(entry) + "\n")
+        fh.write(json.dumps(make_json_safe(entry)) + "\n")
 
 
 _HOOKS: List[Callable[[Dict[str, Any]], None]] = []
@@ -132,12 +145,13 @@ class StructuredLogger:
             "trace_id": trace_id,
         }
         entry.update(extra)
+        safe_entry = make_json_safe(entry)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a") as fh:
-            fh.write(json.dumps(entry) + "\n")
+            fh.write(json.dumps(safe_entry) + "\n")
         for hook in list(_HOOKS):
             try:
-                hook(entry)
+                hook(safe_entry)
             except Exception as exc:
                 # log hook errors but do not interrupt logging
                 log_error(
@@ -167,4 +181,3 @@ class StructuredLogger:
         """Alias for :func:`log` used for verbose tracing."""
 
         self.log(message, **kw)
-
