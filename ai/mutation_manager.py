@@ -18,6 +18,7 @@ class MutationManager:
         self.num_agents = num_agents
         self.agents: List[Any] = []
         self.scores: Dict[int, float] = {}
+        self.chaos_counts: Dict[str, int] = {}
 
     # --------------------------------------------------------------
     def spawn_agents(self, agent_class: Type[Any]) -> None:
@@ -54,3 +55,14 @@ class MutationManager:
             return
         log_mutation("trigger_mutation", strategies=strategies)
         LOG.log("trigger_mutation", strategies=strategies)
+
+    # --------------------------------------------------------------
+    def record_chaos_event(self, adapter: str, event: str) -> None:
+        """Track adapter chaos events and emit mutation hooks."""
+        count = self.chaos_counts.get(adapter, 0) + 1
+        self.chaos_counts[adapter] = count
+        log_mutation("adapter_chaos_event", adapter=adapter, event=event, count=count)
+        LOG.log("adapter_chaos_event", adapter=adapter, event=event, count=count)
+        if count >= 3:
+            log_mutation("adapter_chaos_mutation", adapter=adapter)
+            LOG.log("adapter_chaos_mutation", adapter=adapter)

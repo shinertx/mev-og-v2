@@ -167,6 +167,14 @@ Every PR or batch/module must pass:
   `python tests/test_adapters_chaos.py --simulate bridge_downtime`
 * Expect `fallback_success` events in module logs and OpsAgent alerts for each failure.
 
+### chaos_scheduler
+
+* Run scheduler:
+  `CHAOS_ONCE=1 python infra/sim_harness/chaos_scheduler.py`
+* Configure via ENV:
+  `CHAOS_INTERVAL`, `CHAOS_ADAPTERS`, `CHAOS_MODES`, `CHAOS_SCHED_LOG`.
+* Scheduler logs to `logs/chaos_scheduler.json` and updates `logs/drill_metrics.json`.
+
 ### OpsAgent & CapitalLock Runbook
 
 * Start OpsAgent:

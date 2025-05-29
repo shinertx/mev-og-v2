@@ -262,6 +262,10 @@ the values used in tests and the simulation harness:
 | `FLASHBOTS_AUTH_KEY` | `<none>` | Private key for Flashbots bundles |
 | `FLASHBOTS_RPC_URL` | `https://relay.flashbots.net` | Flashbots/SUAVE relay |
 | `PRIORITY_FEE_GWEI` | `2` | Default EIP-1559 priority fee |
+| `CHAOS_INTERVAL` | `600` | Seconds between scheduled chaos runs |
+| `CHAOS_ADAPTERS` | `dex,bridge,cex,flashloan` | Adapters to target |
+| `CHAOS_MODES` | `network,rpc,downtime,data_poison` | Failure modes injected |
+| `CHAOS_SCHED_LOG` | `logs/chaos_scheduler.json` | Chaos scheduler log path |
 
 ### cross_domain_arb Runbook
 
@@ -503,8 +507,17 @@ During a network outage the logs include entries like:
 {"event":"fallback_success","module":"dex_adapter","risk_level":"low"}
 ```
 
-Metrics from the chaos run are written to `logs/drill_metrics.json` and OpsAgent
-dispatches alerts for each failure.
+Metrics from the chaos run are written to `logs/drill_metrics.json` and OpsAgent dispatches alerts for each failure.
+
+### Chaos Scheduler
+
+Run scheduled chaos injections that randomly target adapters and failure modes:
+
+```bash
+CHAOS_ONCE=1 python infra/sim_harness/chaos_scheduler.py
+```
+
+Set `CHAOS_INTERVAL` (seconds), `CHAOS_ADAPTERS`, and `CHAOS_MODES` to control frequency and scope. Scheduler logs to `logs/chaos_scheduler.json` and updates `logs/drill_metrics.json` on each run.
 
 ## OpsAgent & CapitalLock
 

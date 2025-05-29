@@ -5,11 +5,14 @@ from __future__ import annotations
 import json
 import threading
 import time
-from typing import Dict
+import os
+import random
+from typing import Dict, List
 
 from agents.ops_agent import OpsAgent
 
 from core.logger import StructuredLogger
+from ai.mutation_log import log_mutation
 from core.rate_limiter import RateLimiter
 from core.strategy_scoreboard import SignalProvider
 
@@ -25,11 +28,18 @@ class DuneAnalyticsAdapter(SignalProvider):
         rate: float = 1.0,
         *,
         alt_api_url: str | None = None,
+        alt_api_urls: List[str] | None = None,
+        alt_api_urls: List[str] | None = None,
         ops_agent: OpsAgent | None = None,
         fail_threshold: int = 3,
     ) -> None:
         self.api_url = api_url.rstrip("/")
-        self.alt_api_url = alt_api_url.rstrip("/") if alt_api_url else None
+        alts = []
+        if alt_api_urls:
+            alts.extend(alt_api_urls)
+        if alt_api_url:
+            alts.append(alt_api_url)
+        self.alt_api_urls = [a.rstrip("/") for a in alts]
         self.api_key = api_key
         self.query_id = query_id
         self.rate = RateLimiter(rate)
@@ -74,20 +84,34 @@ class DuneAnalyticsAdapter(SignalProvider):
             return {k: float(v) for k, v in data.items() if isinstance(v, (int, float))}
         except Exception as exc:  # pragma: no cover - network errors
             self._alert("dune_fail", exc)
-            if self.alt_api_url:
+            for alt in random.sample(self.alt_api_urls, len(self.alt_api_urls)):
                 try:
+                    self.logger.log("fallback_try", risk_level="low", alt=alt)
                     resp = requests.get(
-                        f"{self.alt_api_url}/v1/query/{self.query_id}/results",
+                        f"{alt}/v1/query/{self.query_id}/results",
                         headers={"X-Dune-API-Key": self.api_key},
                         timeout=5,
                     )
                     resp.raise_for_status()
-                    self.logger.log("fallback_success", risk_level="low")
+                    self.logger.log("fallback_success", risk_level="low", alt=alt)
                     self.failures = 0
                     data = resp.json().get("result", {})
+                    log_mutation(
+                        "adapter_chaos",
+                        adapter="dune_adapter",
+                        failure=simulate_failure or "runtime",
+                        fallback="success",
+                    )
                     return {k: float(v) for k, v in data.items() if isinstance(v, (int, float))}
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
+            os.environ["OPS_CRITICAL_EVENT"] = "1"
+            log_mutation(
+                "adapter_chaos",
+                adapter="dune_adapter",
+                failure=simulate_failure or "runtime",
+                fallback="fail",
+            )
             return {}
 
 
@@ -105,7 +129,12 @@ class WhaleAlertAdapter(SignalProvider):
         fail_threshold: int = 3,
     ) -> None:
         self.api_url = api_url.rstrip("/")
-        self.alt_api_url = alt_api_url.rstrip("/") if alt_api_url else None
+        alts = []
+        if alt_api_urls:
+            alts.extend(alt_api_urls)
+        if alt_api_url:
+            alts.append(alt_api_url)
+        self.alt_api_urls = [a.rstrip("/") for a in alts]
         self.api_key = api_key
         self.rate = RateLimiter(rate)
         self.logger = StructuredLogger("whale_alert")
@@ -148,21 +177,35 @@ class WhaleAlertAdapter(SignalProvider):
             return {"whale_flow": score}
         except Exception as exc:  # pragma: no cover - network errors
             self._alert("whale_fail", exc)
-            if self.alt_api_url:
+            for alt in random.sample(self.alt_api_urls, len(self.alt_api_urls)):
                 try:
+                    self.logger.log("fallback_try", risk_level="low", alt=alt)
                     resp = requests.get(
-                        f"{self.alt_api_url}/transactions",
+                        f"{alt}/transactions",
                         params={"api_key": self.api_key},
                         timeout=5,
                     )
                     resp.raise_for_status()
-                    self.logger.log("fallback_success", risk_level="low")
+                    self.logger.log("fallback_success", risk_level="low", alt=alt)
                     self.failures = 0
                     data = resp.json().get("transactions", [])
                     score = float(len(data))
+                    log_mutation(
+                        "adapter_chaos",
+                        adapter="whale_alert",
+                        failure=simulate_failure or "runtime",
+                        fallback="success",
+                    )
                     return {"whale_flow": score}
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
+            os.environ["OPS_CRITICAL_EVENT"] = "1"
+            log_mutation(
+                "adapter_chaos",
+                adapter="whale_alert",
+                failure=simulate_failure or "runtime",
+                fallback="fail",
+            )
             return {}
 
 
