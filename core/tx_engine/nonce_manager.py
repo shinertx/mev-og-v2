@@ -21,7 +21,7 @@ from pathlib import Path
 import threading
 from typing import Dict, Optional, Any
 
-from core.logger import log_error
+from core.logger import log_error, make_json_safe
 
 
 class NonceManager:
@@ -81,7 +81,14 @@ class NonceManager:
             log_error("NonceManager", f"rpc nonce fetch failed: {exc}")
             return 0
 
-    def _log(self, source: str, address: str, on_chain_nonce: Optional[int], local_nonce: Optional[int], tx_id: str = "") -> None:
+    def _log(
+        self,
+        source: str,
+        address: str,
+        on_chain_nonce: Optional[int],
+        local_nonce: Optional[int],
+        tx_id: str = "",
+    ) -> None:
         """Write a structured nonce event to the log."""
 
         entry = {
@@ -93,7 +100,7 @@ class NonceManager:
             "source": source,
         }
         with self.log_path.open("a") as fh:
-            fh.write(json.dumps(entry) + "\n")
+            fh.write(json.dumps(make_json_safe(entry)) + "\n")
 
     # ------------------------------------------------------------------
     # Public API
