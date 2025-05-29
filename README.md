@@ -143,6 +143,7 @@ python -m core.metrics --port $METRICS_PORT
 and point Prometheus to `http://localhost:$METRICS_PORT/metrics` for monitoring.
 If `METRICS_TOKEN` is set, include `Authorization: Bearer $METRICS_TOKEN` in
 requests.
+Import `infra/grafana/strategy_scoreboard.json` into Grafana to visualize scores and pruning history.
 
 ### Environment & Configuration
 
@@ -211,6 +212,10 @@ the values used in tests and the simulation harness:
 | `L3_SEQ_TX_POST` | `state/l3_seq_tx_post.json` | Tx builder post snapshot |
 | `L3_SEQ_TX_PRE` | `state/l3_seq_tx_pre.json` | Tx builder pre snapshot |
 | `METRICS_PORT` | `8000` | Port for Prometheus metrics |
+| `DUNE_API_KEY` | `<none>` | Enable Dune Analytics adapter |
+| `DUNE_QUERY_ID` | `<none>` | Dune query ID for signals |
+| `WHALE_ALERT_KEY` | `<none>` | Whale Alert API key |
+| `COINBASE_WS_URL` | `<none>` | Coinbase WebSocket URL |
 | `MUTATION_ID` | `dev` | Tag for current mutation cycle |
 | `TRACE_ID` | `<auto>` | Unique approval trace ID |
 | `NFT_FEED_URL` | `http://localhost:9000` | NFT liquidation feed |
@@ -280,6 +285,7 @@ DRP state files are controlled by the
 `CROSS_ARB_TX_POST` environment variables.
 Metrics are served on
 `http://localhost:8000/metrics` for Prometheus to scrape.
+Import the JSON dashboards in `infra/grafana/` into Grafana for real-time score trends.
 
 Example log:
 
@@ -541,7 +547,7 @@ python scripts/batch_ops.py promote cross_rollup_superbot --source-dir staging -
 ```
 ## Strategy Review & Pruning
 
-Use `core.strategy_scoreboard.StrategyScoreboard` to benchmark live strategies against real-time DEX/CEX gaps, whale alerts, and news sentiment. Call `scoreboard.prune_and_score()` after each trading loop to score performance and auto-prune if `FOUNDER_APPROVED=1`. Rankings are written to `logs/scoreboard.json` and all prune events are appended to `logs/mutation_log.json` with alerts sent via the Ops agent.
+Use `core.strategy_scoreboard.StrategyScoreboard` to benchmark live strategies against real-time DEX/CEX gaps, whale alerts, Dune queries and Coinbase order flow. Adapters are enabled via `DUNE_API_KEY`, `WHALE_ALERT_KEY` and `COINBASE_WS_URL`. `prune_and_score()` requires multi-sig founder approval. Rankings are written to `logs/scoreboard.json` and all prune events are appended to `logs/mutation_log.json` with alerts sent via the Ops agent and Prometheus metrics.
 
 
 ## Wallet Operations

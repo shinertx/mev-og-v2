@@ -51,6 +51,7 @@ logs/
 *.log
 *.json
 !logs/.gitkeep   # (keep folder)
+!infra/grafana/*.json
 
 # DRP/Export/Backup/State Artifacts
 export/

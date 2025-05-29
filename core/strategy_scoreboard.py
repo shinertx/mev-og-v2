@@ -8,10 +8,18 @@ import json
 import os
 
 from collections import defaultdict
-from typing import Any, Callable, Dict, List
+from typing import Any, Dict, List
 
 
 from core.logger import StructuredLogger
+from core import metrics
+from agents.multi_sig import MultiSigApproval
+from ai.mutation_manager import MutationManager
+from adapters.alpha_signals import (
+    DuneAnalyticsAdapter,
+    WhaleAlertAdapter,
+    CoinbaseWebSocketAdapter,
+)
 from ai.mutator import score_strategies, prune_strategies
 from ai.mutation_log import log_mutation
 
@@ -29,6 +37,19 @@ class ExternalSignalFetcher:
     def __init__(self, path: str | None = None, providers: List[SignalProvider] | None = None) -> None:
         self.path = path or os.getenv("EXTERNAL_ALPHA_PATH", "data/external_signals.json")
         self.providers = providers or []
+        if not providers:
+            dune_key = os.getenv("DUNE_API_KEY")
+            dune_query = os.getenv("DUNE_QUERY_ID")
+            dune_url = os.getenv("DUNE_API_URL", "https://api.dune.com")
+            if dune_key and dune_query:
+                self.providers.append(DuneAnalyticsAdapter(dune_url, dune_key, dune_query))
+            whale_key = os.getenv("WHALE_ALERT_KEY")
+            whale_url = os.getenv("WHALE_ALERT_URL", "https://api.whale-alert.io")
+            if whale_key:
+                self.providers.append(WhaleAlertAdapter(whale_url, whale_key))
+            cb_url = os.getenv("COINBASE_WS_URL")
+            if cb_url:
+                self.providers.append(CoinbaseWebSocketAdapter(cb_url))
 
     # ------------------------------------------------------------------
     def _file_signals(self) -> Dict[str, float]:
@@ -57,11 +78,21 @@ class ExternalSignalFetcher:
 
 
 class AlphaDecayModel:
-    """Detect alpha decay and regime shifts via score trends."""
+    """Detect alpha decay using linear or Bayesian regression."""
 
-    def __init__(self, window: int = 5) -> None:
+    def __init__(
+        self,
+        window: int = 5,
+        method: str = "linear",
+        sensitivity: float = 0.1,
+        retrain: int = 50,
+    ) -> None:
         self.history: Dict[str, List[float]] = defaultdict(list)
         self.window = window
+        self.method = method
+        self.sensitivity = sensitivity
+        self.retrain = retrain
+        self._counter = 0
 
     # ------------------------------------------------------------------
     def score(self, sid: str, metrics: Dict[str, float], signals: Dict[str, float]) -> float:
@@ -88,7 +119,10 @@ class AlphaDecayModel:
             sum_xx = sum(i * i for i in x)
             denom = n * sum_xx - sum_x * sum_x
             if denom:
-                slope = (n * sum_xy - sum_x * sum_y) / denom
+                if self.method == "bayesian":
+                    slope = (sum_xy + 0.1) / (sum_xx + 0.1)
+                else:
+                    slope = (n * sum_xy - sum_x * sum_y) / denom
         return base + slope * 10
 
     # ------------------------------------------------------------------
@@ -103,17 +137,35 @@ class AlphaDecayModel:
         sum_xy = sum(x[i] * hist[i] for i in range(n))
         sum_xx = sum(i * i for i in x)
         denom = n * sum_xx - sum_x * sum_x
-        slope = (n * sum_xy - sum_x * sum_y) / denom if denom else 0.0
-        return slope < -0.1
+        if denom:
+            if self.method == "bayesian":
+                slope = (sum_xy + 0.1) / (sum_xx + 0.1)
+            else:
+                slope = (n * sum_xy - sum_x * sum_y) / denom
+        else:
+            slope = 0.0
+        self._counter += 1
+        if self._counter % self.retrain == 0:
+            self.history[sid] = hist[-self.window :]
+        return slope < -self.sensitivity
 
 
 class StrategyScoreboard:
     """Collect metrics, rank strategies and prune underperformers."""
 
-    def __init__(self, orchestrator: Any, signal_fetcher: ExternalSignalFetcher | None = None, model: AlphaDecayModel | None = None) -> None:
+    def __init__(
+        self,
+        orchestrator: Any,
+        signal_fetcher: ExternalSignalFetcher | None = None,
+        model: AlphaDecayModel | None = None,
+        multisig: MultiSigApproval | None = None,
+        mutator: MutationManager | None = None,
+    ) -> None:
         self.orchestrator = orchestrator
         self.signal_fetcher = signal_fetcher or ExternalSignalFetcher()
         self.model = model or AlphaDecayModel()
+        self.multisig = multisig or MultiSigApproval()
+        self.mutator = mutator
         self.logger = StructuredLogger("strategy_scoreboard")
 
     # --------------------------------------------------------------
@@ -151,6 +203,7 @@ class StrategyScoreboard:
         for sid, data in metrics.items():
             score = self.model.score(sid, data, signals)
             scores[sid] = score
+            metrics.record_strategy_score(sid, score)
             ranking.append({"strategy": sid, "score": score})
         ranking.sort(key=lambda x: x["score"], reverse=True)
         json_path = "logs/scoreboard.json"
@@ -160,18 +213,25 @@ class StrategyScoreboard:
         flagged = prune_strategies(metrics)
         for sid in list(scores):
             if self.model.decayed(sid):
+                metrics.record_decay_alert()
                 flagged.append(sid)
         flagged = list(dict.fromkeys(flagged))
         pruned: List[str] = []
         for sid in flagged:
             self.logger.log("prune_strategy", strategy_id=sid, risk_level="medium")
             log_mutation("auto_prune", strategy_id=sid)
-            if os.getenv("FOUNDER_APPROVED") == "1":
+            metrics.record_mutation_event()
+            if self.multisig.request("prune", {"strategy": sid}):
                 self.orchestrator.strategies.pop(sid, None)
                 pruned.append(sid)
+                metrics.record_prune()
                 if hasattr(self.orchestrator, "ops_agent"):
                     self.orchestrator.ops_agent.notify(f"pruned {sid}")
         score_strategies(metrics, output_path=json_path)
+        if self.mutator:
+            dry = os.getenv("MUTATION_DRY_RUN") == "1"
+            self.mutator.handle_pruning(pruned, dry_run=dry)
+        metrics.record_mutation_event()
         return {"scores": ranking, "pruned": pruned}
 
 

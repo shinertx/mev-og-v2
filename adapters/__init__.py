@@ -5,6 +5,7 @@ from .cex_adapter import CEXAdapter
 from .dex_adapter import DEXAdapter
 from .flashloan_adapter import FlashloanAdapter
 from .pool_scanner import PoolScanner, PoolInfo
+from .alpha_signals import DuneAnalyticsAdapter, WhaleAlertAdapter, CoinbaseWebSocketAdapter
 
 __all__ = [
     "BridgeAdapter",
@@ -13,4 +14,7 @@ __all__ = [
     "FlashloanAdapter",
     "PoolScanner",
     "PoolInfo",
+    "DuneAnalyticsAdapter",
+    "WhaleAlertAdapter",
+    "CoinbaseWebSocketAdapter",
 ]
