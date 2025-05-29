@@ -2,6 +2,8 @@ import sys
 from pathlib import Path
 import types
 import importlib.util
+from types import ModuleType, SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -9,69 +11,77 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 class DummyOps:
-    def __init__(self):
+    msgs: list[str]
+
+    def __init__(self) -> None:
         self.msgs = []
+
     def notify(self, msg: str) -> None:
         self.msgs.append(msg)
 
 
 BASE = Path(__file__).resolve().parents[1]
 
-def _load(name: str, rel: str):
+def _load(name: str, rel: str) -> ModuleType:
     spec = importlib.util.spec_from_file_location(name, BASE / rel)
+    if spec is None or spec.loader is None:
+        raise AssertionError("module spec missing")
     mod = importlib.util.module_from_spec(spec)
-    assert spec and spec.loader
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
     return mod
 
 
 
-def _dummy_response(data=None):
+def _dummy_response(data: Any | None = None) -> Any:
     class Resp:
         status_code = 200
 
-        def raise_for_status(self):
-            pass
+        def raise_for_status(self) -> None:
+            return None
 
-        def json(self):
+        def json(self) -> Any:
             return data or {}
 
     return Resp()
 
 
 @pytest.fixture
-def log_env(tmp_path, monkeypatch):
+def log_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("ERROR_LOG_FILE", str(tmp_path / "errors.log"))
-    core_stub = types.ModuleType("core")
-    core_stub.logger = __import__("core.logger", fromlist=[""])
+    core_stub: Any = types.ModuleType("core")
+    setattr(core_stub, "logger", __import__("core.logger", fromlist=[""]))
     monkeypatch.setitem(sys.modules, "core", core_stub)
-    hb = types.ModuleType("hexbytes")
-    hb.HexBytes = bytes
+    hb: Any = types.ModuleType("hexbytes")
+    setattr(hb, "HexBytes", bytes)
     monkeypatch.setitem(sys.modules, "hexbytes", hb)
-    rl = types.ModuleType("core.rate_limiter")
+    rl: Any = types.ModuleType("core.rate_limiter")
     class RateLimiter:
-        def __init__(self, rate):
-            pass
-        def wait(self):
-            pass
-    rl.RateLimiter = RateLimiter
+        def __init__(self, rate: int) -> None:
+            return None
+
+        def wait(self) -> None:
+            return None
+
+    setattr(rl, "RateLimiter", RateLimiter)
     monkeypatch.setitem(sys.modules, "core.rate_limiter", rl)
-    ss = types.ModuleType("core.strategy_scoreboard")
-    class SignalProvider:  # type: ignore
+    ss: Any = types.ModuleType("core.strategy_scoreboard")
+    class SignalProvider:
         pass
-    ss.SignalProvider = SignalProvider
+    setattr(ss, "SignalProvider", SignalProvider)
     monkeypatch.setitem(sys.modules, "core.strategy_scoreboard", ss)
     return tmp_path
 
 
-def _setup_requests(monkeypatch, success_url, data=None):
-    def fake_get(url, *a, **k):
+def _setup_requests(
+    monkeypatch: pytest.MonkeyPatch, success_url: str, data: Any | None = None
+) -> None:
+    def fake_get(url: str, *a: Any, **k: Any) -> Any:
         if success_url in url:
             return _dummy_response(data or {"ok": True})
         raise RuntimeError("fail")
 
-    def fake_post(url, *a, **k):
+    def fake_post(url: str, *a: Any, **k: Any) -> Any:
         if success_url in url:
             return _dummy_response(data or {"ok": True})
         raise RuntimeError("fail")
@@ -79,11 +89,13 @@ def _setup_requests(monkeypatch, success_url, data=None):
     monkeypatch.setitem(
         sys.modules,
         "requests",
-        types.SimpleNamespace(get=fake_get, post=fake_post),
+        SimpleNamespace(get=fake_get, post=fake_post),
     )
 
 
-def test_dex_adapter_fallback(monkeypatch, log_env):
+def test_dex_adapter_fallback(
+    monkeypatch: pytest.MonkeyPatch, log_env: Path
+) -> None:
     _setup_requests(monkeypatch, "alt", {"ok": True})
     ops = DummyOps()
     DEXAdapter = _load("dex_adapter", "adapters/dex_adapter.py").DEXAdapter
@@ -93,7 +105,9 @@ def test_dex_adapter_fallback(monkeypatch, log_env):
     assert adapter.failures == 0
 
 
-def test_cex_adapter_circuit(monkeypatch, log_env):
+def test_cex_adapter_circuit(
+    monkeypatch: pytest.MonkeyPatch, log_env: Path
+) -> None:
     _setup_requests(monkeypatch, "alt", {"ok": True})
     ops = DummyOps()
     CEXAdapter = _load("cex_adapter", "adapters/cex_adapter.py").CEXAdapter
@@ -109,7 +123,9 @@ def test_cex_adapter_circuit(monkeypatch, log_env):
     assert adapter.failures == 1
 
 
-def test_bridge_adapter_manual(monkeypatch, log_env):
+def test_bridge_adapter_manual(
+    monkeypatch: pytest.MonkeyPatch, log_env: Path
+) -> None:
     _setup_requests(monkeypatch, "alt", {"ok": True})
     ops = DummyOps()
     BridgeAdapter = _load("bridge_adapter", "adapters/bridge_adapter.py").BridgeAdapter
@@ -118,7 +134,9 @@ def test_bridge_adapter_manual(monkeypatch, log_env):
     assert data.get("ok") is True
 
 
-def test_pool_scanner_downtime(monkeypatch, log_env):
+def test_pool_scanner_downtime(
+    monkeypatch: pytest.MonkeyPatch, log_env: Path
+) -> None:
     _setup_requests(monkeypatch, "alt", [{"pool": "bad", "domain": "x"}])
     ops = DummyOps()
     PoolScanner = _load("pool_scanner", "adapters/pool_scanner.py").PoolScanner
@@ -127,14 +145,18 @@ def test_pool_scanner_downtime(monkeypatch, log_env):
     assert pools and pools[0].pool == "bad"
 
 
-def test_mempool_monitor_rpc(monkeypatch, log_env):
+def test_mempool_monitor_rpc(
+    monkeypatch: pytest.MonkeyPatch, log_env: Path
+) -> None:
     ops = DummyOps()
     MempoolMonitor = _load("mempool_monitor", "core/mempool_monitor.py").MempoolMonitor
     monitor = MempoolMonitor(None, ops_agent=ops, fail_threshold=1)
     assert monitor.listen_bridge_txs(simulate_failure="rpc") == []
 
 
-def test_alpha_signal(monkeypatch, log_env):
+def test_alpha_signal(
+    monkeypatch: pytest.MonkeyPatch, log_env: Path
+) -> None:
     _setup_requests(monkeypatch, "alt", {"ok": True})
     ops = DummyOps()
     DuneAnalyticsAdapter = _load("alpha_signals", "adapters/alpha_signals.py").DuneAnalyticsAdapter
