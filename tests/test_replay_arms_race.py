@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "replay_arms_race.py"
 
 
-def test_replay(tmp_path):
+def test_replay(tmp_path: Path) -> None:
     data = [{"hash": "0x1", "profit": 1}, {"hash": "0x2", "profit": -1}]
     log = tmp_path / "txs.json"
     log.write_text(json.dumps(data))
@@ -20,7 +20,7 @@ def test_replay(tmp_path):
     assert out["wins"] == 1
 
 
-def test_missing_log_file(tmp_path):
+def test_missing_log_file(tmp_path: Path) -> None:
     log = tmp_path / "missing.json"
     env = os.environ.copy()
     env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])

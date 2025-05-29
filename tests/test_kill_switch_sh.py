@@ -7,11 +7,17 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "kill_switch.sh"
 
-def run_script(args, env):
-    return subprocess.run(["bash", str(SCRIPT)] + args, capture_output=True, text=True, env=env, check=True)
+def run_script(args: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["bash", str(SCRIPT)] + args,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
 
 
-def test_trigger_and_clean(tmp_path):
+def test_trigger_and_clean(tmp_path: Path) -> None:
     env_file = tmp_path / ".env"
     log_file = tmp_path / "log.json"
     flag_file = tmp_path / "flag.txt"
@@ -38,7 +44,7 @@ def test_trigger_and_clean(tmp_path):
     assert entries[-1]["mode"] == "clean"
 
 
-def test_dry_run(tmp_path):
+def test_dry_run(tmp_path: Path) -> None:
     env_file = tmp_path / ".env"
     log_file = tmp_path / "log.json"
     flag_file = tmp_path / "flag.txt"

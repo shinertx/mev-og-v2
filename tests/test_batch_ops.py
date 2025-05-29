@@ -8,13 +8,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "batch_ops.py"
 
 
-def run_script(args, env):
+def run_script(args: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     env = env.copy()
     env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
-    return subprocess.run([sys.executable, str(SCRIPT)] + args, capture_output=True, text=True, env=env, check=True)
+    return subprocess.run(
+        [sys.executable, str(SCRIPT)] + args,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
 
 
-def test_batch_promote_pause(tmp_path):
+def test_batch_promote_pause(tmp_path: Path) -> None:
     staging = tmp_path / "staging" / "s1"
     active = tmp_path / "active" / "s1"
     paused = tmp_path / "paused"
