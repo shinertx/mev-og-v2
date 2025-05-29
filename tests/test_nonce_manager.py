@@ -28,7 +28,7 @@ class DummyWeb3:
 def test_cache_update_and_reset(tmp_path):
     cache = tmp_path / "cache.json"
     log_file = tmp_path / "log.json"
-    w3 = DummyWeb3()
+    w3 = DummyWeb3(start=0)
     nm = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
 
     # First call fetches from RPC
@@ -62,7 +62,7 @@ def test_cache_update_and_reset(tmp_path):
 def test_concurrent_access(tmp_path):
     cache = tmp_path / "cache.json"
     log_file = tmp_path / "log.json"
-    w3 = DummyWeb3()
+    w3 = DummyWeb3(start=0)
     nm = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
 
     results = []
@@ -81,7 +81,7 @@ def test_concurrent_access(tmp_path):
 def test_reset_increment_race(tmp_path):
     cache = tmp_path / "cache.json"
     log_file = tmp_path / "log.json"
-    w3 = DummyWeb3()
+    w3 = DummyWeb3(start=0)
     nm = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
     nm.get_nonce("0xabc")
 
@@ -105,7 +105,7 @@ def test_reset_increment_race(tmp_path):
 def test_replay_attempt(tmp_path):
     cache = tmp_path / "cache.json"
     log_file = tmp_path / "log.json"
-    w3 = DummyWeb3()
+    w3 = DummyWeb3(start=0)
     nm = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
     first = nm.get_nonce("0xabc")
     nm.update_nonce("0xabc", first - 1)
@@ -114,9 +114,34 @@ def test_replay_attempt(tmp_path):
 def test_cross_agent_replay(tmp_path):
     cache = tmp_path / "cache.json"
     log_file = tmp_path / "log.json"
-    w3 = DummyWeb3()
+    w3 = DummyWeb3(start=0)
     nm_a = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
     nm_b = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
     first = nm_a.get_nonce("0xabc")
     nm_b.update_nonce("0xabc", first - 1)
     assert nm_a.get_nonce("0xabc") == first + 1
+
+
+def test_atomic_increment_race(tmp_path):
+    cache = tmp_path / "cache.json"
+    log_file = tmp_path / "log.json"
+    w3 = DummyWeb3(start=0)
+    nm = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
+
+    results: list[int] = []
+    barrier = threading.Barrier(10)
+
+    def worker():
+        barrier.wait()
+        for _ in range(5):
+            results.append(nm.get_nonce("0xabc"))
+
+    threads = [threading.Thread(target=worker) for _ in range(10)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert len(results) == 50
+    assert sorted(results)[0] == 0
+    assert sorted(results)[-1] == 49
