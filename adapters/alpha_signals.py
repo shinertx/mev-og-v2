@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import threading
 import time
-from typing import Dict, Optional
+from typing import Dict
 
 from agents.ops_agent import OpsAgent
 

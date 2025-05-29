@@ -1,11 +1,10 @@
 from pathlib import Path
 
-import os
 import sys
 
 import pytest
 pytest.importorskip("hexbytes")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core.strategy_scoreboard import (
     StrategyScoreboard,
