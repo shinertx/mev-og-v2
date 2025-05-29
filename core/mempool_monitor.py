@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, cast
+from typing import Any, Dict, List, cast
 
 from agents.ops_agent import OpsAgent
 from hexbytes import HexBytes
@@ -10,9 +10,10 @@ from hexbytes import HexBytes
 from core.logger import StructuredLogger
 
 try:
-    from web3 import Web3  # type: ignore
+    from web3 import Web3 as Web3Type
+    Web3: Any = Web3Type
 except Exception:  # pragma: no cover - optional
-    Web3 = None  # type: ignore
+    Web3 = cast(Any, None)
 
 LOG = StructuredLogger("mempool_monitor")
 

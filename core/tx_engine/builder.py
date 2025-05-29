@@ -66,7 +66,7 @@ class TransactionBuilder:
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
         logging.basicConfig(level=logging.INFO)
 
-    def _log(self, entry: dict) -> None:
+    def _log(self, entry: dict[str, Any]) -> None:
         """Append ``entry`` as a JSON line to the transaction log."""
 
         with self.log_file.open("a") as fh:

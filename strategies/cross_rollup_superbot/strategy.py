@@ -169,8 +169,8 @@ class CrossRollupSuperbot:
         Falls back to :func:`TransactionBuilder.send_transaction` on failure.
         """
         try:
-            from eth_account import Account  # type: ignore
-            from flashbots import flashbot  # type: ignore
+            from eth_account import Account
+            from flashbots import flashbot
         except Exception as exc:  # pragma: no cover - import guard
             raise RuntimeError("flashbots package required") from exc
 

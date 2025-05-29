@@ -18,7 +18,7 @@ import json
 import os
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from core.logger import StructuredLogger, log_error, make_json_safe
 from core.secret_manager import get_secret
@@ -52,17 +52,18 @@ class Mutator:
             return json.dumps({"params": {}})
 
         try:
-            import openai  # type: ignore  # pragma: no cover - external
+            import openai as openai_module  # pragma: no cover - external
+            openai_client = cast(Any, openai_module)
 
-            openai.api_key = get_secret("OPENAI_API_KEY")
+            openai_client.api_key = get_secret("OPENAI_API_KEY")
             api_base = os.getenv("OPENAI_API_BASE")
             if api_base:
-                openai.api_base = api_base
-            resp = openai.ChatCompletion.create(
+                openai_client.api_base = api_base
+            resp = openai_client.ChatCompletion.create(
                 model=os.getenv("MUTATION_MODEL", "gpt-4o"),
                 messages=[{"role": "user", "content": prompt}],
             )
-            return resp.choices[0].message.content  # type: ignore[assignment]
+            return cast(str, resp.choices[0].message.content)
         except Exception as exc:  # pragma: no cover - network errors
             raise RuntimeError(f"model API error: {exc}") from exc
 
@@ -111,7 +112,7 @@ class Mutator:
             prompt=summary,
             response=data,
         )
-        return data["params"]
+        return cast(Dict[str, Any], data["params"])
 
     # ------------------------------------------------------------------
     def run(self) -> Dict[str, Any]:
