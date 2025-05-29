@@ -539,6 +539,10 @@ Example usage:
 ```bash
 python scripts/batch_ops.py promote cross_rollup_superbot --source-dir staging --dest-dir active
 ```
+## Strategy Review & Pruning
+
+Use `core.strategy_scoreboard.StrategyScoreboard` to benchmark live strategies against external market data. Run `scoreboard.prune_and_score()` after each trading cycle. Results are written to `logs/scoreboard.json`. Flagged strategies require founder approval before capital is reallocated.
+
 
 ## Wallet Operations
 
