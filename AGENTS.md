@@ -190,6 +190,13 @@ strat = Strategy(..., capital_lock=lock)
 - Adjust `PRIORITY_FEE_GWEI` to set the priority fee for bundles.
 - On failure, `_bundle_and_send` falls back to `TransactionBuilder.send_transaction`.
 - Bundle latency is returned for metrics and log entry enrichment.
+### Strategy Review & Pruning
+
+- Run `python -m core.strategy_scoreboard` or call `StrategyScoreboard.prune_and_score()` to generate live rankings.
+- Review `logs/scoreboard.json` for P&L, risk and edge vs. market.
+- Founder must confirm any capital changes before promoted strategies go live.
+- All prune/promote events are appended to `logs/mutation_log.json`.
+
 
 ## Agent CLI Reference
 
