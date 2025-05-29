@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import json
+import os
+import random
 from typing import Any, Dict, Optional
 
 from agents.ops_agent import OpsAgent
 
 from core.logger import StructuredLogger
+from ai.mutation_log import log_mutation
 
 LOGGER = StructuredLogger("cex_adapter")
 
@@ -20,11 +24,15 @@ class CEXAdapter:
         api_key: str,
         *,
         alt_api_url: str | None = None,
+        alt_api_urls: list[str] | None = None,
         ops_agent: OpsAgent | None = None,
         fail_threshold: int = 3,
     ) -> None:
         self.api_url = api_url.rstrip("/")
-        self.alt_api_url = alt_api_url.rstrip("/") if alt_api_url else None
+        urls = list(alt_api_urls or [])
+        if alt_api_url:
+            urls.append(alt_api_url)
+        self.alt_api_urls = [u.rstrip("/") for u in urls]
         self.api_key = api_key
         self.ops_agent = ops_agent
         self.fail_threshold = fail_threshold
@@ -34,8 +42,12 @@ class CEXAdapter:
         self.failures += 1
         LOGGER.log(event, risk_level="high", error=str(err))
         if self.ops_agent:
-            self.ops_agent.notify(f"cex_adapter:{event}:{err}")
+            self.ops_agent.notify(
+                json.dumps({"adapter": "cex", "event": event, "error": str(err)})
+            )
+        log_mutation("adapter_chaos", adapter="cex", failure=event, fallback=False)
         if self.failures >= self.fail_threshold:
+            os.environ["OPS_CRITICAL_EVENT"] = "1"
             raise RuntimeError("circuit breaker open")
 
     # ------------------------------------------------------------------
@@ -61,17 +73,21 @@ class CEXAdapter:
             return resp.json()
         except Exception as exc:  # pragma: no cover - network errors
             self._alert("balance_fail", exc)
-            if self.alt_api_url:
+            for url in random.sample(self.alt_api_urls, len(self.alt_api_urls)):
                 try:
                     resp = requests.get(
-                        f"{self.alt_api_url}/balance", headers=self._headers(), timeout=5
+                        f"{url}/balance", headers=self._headers(), timeout=5
                     )
                     resp.raise_for_status()
-                    LOGGER.log("fallback_success", risk_level="low")
+                    LOGGER.log("fallback_success", risk_level="low", alt=url)
+                    log_mutation(
+                        "adapter_chaos", adapter="cex", failure="balance_fail", fallback=url
+                    )
                     self.failures = 0
                     return resp.json()
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
+            os.environ["OPS_CRITICAL_EVENT"] = "1"
             raise
 
     # ------------------------------------------------------------------
@@ -96,16 +112,20 @@ class CEXAdapter:
             return resp.json()
         except Exception as exc:  # pragma: no cover - network errors
             self._alert("order_fail", exc)
-            if self.alt_api_url:
+            for url in random.sample(self.alt_api_urls, len(self.alt_api_urls)):
                 try:
                     resp = requests.post(
-                        f"{self.alt_api_url}/order", json=data, headers=self._headers(), timeout=5
+                        f"{url}/order", json=data, headers=self._headers(), timeout=5
                     )
                     resp.raise_for_status()
-                    LOGGER.log("fallback_success", risk_level="low")
+                    LOGGER.log("fallback_success", risk_level="low", alt=url)
+                    log_mutation(
+                        "adapter_chaos", adapter="cex", failure="order_fail", fallback=url
+                    )
                     self.failures = 0
                     return resp.json()
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
+            os.environ["OPS_CRITICAL_EVENT"] = "1"
             raise
 

@@ -227,6 +227,9 @@ the values used in tests and the simulation harness:
 | `NFT_LIQ_TX_PRE` | `state/nft_liq_tx_pre.json` | Tx builder pre snapshot |
 | `OPENAI_API_KEY` | `<none>` | Required for online GPT audits |
 | `OPS_ALERT_WEBHOOK` | `<none>` | Webhook for OpsAgent alerts |
+| `CHAOS_INTERVAL` | `3600` | Seconds between chaos injections |
+| `CHAOS_ADAPTERS` | `dex,bridge,cex,flashloan` | Target adapters for scheduler |
+| `CHAOS_MODES` | `network,rpc,downtime,data_poison` | Failure modes for chaos |
 | `POOL_ARBITRUM` | `0xb3f8e426...` | Arbitrum pool address |
 | `POOL_ETHEREUM` | `0x8ad599c3...` | Ethereum pool address |
 | `POOL_L3` | `0x6b3d1a6...` | Scroll ETH/USDC pool |
@@ -503,8 +506,17 @@ During a network outage the logs include entries like:
 {"event":"fallback_success","module":"dex_adapter","risk_level":"low"}
 ```
 
-Metrics from the chaos run are written to `logs/drill_metrics.json` and OpsAgent
-dispatches alerts for each failure.
+Metrics from the chaos run are written to `logs/drill_metrics.json` and OpsAgent dispatches alerts for each failure.
+
+### Chaos Scheduler
+
+Automated chaos can be scheduled with `infra/sim_harness/chaos_scheduler.py`.
+
+```bash
+python infra/sim_harness/chaos_scheduler.py --once
+```
+
+Customize via `CHAOS_INTERVAL`, `CHAOS_ADAPTERS`, and `CHAOS_MODES`. Logs are stored in `logs/chaos_scheduler.json`.
 
 ## OpsAgent & CapitalLock
 

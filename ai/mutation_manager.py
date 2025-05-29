@@ -54,3 +54,12 @@ class MutationManager:
             return
         log_mutation("trigger_mutation", strategies=strategies)
         LOG.log("trigger_mutation", strategies=strategies)
+
+    # --------------------------------------------------------------
+    def record_chaos(self, adapter: str, failure: str, fallback: str | None) -> None:
+        """Handle adapter chaos events for dynamic reconfiguration."""
+        log_mutation("adapter_chaos", adapter=adapter, failure=failure, fallback=fallback)
+        LOG.log("adapter_chaos", adapter=adapter, failure=failure, fallback=fallback)
+        ft = self.base_params.get("fail_threshold")
+        if isinstance(ft, int) and ft > 1:
+            self.base_params["fail_threshold"] = ft - 1

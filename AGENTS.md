@@ -159,6 +159,13 @@ Every PR or batch/module must pass:
 * Results are written to `logs/chaos_drill.json` with per-adapter failure counts in `logs/drill_metrics.json`.
   CI fails if any secrets/PII are detected in logs or DRP exports.
 
+### chaos_scheduler
+
+* Scheduled injections:
+  `python infra/sim_harness/chaos_scheduler.py --once`
+* Control via ENV: `CHAOS_INTERVAL`, `CHAOS_ADAPTERS`, `CHAOS_MODES`.
+* Logs in `logs/chaos_scheduler.json`, metrics in `logs/drill_metrics.json`.
+
 ### adapter_chaos
 
 * Run targeted adapter chaos tests:

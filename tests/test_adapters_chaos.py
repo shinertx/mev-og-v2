@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from pathlib import Path
 import types
@@ -43,6 +44,8 @@ def _dummy_response(data=None):
 @pytest.fixture
 def log_env(tmp_path, monkeypatch):
     monkeypatch.setenv("ERROR_LOG_FILE", str(tmp_path / "errors.log"))
+    monkeypatch.setenv("MUTATION_LOG", str(tmp_path / "mutation.json"))
+    monkeypatch.setenv("OPS_CRITICAL_EVENT", "0")
     core_stub = types.ModuleType("core")
     core_stub.logger = __import__("core.logger", fromlist=[""])
     monkeypatch.setitem(sys.modules, "core", core_stub)
@@ -67,12 +70,12 @@ def log_env(tmp_path, monkeypatch):
 
 def _setup_requests(monkeypatch, success_url, data=None):
     def fake_get(url, *a, **k):
-        if success_url in url:
+        if any(u in url for u in ([success_url] if isinstance(success_url, str) else success_url)):
             return _dummy_response(data or {"ok": True})
         raise RuntimeError("fail")
 
     def fake_post(url, *a, **k):
-        if success_url in url:
+        if any(u in url for u in ([success_url] if isinstance(success_url, str) else success_url)):
             return _dummy_response(data or {"ok": True})
         raise RuntimeError("fail")
 
@@ -84,23 +87,23 @@ def _setup_requests(monkeypatch, success_url, data=None):
 
 
 def test_dex_adapter_fallback(monkeypatch, log_env):
-    _setup_requests(monkeypatch, "alt", {"ok": True})
+    _setup_requests(monkeypatch, ["alt", "alt2"], {"ok": True})
     ops = DummyOps()
     DEXAdapter = _load("dex_adapter", "adapters/dex_adapter.py").DEXAdapter
-    adapter = DEXAdapter("http://bad", alt_api_url="http://alt", ops_agent=ops)
+    adapter = DEXAdapter("http://bad", alt_api_urls=["http://alt", "http://alt2"], ops_agent=ops)
     data = adapter.get_quote("ETH", "USDC", 1, simulate_failure="network")
     assert data.get("ok") is True
     assert adapter.failures == 0
 
 
 def test_cex_adapter_circuit(monkeypatch, log_env):
-    _setup_requests(monkeypatch, "alt", {"ok": True})
+    _setup_requests(monkeypatch, ["alt", "alt2"], {"ok": True})
     ops = DummyOps()
     CEXAdapter = _load("cex_adapter", "adapters/cex_adapter.py").CEXAdapter
     adapter = CEXAdapter(
         "http://bad",
         "k",
-        alt_api_url="http://alt",
+        alt_api_urls=["http://alt", "http://alt2"],
         ops_agent=ops,
         fail_threshold=1,
     )
@@ -110,19 +113,19 @@ def test_cex_adapter_circuit(monkeypatch, log_env):
 
 
 def test_bridge_adapter_manual(monkeypatch, log_env):
-    _setup_requests(monkeypatch, "alt", {"ok": True})
+    _setup_requests(monkeypatch, ["alt", "alt2"], {"ok": True})
     ops = DummyOps()
     BridgeAdapter = _load("bridge_adapter", "adapters/bridge_adapter.py").BridgeAdapter
-    adapter = BridgeAdapter("http://bad", alt_api_url="http://alt", ops_agent=ops)
+    adapter = BridgeAdapter("http://bad", alt_api_urls=["http://alt", "http://alt2"], ops_agent=ops)
     data = adapter.bridge("eth", "arb", "ETH", 1, simulate_failure="network")
     assert data.get("ok") is True
 
 
 def test_pool_scanner_downtime(monkeypatch, log_env):
-    _setup_requests(monkeypatch, "alt", [{"pool": "bad", "domain": "x"}])
+    _setup_requests(monkeypatch, ["alt", "alt2"], [{"pool": "bad", "domain": "x"}])
     ops = DummyOps()
     PoolScanner = _load("pool_scanner", "adapters/pool_scanner.py").PoolScanner
-    scanner = PoolScanner("http://bad", alt_api_url="http://alt", ops_agent=ops)
+    scanner = PoolScanner("http://bad", alt_api_urls=["http://alt", "http://alt2"], ops_agent=ops)
     pools = scanner.scan(simulate_failure="downtime")
     assert pools and pools[0].pool == "bad"
 
@@ -135,7 +138,7 @@ def test_mempool_monitor_rpc(monkeypatch, log_env):
 
 
 def test_alpha_signal(monkeypatch, log_env):
-    _setup_requests(monkeypatch, "alt", {"ok": True})
+    _setup_requests(monkeypatch, ["alt", "alt2"], {"ok": True})
     ops = DummyOps()
     DuneAnalyticsAdapter = _load("alpha_signals", "adapters/alpha_signals.py").DuneAnalyticsAdapter
     WhaleAlertAdapter = _load("alpha_signals", "adapters/alpha_signals.py").WhaleAlertAdapter
@@ -143,7 +146,7 @@ def test_alpha_signal(monkeypatch, log_env):
         "http://bad",
         "k",
         "q",
-        alt_api_url="http://alt",
+        alt_api_urls=["http://alt", "http://alt2"],
         ops_agent=ops,
     )
     data = dune.fetch(simulate_failure="network")
@@ -151,11 +154,14 @@ def test_alpha_signal(monkeypatch, log_env):
     whale = WhaleAlertAdapter(
         "http://bad",
         "k",
-        alt_api_url="http://alt",
+        alt_api_urls=["http://alt", "http://alt2"],
         ops_agent=ops,
     )
     data2 = whale.fetch(simulate_failure="network")
     assert data2 == {"whale_flow": 0.0}
+    import json
+    entries = [json.loads(l) for l in Path(os.getenv("MUTATION_LOG")).read_text().splitlines()]
+    assert any(e["event"] == "adapter_chaos" for e in entries)
 
 
 if __name__ == "__main__":

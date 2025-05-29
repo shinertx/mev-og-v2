@@ -133,6 +133,11 @@ class StrategyOrchestrator:
     # ---------------------------------------------------------------
     def run_once(self) -> bool:
         self.ops_agent.run_checks()
+        if os.getenv("OPS_CRITICAL_EVENT") == "1":
+            self.ops_agent.auto_pause("critical_event")
+            ok = self._snapshot_state()
+            self.drp_agent.record_export(ok)
+            return False
         if not gates_green(self.capital_lock, self.ops_agent, self.drp_agent):
             if kill_switch_triggered():
                 record_kill_event("orchestrator")

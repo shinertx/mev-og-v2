@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, cast
 
+import json
+import os
 from agents.ops_agent import OpsAgent
 from hexbytes import HexBytes
 
@@ -32,8 +34,13 @@ class MempoolMonitor:
         self.failures += 1
         LOG.log(event, risk_level="high", error=str(err))
         if self.ops_agent:
-            self.ops_agent.notify(f"mempool_monitor:{event}:{err}")
+            self.ops_agent.notify(
+                json.dumps({"adapter": "mempool_monitor", "event": event, "error": str(err)})
+            )
+        from ai.mutation_log import log_mutation
+        log_mutation("adapter_chaos", adapter="mempool_monitor", failure=event, fallback=False)
         if self.failures >= self.fail_threshold:
+            os.environ["OPS_CRITICAL_EVENT"] = "1"
             raise RuntimeError("circuit breaker open")
 
     def listen_bridge_txs(

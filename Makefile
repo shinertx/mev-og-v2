@@ -13,7 +13,7 @@ test:
     pytest -v && foundry test
 
 chaos:
-    pytest tests/test_adapters_chaos.py -v
+    pytest tests/test_adapters_chaos.py -v && python infra/sim_harness/chaos_scheduler.py --once
 
 simulate:
 bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
