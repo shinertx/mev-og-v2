@@ -3,6 +3,9 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
+import pytest
+pytest.importorskip("hexbytes")
+
 from core.alpha_dashboard import AlphaDashboard
 from agents.capital_lock import CapitalLock
 from strategies.cross_domain_arb import PoolConfig, CrossDomainArb

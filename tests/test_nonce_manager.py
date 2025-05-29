@@ -107,3 +107,13 @@ def test_replay_attempt(tmp_path):
     first = nm.get_nonce("0xabc")
     nm.update_nonce("0xabc", first - 1)
     assert nm.get_nonce("0xabc") == first
+
+def test_cross_agent_replay(tmp_path):
+    cache = tmp_path / "cache.json"
+    log_file = tmp_path / "log.json"
+    w3 = DummyWeb3()
+    nm_a = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
+    nm_b = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
+    first = nm_a.get_nonce("0xabc")
+    nm_b.update_nonce("0xabc", first - 1)
+    assert nm_a.get_nonce("0xabc") == first + 1
