@@ -1,43 +1,126 @@
-"""Strategy benchmarking and pruning utilities."""
+
+"""Advanced live strategy benchmarking and pruning."""
+
 
 from __future__ import annotations
 
 import json
 import os
-from typing import Any, Dict, List
+
+from collections import defaultdict
+from typing import Any, Callable, Dict, List
+
 
 from core.logger import StructuredLogger
 from ai.mutator import score_strategies, prune_strategies
 from ai.mutation_log import log_mutation
 
 
+class SignalProvider:
+    """Base class for external alpha signal providers."""
+
+    def fetch(self) -> Dict[str, float]:  # pragma: no cover - interface
+        return {}
+
+
 class ExternalSignalFetcher:
-    """Fetch external alpha signals from a JSON file."""
+    """Aggregate multiple real-time signal providers."""
 
-    def __init__(self, path: str | None = None) -> None:
+    def __init__(self, path: str | None = None, providers: List[SignalProvider] | None = None) -> None:
         self.path = path or os.getenv("EXTERNAL_ALPHA_PATH", "data/external_signals.json")
+        self.providers = providers or []
 
-    def fetch(self) -> Dict[str, Any]:
+    # ------------------------------------------------------------------
+    def _file_signals(self) -> Dict[str, float]:
+
         if not os.path.exists(self.path):
             return {}
         try:
             with open(self.path) as fh:
-                return json.load(fh)
+
+                data = json.load(fh)
+                if isinstance(data, dict):
+                    return {k: float(v) for k, v in data.items() if isinstance(v, (int, float))}
+                return {}
         except Exception:
             return {}
 
+    # ------------------------------------------------------------------
+    def fetch(self) -> Dict[str, float]:
+        signals: Dict[str, float] = self._file_signals()
+        for prov in list(self.providers):
+            try:
+                signals.update(prov.fetch())
+            except Exception:
+                continue
+        return signals
+
+
+class AlphaDecayModel:
+    """Detect alpha decay and regime shifts via score trends."""
+
+    def __init__(self, window: int = 5) -> None:
+        self.history: Dict[str, List[float]] = defaultdict(list)
+        self.window = window
+
+    # ------------------------------------------------------------------
+    def score(self, sid: str, metrics: Dict[str, float], signals: Dict[str, float]) -> float:
+        base = (
+            metrics.get("realized_pnl", 0.0)
+            + metrics.get("edge_vs_market", 0.0) * 2
+            + metrics.get("win_rate", 0.0) * 10
+            - metrics.get("drawdown", 0.0) * 50
+            - metrics.get("failures", 0.0) * 20
+            + signals.get("whale_flow", 0.0) * 2
+            + signals.get("news_sentiment", 0.0) * 5
+        )
+        hist = self.history[sid]
+        hist.append(base)
+        if len(hist) > self.window:
+            hist.pop(0)
+        slope = 0.0
+        n = len(hist)
+        if n > 1:
+            x = list(range(n))
+            sum_x = sum(x)
+            sum_y = sum(hist)
+            sum_xy = sum(x[i] * hist[i] for i in range(n))
+            sum_xx = sum(i * i for i in x)
+            denom = n * sum_xx - sum_x * sum_x
+            if denom:
+                slope = (n * sum_xy - sum_x * sum_y) / denom
+        return base + slope * 10
+
+    # ------------------------------------------------------------------
+    def decayed(self, sid: str) -> bool:
+        hist = self.history.get(sid, [])
+        if len(hist) < self.window:
+            return False
+        n = len(hist)
+        x = list(range(n))
+        sum_x = sum(x)
+        sum_y = sum(hist)
+        sum_xy = sum(x[i] * hist[i] for i in range(n))
+        sum_xx = sum(i * i for i in x)
+        denom = n * sum_xx - sum_x * sum_x
+        slope = (n * sum_xy - sum_x * sum_y) / denom if denom else 0.0
+        return slope < -0.1
+
 
 class StrategyScoreboard:
-    """Collect metrics, rank strategies and trigger pruning."""
+    """Collect metrics, rank strategies and prune underperformers."""
 
-    def __init__(self, orchestrator: Any, signal_fetcher: ExternalSignalFetcher | None = None) -> None:
+    def __init__(self, orchestrator: Any, signal_fetcher: ExternalSignalFetcher | None = None, model: AlphaDecayModel | None = None) -> None:
         self.orchestrator = orchestrator
         self.signal_fetcher = signal_fetcher or ExternalSignalFetcher()
+        self.model = model or AlphaDecayModel()
         self.logger = StructuredLogger("strategy_scoreboard")
 
     # --------------------------------------------------------------
     def collect_metrics(self) -> Dict[str, Dict[str, float]]:
-        """Return live metrics for all strategies."""
+
+        """Return live metrics enriched with market signals."""
+
         ext = self.signal_fetcher.fetch()
         market_pnl = float(ext.get("market_pnl", 0.0))
         metrics: Dict[str, Dict[str, float]] = {}
@@ -59,27 +142,53 @@ class StrategyScoreboard:
 
     # --------------------------------------------------------------
     def prune_and_score(self) -> Dict[str, Any]:
-        """Score strategies and prune underperformers."""
+
+        """Score strategies and auto-prune underperformers."""
         metrics = self.collect_metrics()
-        scores = score_strategies(metrics, output_path="logs/scoreboard.json")
+        signals = self.signal_fetcher.fetch()
+        scores = {}
+        ranking: List[Dict[str, Any]] = []
+        for sid, data in metrics.items():
+            score = self.model.score(sid, data, signals)
+            scores[sid] = score
+            ranking.append({"strategy": sid, "score": score})
+        ranking.sort(key=lambda x: x["score"], reverse=True)
+        json_path = "logs/scoreboard.json"
+        os.makedirs(os.path.dirname(json_path), exist_ok=True)
+        with open(json_path, "w") as fh:
+            json.dump(ranking, fh, indent=2)
         flagged = prune_strategies(metrics)
+        for sid in list(scores):
+            if self.model.decayed(sid):
+                flagged.append(sid)
+        flagged = list(dict.fromkeys(flagged))
+        pruned: List[str] = []
         for sid in flagged:
             self.logger.log("prune_strategy", strategy_id=sid, risk_level="medium")
             log_mutation("auto_prune", strategy_id=sid)
-        return {"scores": scores, "pruned": flagged}
+            if os.getenv("FOUNDER_APPROVED") == "1":
+                self.orchestrator.strategies.pop(sid, None)
+                pruned.append(sid)
+                if hasattr(self.orchestrator, "ops_agent"):
+                    self.orchestrator.ops_agent.notify(f"pruned {sid}")
+        score_strategies(metrics, output_path=json_path)
+        return {"scores": ranking, "pruned": pruned}
+
 
 
 if __name__ == "__main__":  # pragma: no cover - CLI entry
     import argparse
-    from core.orchestrator import Orchestrator
+    from core.orchestrator import StrategyOrchestrator
+
 
     parser = argparse.ArgumentParser(description="Run strategy scoreboard")
     parser.add_argument("--config", default="config.yaml", help="Orchestrator config")
     args = parser.parse_args()
 
-    orch = Orchestrator.from_config(args.config)
+
+    orch = StrategyOrchestrator(args.config)
+
     board = StrategyScoreboard(orch)
     result = board.prune_and_score()
     print(json.dumps(result, indent=2))
-
 

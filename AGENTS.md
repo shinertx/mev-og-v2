@@ -192,10 +192,10 @@ strat = Strategy(..., capital_lock=lock)
 - Bundle latency is returned for metrics and log entry enrichment.
 ### Strategy Review & Pruning
 
-- Run `python -m core.strategy_scoreboard` or call `StrategyScoreboard.prune_and_score()` to generate live rankings.
-- Review `logs/scoreboard.json` for P&L, risk and edge vs. market.
-- Founder must confirm any capital changes before promoted strategies go live.
-- All prune/promote events are appended to `logs/mutation_log.json`.
+- Run `python -m core.strategy_scoreboard` or call `StrategyScoreboard.prune_and_score()` after each trading loop.
+- Review `logs/scoreboard.json` for risk-adjusted scores with external alpha signals.
+- Set `FOUNDER_APPROVED=1` to enable auto-pruning and live capital changes. Alerts are dispatched via `OpsAgent.notify`.
+- Every prune/promote/mutation event is recorded in `logs/mutation_log.json` using the current `TRACE_ID`.
 
 
 ## Agent CLI Reference
