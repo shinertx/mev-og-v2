@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
+from agents.ops_agent import OpsAgent
+
 from core.logger import StructuredLogger
 
 LOG = StructuredLogger("pool_scanner")
@@ -19,30 +21,87 @@ class PoolInfo:
 class PoolScanner:
     """Scan subgraph or RPC endpoints for newly deployed pools."""
 
-    def __init__(self, api_url: str) -> None:
+    def __init__(
+        self,
+        api_url: str,
+        *,
+        alt_api_url: str | None = None,
+        ops_agent: OpsAgent | None = None,
+        fail_threshold: int = 3,
+    ) -> None:
         self.api_url = api_url.rstrip("/")
+        self.alt_api_url = alt_api_url.rstrip("/") if alt_api_url else None
+        self.ops_agent = ops_agent
+        self.fail_threshold = fail_threshold
+        self.failures = 0
 
-    def scan(self) -> List[PoolInfo]:
+    def _alert(self, event: str, err: Exception) -> None:
+        self.failures += 1
+        LOG.log(event, risk_level="high", error=str(err))
+        if self.ops_agent:
+            self.ops_agent.notify(f"pool_scanner:{event}:{err}")
+        if self.failures >= self.fail_threshold:
+            raise RuntimeError("circuit breaker open")
+
+    def scan(self, *, simulate_failure: str | None = None) -> List[PoolInfo]:
         try:
             import requests  # type: ignore
+
+            if simulate_failure == "network":
+                raise RuntimeError("sim net")
+            if simulate_failure == "rpc":
+                raise ValueError("sim rpc")
+            if simulate_failure == "data_poison":
+                return [PoolInfo(pool="bad", domain="bad")]
+            if simulate_failure == "downtime":
+                raise RuntimeError("sim 503")
 
             resp = requests.get(f"{self.api_url}/pools", timeout=5)
             resp.raise_for_status()
             data = resp.json()
             return [PoolInfo(**d) for d in data]
         except Exception as exc:  # pragma: no cover - network errors
-            LOG.log("scan_fail", risk_level="high", error=str(exc))
+            self._alert("scan_fail", exc)
+            if self.alt_api_url:
+                try:
+                    resp = requests.get(f"{self.alt_api_url}/pools", timeout=5)
+                    resp.raise_for_status()
+                    LOG.log("fallback_success", risk_level="low")
+                    self.failures = 0
+                    data = resp.json()
+                    return [PoolInfo(**d) for d in data]
+                except Exception as exc2:  # pragma: no cover - network errors
+                    self._alert("fallback_fail", exc2)
             return []
 
-    def scan_l3(self) -> List[PoolInfo]:
+    def scan_l3(self, *, simulate_failure: str | None = None) -> List[PoolInfo]:
         """Discover L3/app rollup pools."""
         try:
             import requests  # type: ignore
+
+            if simulate_failure == "network":
+                raise RuntimeError("sim net")
+            if simulate_failure == "rpc":
+                raise ValueError("sim rpc")
+            if simulate_failure == "data_poison":
+                return [PoolInfo(pool="bad", domain="l3")]
+            if simulate_failure == "downtime":
+                raise RuntimeError("sim 503")
 
             resp = requests.get(f"{self.api_url}/l3_pools", timeout=5)
             resp.raise_for_status()
             data = resp.json()
             return [PoolInfo(**d) for d in data]
         except Exception as exc:  # pragma: no cover - network errors
-            LOG.log("scan_l3_fail", risk_level="high", error=str(exc))
+            self._alert("scan_l3_fail", exc)
+            if self.alt_api_url:
+                try:
+                    resp = requests.get(f"{self.alt_api_url}/l3_pools", timeout=5)
+                    resp.raise_for_status()
+                    LOG.log("fallback_success", risk_level="low")
+                    self.failures = 0
+                    data = resp.json()
+                    return [PoolInfo(**d) for d in data]
+                except Exception as exc2:  # pragma: no cover - network errors
+                    self._alert("fallback_fail", exc2)
             return []

@@ -483,6 +483,29 @@ Validate locally with:
 pytest tests/test_chaos_drill.py
 ```
 
+### Adapter Chaos Simulation
+
+Each adapter implements failure injection and fallback logic. Run targeted chaos tests with:
+
+```bash
+pytest tests/test_adapters_chaos.py
+```
+
+Manual simulation example:
+
+```bash
+python tests/test_adapters_chaos.py --simulate bridge_downtime
+```
+
+During a network outage the logs include entries like:
+
+```json
+{"event":"fallback_success","module":"dex_adapter","risk_level":"low"}
+```
+
+Metrics from the chaos run are written to `logs/drill_metrics.json` and OpsAgent
+dispatches alerts for each failure.
+
 ## OpsAgent & CapitalLock
 
 `agents/ops_agent.py` runs periodic health checks and pauses all strategies if
