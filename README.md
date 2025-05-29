@@ -452,6 +452,23 @@ lock is engaged the strategy aborts, logging a structured error entry with the
 message "capital lock: trade not allowed" to both its strategy log and
 `logs/errors.log`.
 
+## Gas/Latency Runbook
+
+All bundle-based strategies share a common gas and latency tuning flow.
+
+- Set `PRIORITY_FEE_GWEI` to adjust the EIP-1559 priority fee used when
+  building Flashbots bundles.
+- Bundles are created via `_bundle_and_send` which returns the bundle hash
+  and observed latency. If bundle submission fails, the strategy falls back
+  to `TransactionBuilder.send_transaction`.
+- Latency is recorded in Prometheus metrics for each opportunity.
+
+Example:
+
+```bash
+PRIORITY_FEE_GWEI=3 python -m core.orchestrator --config=config.yaml --dry-run
+```
+
 ## Strategy Orchestrator
 
 `core/orchestrator.py` boots all enabled strategies from `config.yaml` and

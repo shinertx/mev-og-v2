@@ -104,7 +104,7 @@ class NFTLiquidationMEV:
                 return a
         return None
 
-    def _bundle_and_send(self, auction: AuctionData) -> str:
+    def _bundle_and_send(self, auction: AuctionData) -> tuple[str, float]:
         try:
             from eth_account import Account  # type: ignore
             from flashbots import flashbot  # type: ignore
@@ -120,10 +120,35 @@ class NFTLiquidationMEV:
         auth_account = Account.from_key(auth_key)
         flashbot(w3, auth_account, endpoint_uri=relay)
 
-        bundle = [{"signed_transaction": self.sample_tx}]
+        priority_gwei = float(os.getenv("PRIORITY_FEE_GWEI", "2"))
+        bundle = [
+            {
+                "signed_transaction": self.sample_tx,
+                "maxPriorityFeePerGas": int(priority_gwei * 1e9),
+            }
+        ]
         target_block = w3.eth.block_number + 1
-        result = w3.flashbots.send_bundle(bundle, target_block)
-        return str(result.get("bundleHash"))
+        start = time.time()
+        try:
+            result = w3.flashbots.send_bundle(bundle, target_block)
+            latency = time.time() - start
+            return str(result.get("bundleHash")), latency
+        except Exception as exc:  # pragma: no cover - runtime
+            latency = time.time() - start
+            log_error(STRATEGY_ID, f"bundle send: {exc}", event="bundle_fail")
+            tx_hash = self.tx_builder.send_transaction(
+                self.sample_tx,
+                self.executor,
+                strategy_id=STRATEGY_ID,
+                mutation_id=os.getenv("MUTATION_ID", "dev"),
+                risk_level="low",
+            )
+            return (
+                tx_hash.hex()
+                if isinstance(tx_hash, (bytes, bytearray))
+                else str(tx_hash),
+                latency,
+            )
 
     # ------------------------------------------------------------------
     def run_once(self) -> Optional[Dict[str, object]]:
@@ -166,7 +191,6 @@ class NFTLiquidationMEV:
                 log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
                 return None
 
-            metrics.record_opportunity(0.0, opp.value - opp.price, 0.0)
             pre = os.getenv("NFT_LIQ_STATE_PRE", "state/nft_liq_pre.json")
             post = os.getenv("NFT_LIQ_STATE_POST", "state/nft_liq_post.json")
             tx_pre = os.getenv("NFT_LIQ_TX_PRE", "state/nft_liq_tx_pre.json")
@@ -175,9 +199,10 @@ class NFTLiquidationMEV:
                 Path(p).parent.mkdir(parents=True, exist_ok=True)
             self.snapshot(pre)
             self.tx_builder.snapshot(tx_pre)
-            tx_id = self._bundle_and_send(opp)
+            tx_id, latency = self._bundle_and_send(opp)
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
+            metrics.record_opportunity(0.0, opp.value - opp.price, latency)
 
             self.capital_lock.record_trade(opp.value - opp.price)
             self.last_seen[opp.nft] = opp.auction_id
