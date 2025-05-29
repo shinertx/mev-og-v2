@@ -6,6 +6,7 @@ import random
 from typing import Any, Dict, Type
 
 from core.logger import StructuredLogger
+from core.tx_engine.nonce_manager import get_shared_nonce_manager
 from ai.mutation_log import log_mutation
 
 
@@ -16,6 +17,7 @@ class MetaOrchestrator:
         self.strategy_cls = strategy_cls
         self.base_params = base_params
         self.num_agents = num_agents
+        self.nonce_manager = get_shared_nonce_manager()
         self.active_agents: Dict[int, Any] = {}
         self.pruned_agents: list[int] = []
         self.logger = StructuredLogger("meta_orchestrator")
@@ -26,6 +28,7 @@ class MetaOrchestrator:
         for _ in range(n):
             params = self.base_params.copy()
             params["threshold"] = params.get("threshold", 0.003) * (0.9 + 0.2 * random.random())
+            params["nonce_manager"] = self.nonce_manager
             aid = max(self.active_agents.keys(), default=-1) + 1
             agent = self.strategy_cls(**params)
             self.active_agents[aid] = agent

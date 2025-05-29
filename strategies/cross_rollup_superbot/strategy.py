@@ -34,7 +34,7 @@ from core.logger import StructuredLogger, log_error
 from core import metrics
 from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
 from core.tx_engine.builder import HexBytes, TransactionBuilder
-from core.tx_engine.nonce_manager import NonceManager
+from core.tx_engine.nonce_manager import NonceManager, get_shared_nonce_manager
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from agents.capital_lock import CapitalLock
 
@@ -80,6 +80,7 @@ class CrossRollupSuperbot:
         threshold: float | None = None,
         *,
         capital_lock: CapitalLock | None = None,
+        nonce_manager: NonceManager | None = None,
     ) -> None:
         self.feed = UniswapV3Feed()
         self.pools = pools
@@ -92,7 +93,7 @@ class CrossRollupSuperbot:
         self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
 
         w3 = self.feed.web3s.get("ethereum") if self.feed.web3s else None
-        self.nonce_manager = NonceManager(w3)
+        self.nonce_manager = nonce_manager or get_shared_nonce_manager(w3)
         self.tx_builder = TransactionBuilder(w3, self.nonce_manager)
         self.executor = os.getenv("SUPERBOT_EXECUTOR", "0x0000000000000000000000000000000000000000")
         self.sample_tx = HexBytes(b"\x01")

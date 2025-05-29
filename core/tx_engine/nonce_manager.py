@@ -15,6 +15,7 @@ Simulation/test hooks and kill conditions:
 """
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 import threading
@@ -24,18 +25,25 @@ from core.logger import log_error
 
 
 class NonceManager:
+    """Thread-safe nonce manager with disk-backed cache and JSON logging."""
+
     def __init__(
         self,
         web3: Optional[Any] = None,
-        cache_file: str = "state/nonce_cache.json",
-        log_file: str = "logs/nonce_log.json",
+        cache_file: str | None = None,
+        log_file: str | None = None,
     ) -> None:
         self.web3 = web3
+        if cache_file is None:
+            cache_file = os.getenv("NONCE_CACHE_FILE", "state/nonce_cache.json")
+        if log_file is None:
+            log_file = os.getenv("NONCE_LOG_FILE", "logs/nonce_log.json")
+
         self.cache_path = Path(cache_file)
         self.log_path = Path(log_file)
         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
-        self._nonce_lock = threading.Lock()
+        self._nonce_lock = threading.RLock()
         self._nonces: Dict[str, int] = {}
         self._load_cache()
 
@@ -137,3 +145,22 @@ class NonceManager:
         with self._nonce_lock:
             self._nonces = {k: int(v) for k, v in data.items()}
             self._save_cache()
+
+
+# ---------------------------------------------------------------------------
+# Shared instance utilities
+# ---------------------------------------------------------------------------
+_shared_nonce_manager: Optional[NonceManager] = None
+_shared_lock = threading.Lock()
+
+
+def get_shared_nonce_manager(web3: Optional[Any] = None) -> NonceManager:
+    """Return module-wide singleton ``NonceManager``."""
+
+    global _shared_nonce_manager
+    with _shared_lock:
+        if _shared_nonce_manager is None:
+            _shared_nonce_manager = NonceManager(web3)
+        elif web3 is not None and _shared_nonce_manager.web3 is None:
+            _shared_nonce_manager.web3 = web3
+        return _shared_nonce_manager

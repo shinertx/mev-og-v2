@@ -239,6 +239,8 @@ the values used in tests and the simulation harness:
 | `SUPERBOT_STATE_PRE` | `state/superbot_pre.json` | Pre DRP snapshot |
 | `SUPERBOT_TX_POST` | `state/superbot_tx_post.json` | Tx builder post snapshot |
 | `SUPERBOT_TX_PRE` | `state/superbot_tx_pre.json` | Tx builder pre snapshot |
+| `NONCE_CACHE_FILE` | `state/nonce_cache.json` | NonceManager cache |
+| `NONCE_LOG_FILE` | `logs/nonce_log.json` | NonceManager audit log |
 | `TX_LOG_FILE` | `logs/tx_log.json` | Transaction builder log |
 | `ORCH_CONFIG` | `config.yaml` | Orchestrator config file |
 | `ORCH_LOGS_DIR` | `logs` | Directory for orchestrator logs |
