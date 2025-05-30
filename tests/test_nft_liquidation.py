@@ -4,7 +4,6 @@ from pathlib import Path
 import sys
 import types
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.nft_liquidation import NFTLiquidationMEV, AuctionConfig
 from agents.capital_lock import CapitalLock

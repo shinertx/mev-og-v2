@@ -1,10 +1,7 @@
 import os
-from pathlib import Path
-import sys
 import pytest
 pytest.importorskip("hexbytes")
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.cross_domain_arb import CrossDomainArb, PoolConfig
 from agents.capital_lock import CapitalLock

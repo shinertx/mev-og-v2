@@ -3,9 +3,7 @@
 import json
 from pathlib import Path
 import threading
-import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 import pytest
 from agents.agent_registry import set_value

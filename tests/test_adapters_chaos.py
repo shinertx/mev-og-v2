@@ -8,7 +8,6 @@ import json
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 class DummyOps:
@@ -121,7 +120,7 @@ def test_multi_endpoint_fallback(monkeypatch, log_env):
     )
     ops = DummyOps()
     DEXAdapter = _load("dex_adapter", "adapters/dex_adapter.py").DEXAdapter
-    monkeypatch.setattr("random.sample", lambda l, k: l)
+    monkeypatch.setattr("random.sample", lambda items, k: items)
     adapter = DEXAdapter(
         "http://bad",
         alt_api_urls=["http://alt1", "http://alt2"],

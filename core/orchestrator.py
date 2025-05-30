@@ -64,7 +64,7 @@ def load_config(path: str) -> Dict[str, Any]:
     """Load YAML config from ``path`` using PyYAML if available."""
 
     try:
-        import yaml  # type: ignore
+        import yaml  # type: ignore[import-untyped]
     except Exception:  # pragma: no cover - optional
         yaml = cast(Any, None)
     text = Path(path).read_text()

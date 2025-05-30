@@ -1,9 +1,7 @@
 import json
 import tempfile
 from pathlib import Path
-import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.l3_sequencer_mev import L3SequencerMEV, PoolConfig
 from agents.capital_lock import CapitalLock

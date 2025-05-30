@@ -4,7 +4,6 @@ import types
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.rwa_settlement import RWASettlementMEV, VenueConfig
 from agents.capital_lock import CapitalLock

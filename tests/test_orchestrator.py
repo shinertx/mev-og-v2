@@ -1,7 +1,6 @@
+import importlib.util
 import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from core.orchestrator import StrategyOrchestrator
 
@@ -15,10 +14,18 @@ def _make_dummy_strategy(tmp_path):
         "    def __init__(self, **kw):\n        self.runs=0\n" \
         "    def run_once(self):\n        self.runs+=1\n"
     )
-    sys.path.insert(0, str(tmp_path))
     import strategies
     from pkgutil import extend_path
-    strategies.__path__ = extend_path(strategies.__path__, strategies.__name__)
+    strategies.__path__ = extend_path(
+        strategies.__path__, str(tmp_path / "strategies")
+    )
+    spec = importlib.util.spec_from_file_location(
+        "strategies.dummy.strategy", strat_dir / "strategy.py"
+    )
+    if spec and spec.loader:
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["strategies.dummy.strategy"] = mod
+        spec.loader.exec_module(mod)
 
 
 def _config(tmp_path):
