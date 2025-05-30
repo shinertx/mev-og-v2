@@ -4,7 +4,6 @@ import types
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 from strategies.l3_app_rollup_mev import L3AppRollupMEV, PoolConfig, BridgeConfig
 from agents.capital_lock import CapitalLock

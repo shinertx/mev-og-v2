@@ -6,11 +6,6 @@ transaction using TransactionBuilder. Requires web3 and a forking provider
 """
 
 import os
-import sys
-
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager

@@ -1,10 +1,7 @@
 """Tests for the mutation cycle orchestrator."""
 
-import sys
 import json
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 
 import ai.mutator.main as mut_main
 
@@ -21,7 +18,9 @@ def test_mutation_cycle(monkeypatch, tmp_path):
     (strat_dir / "strategy.py").write_text(
         "class Good:\n" "    def __init__(self, pools=None):\n        pass\n" "    def mutate(self, params):\n        pass\n"
     )
-    sys.path.insert(0, str(tmp_path))
+    import strategies
+    from pkgutil import extend_path
+    strategies.__path__ = extend_path(strategies.__path__, str(tmp_path / "strategies"))
 
     monkeypatch.setenv("ERROR_LOG_FILE", str(logs / "errors.log"))
     monkeypatch.setenv("FOUNDER_APPROVED", "1")
@@ -60,7 +59,9 @@ def test_mutation_cycle_requires_founder(monkeypatch, tmp_path):
     strat_dir.mkdir(parents=True)
     (strat_dir / "__init__.py").write_text("")
     (strat_dir / "strategy.py").write_text("class Good:\n    pass\n")
-    sys.path.insert(0, str(tmp_path))
+    import strategies
+    from pkgutil import extend_path
+    strategies.__path__ = extend_path(strategies.__path__, str(tmp_path / "strategies"))
 
     monkeypatch.setenv("ERROR_LOG_FILE", str(logs / "errors.log"))
     monkeypatch.setenv("FOUNDER_APPROVED", "0")

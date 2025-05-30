@@ -5,10 +5,8 @@ if the switch is active. Intended for chaos testing and DRP drills.
 """
 
 import subprocess
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from core.tx_engine.kill_switch import init_kill_switch, kill_switch_triggered, record_kill_event
 

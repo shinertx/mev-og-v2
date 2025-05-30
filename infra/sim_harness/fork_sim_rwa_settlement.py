@@ -1,11 +1,9 @@
 """Fork simulation for rwa_settlement."""
 
 import os
-import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from strategies.rwa_settlement.strategy import RWASettlementMEV, VenueConfig
 

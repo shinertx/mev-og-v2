@@ -50,7 +50,7 @@ class OpsAgent:
         webhook = os.getenv("OPS_ALERT_WEBHOOK")
         if webhook:
             try:
-                import requests  # type: ignore
+                import requests  # type: ignore[import-untyped]
 
                 requests.post(webhook, json={"text": message}, timeout=5)
             except Exception as exc:  # pragma: no cover - network errors
