@@ -69,6 +69,10 @@ class DummyFeed:
 
 
 def test_capital_lock_blocks_trade(tmp_path) -> None:
+    os.environ.pop("KILL_SWITCH_FLAG_FILE", None)
+    os.environ.pop("KILL_SWITCH", None)
+    import strategies.cross_rollup_superbot.strategy as mod
+    mod.kill_switch_triggered = lambda: False
     pools = {
         "eth": PoolConfig(
             "0xdeadbeef00000000000000000000000000000000", "ethereum"

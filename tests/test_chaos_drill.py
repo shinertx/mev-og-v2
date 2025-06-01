@@ -26,6 +26,7 @@ def test_chaos_drill(tmp_path):
         "ERROR_LOG_FILE": str(tmp_path / "errors.log"),
         "KILL_SWITCH_LOG_FILE": str(tmp_path / "kill_log.json"),
         "KILL_SWITCH_FLAG_FILE": str(tmp_path / "flag.txt"),
+        "CHAOS_METRICS": str(tmp_path / "logs" / "drill_metrics.json"),
         "PYTHONPATH": str(Path(__file__).resolve().parents[1]),
         "PWD": str(tmp_path),
     })
@@ -36,7 +37,7 @@ def test_chaos_drill(tmp_path):
     assert (tmp_path / "rollback.log").exists()
     with open(tmp_path / "export_log.json") as fh:
         lines = [json.loads(line) for line in fh]
-    assert any(e.get("event") == "export" for e in lines)
+    assert any(e.get("mode") == "export" for e in lines)
 
     metrics = json.loads(Path(tmp_path / "logs" / "drill_metrics.json").read_text())
     assert metrics["dex_adapter"]["failures"] >= 1

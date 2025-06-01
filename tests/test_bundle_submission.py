@@ -30,6 +30,13 @@ def test_bundle_send(monkeypatch) -> None:
 
     module.flashbot = flashbot
     monkeypatch.setitem(sys.modules, "flashbots", module)
+    acct = types.ModuleType("eth_account")
+    class DummyAccount:
+        @staticmethod
+        def from_key(key):
+            return "acct"
+    acct.Account = DummyAccount
+    monkeypatch.setitem(sys.modules, "eth_account", acct)
 
     pools = {
         "eth": PoolConfig(
@@ -62,6 +69,13 @@ def test_bundle_fallback(monkeypatch) -> None:
 
     module.flashbot = flashbot
     monkeypatch.setitem(sys.modules, "flashbots", module)
+    acct = types.ModuleType("eth_account")
+    class DummyAccount:
+        @staticmethod
+        def from_key(key):
+            return "acct"
+    acct.Account = DummyAccount
+    monkeypatch.setitem(sys.modules, "eth_account", acct)
 
     pools = {
         "eth": PoolConfig(

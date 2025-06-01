@@ -5,7 +5,10 @@ from __future__ import annotations
 from typing import Any, Dict, List, cast
 
 from agents.ops_agent import OpsAgent
-from hexbytes import HexBytes
+try:
+    from hexbytes import HexBytes
+except Exception:  # pragma: no cover - optional
+    HexBytes = bytes  # type: ignore
 
 from core.logger import StructuredLogger
 
