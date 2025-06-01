@@ -54,7 +54,7 @@ class CEXAdapter:
     # ------------------------------------------------------------------
     def get_balance(self, *, simulate_failure: str | None = None) -> Dict[str, Any]:
         try:
-            import requests  # type: ignore
+            import requests  # type: ignore[import-untyped]
 
             if simulate_failure == "network":
                 raise RuntimeError("sim net")
@@ -103,7 +103,7 @@ class CEXAdapter:
     ) -> Dict[str, Any]:
         data = {"side": side, "size": size, "price": price}
         try:
-            import requests  # type: ignore
+            import requests  # type: ignore[import-untyped]
 
             if simulate_failure == "network":
                 raise RuntimeError("sim net")

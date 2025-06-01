@@ -86,6 +86,13 @@ Every PR or batch/module must pass:
 * `scripts/export_state.sh --dry-run`
 * `python ai/audit_agent.py --mode=offline --logs logs/<module>.json`
 
+### Static Type Hygiene
+
+* All functions and classes **must** include type annotations.
+* `mypy --strict` and `ruff check` must report zero errors.
+* Remove unused `# type: ignore` comments and pin dependency versions
+  in `requirements.txt` when updating packages.
+
 **No code is merged without forked-mainnet sim, chaos test, DRP snapshot/restore, and AI/LLM audit.**
 **No promotion or live mutation occurs without explicit founder approval (`FOUNDER_APPROVED=1`) and audit artifact export.**
 

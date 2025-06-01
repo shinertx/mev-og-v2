@@ -51,7 +51,7 @@ class BridgeAdapter:
     ) -> Dict[str, Any]:
         data = {"from": from_chain, "to": to_chain, "token": token, "amount": amount}
         try:
-            import requests  # type: ignore
+            import requests  # type: ignore[import-untyped]
 
             if simulate_failure == "network":
                 raise RuntimeError("sim net")

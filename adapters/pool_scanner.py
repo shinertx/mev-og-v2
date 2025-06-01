@@ -54,7 +54,7 @@ class PoolScanner:
 
     def scan(self, *, simulate_failure: str | None = None) -> List[PoolInfo]:
         try:
-            import requests  # type: ignore
+            import requests  # type: ignore[import-untyped]
 
             if simulate_failure == "network":
                 raise RuntimeError("sim net")
@@ -100,7 +100,7 @@ class PoolScanner:
     def scan_l3(self, *, simulate_failure: str | None = None) -> List[PoolInfo]:
         """Discover L3/app rollup pools."""
         try:
-            import requests  # type: ignore
+            import requests  # type: ignore[import-untyped]
 
             if simulate_failure == "network":
                 raise RuntimeError("sim net")
