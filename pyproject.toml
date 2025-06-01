@@ -26,6 +26,7 @@ pyyaml = "6.0.1"
 pytest = "8.3.5"
 flake8 = "7.2.0"
 mypy = "1.15.0"
+ruff = "0.4.8"
 
 [tool.poetry.scripts]
 lint = "scripts.cli:lint"
@@ -43,3 +44,19 @@ build-backend = "poetry.core.masonry.api"
 [tool.mypy]
 config_file = "mypy.ini"
 strict = true
+
+[tool.ruff]
+exclude = [
+    ".venv",
+    "venv",
+    ".local",
+    "site-packages",
+    "node_modules",
+    "tests/fixtures",
+    "**/.local/**",
+    "**/site-packages/**",
+    "**/pip/_vendor/**"
+]
+
+[tool.flake8]
+exclude = ".venv,venv,.local,site-packages,node_modules,tests/fixtures"
