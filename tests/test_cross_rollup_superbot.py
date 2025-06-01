@@ -4,6 +4,7 @@ import tempfile
 import types
 from pathlib import Path
 import sys
+from typing import Callable
 
 
 from strategies.cross_rollup_superbot import CrossRollupSuperbot, PoolConfig, BridgeConfig
@@ -12,67 +13,67 @@ from core.oracles.uniswap_feed import PriceData
 
 
 class DummyPool:
-    def __init__(self, price):
+    def __init__(self, price: float) -> None:
         self._price = price
 
     class functions:
-        def __init__(self, outer):
+        def __init__(self, outer: "DummyPool") -> None:
             self.outer = outer
 
-        def slot0(self):
+        def slot0(self) -> Callable[[], tuple[int, int, int, int, int, int, bool]]:
             return lambda: (self.outer._price, 0, 0, 0, 0, 0, False)
 
-        def token0(self):
+        def token0(self) -> Callable[[], str]:
             return lambda: "0x0"
 
-        def token1(self):
+        def token1(self) -> Callable[[], str]:
             return lambda: "0x1"
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str):
         return getattr(self.functions(self), item)
 
 
 class DummyEth:
-    def __init__(self, price):
+    def __init__(self, price: float) -> None:
         self.contract_obj = DummyPool(price)
         self.block_number = 1
 
-    def contract(self, address, abi):
+    def contract(self, address: str, abi: object) -> DummyPool:
         return self.contract_obj
 
-    def get_block(self, block):
+    def get_block(self, block: int) -> object:
         return type("B", (), {"number": 1, "timestamp": 1})
 
-    def get_transaction_count(self, address):
+    def get_transaction_count(self, address: str) -> int:
         return 0
 
-    def estimate_gas(self, tx):
+    def estimate_gas(self, tx: dict) -> int:
         return 21000
 
     class account:
         @staticmethod
-        def decode_transaction(tx):
+        def decode_transaction(tx: bytes) -> dict:
             return {}
 
 
 class DummyWeb3:
-    def __init__(self, price):
+    def __init__(self, price: float) -> None:
         self.eth = DummyEth(price)
 
 
 class DummyFeed:
-    def __init__(self, prices):
+    def __init__(self, prices: dict[str, float]) -> None:
         self.prices = prices
         self.web3s = {d: DummyWeb3(p) for d, p in prices.items()}
 
-    def fetch_price(self, pool, domain):
+    def fetch_price(self, pool: object, domain: str) -> PriceData:
         if isinstance(self.prices[domain], Exception):
             raise self.prices[domain]
         price = self.prices[domain]
         return PriceData(price, pool, 1, 1, 0)
 
 
-def setup_strat(threshold=0.01):
+def setup_strat(threshold: float = 0.01) -> CrossRollupSuperbot:
     pools = {
         "eth": PoolConfig(
             "0xdeadbeef00000000000000000000000000000000", "ethereum"
@@ -86,7 +87,7 @@ def setup_strat(threshold=0.01):
     return strat
 
 
-def _patch_flashbots(monkeypatch):
+def _patch_flashbots(monkeypatch) -> None:
     module = types.ModuleType("flashbots")
 
     class FB:
@@ -100,7 +101,7 @@ def _patch_flashbots(monkeypatch):
     monkeypatch.setitem(sys.modules, "flashbots", module)
 
 
-def test_opportunity_detection(monkeypatch):
+def test_opportunity_detection(monkeypatch) -> None:
     _patch_flashbots(monkeypatch)
     monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
     strat = setup_strat(threshold=0.01)
@@ -112,7 +113,7 @@ def test_opportunity_detection(monkeypatch):
     assert result and result["opportunity"]
 
 
-def test_bridge_cost_blocks_trade(monkeypatch):
+def test_bridge_cost_blocks_trade(monkeypatch) -> None:
     _patch_flashbots(monkeypatch)
     monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
     strat = setup_strat(threshold=0.001)
@@ -124,7 +125,7 @@ def test_bridge_cost_blocks_trade(monkeypatch):
     assert result is None
 
 
-def test_error_blacklist(monkeypatch):
+def test_error_blacklist(monkeypatch) -> None:
     _patch_flashbots(monkeypatch)
     monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
     strat = setup_strat()
@@ -138,7 +139,7 @@ def test_error_blacklist(monkeypatch):
         assert strat.failed_pools["eth"] == 1
 
 
-def test_snapshot_restore(tmp_path):
+def test_snapshot_restore(tmp_path) -> None:
     strat = setup_strat()
     strat.last_prices = {"eth": 1.0}
     snap = tmp_path / "snap.json"
@@ -150,13 +151,13 @@ def test_snapshot_restore(tmp_path):
     assert data["last_prices"]["eth"] == 1.0
 
 
-def test_mutate_hook():
+def test_mutate_hook() -> None:
     strat = setup_strat(threshold=0.01)
     strat.mutate({"threshold": 0.02})
     assert strat.threshold == 0.02
 
 
-def test_kill_switch(monkeypatch):
+def test_kill_switch(monkeypatch) -> None:
     _patch_flashbots(monkeypatch)
     monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
     strat = setup_strat()

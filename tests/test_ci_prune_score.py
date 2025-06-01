@@ -2,12 +2,13 @@
 from ai.mutation_manager import MutationManager
 
 class Dummy:
-    def __init__(self, threshold=0.1):
+    def __init__(self, threshold: float = 0.1) -> None:
         self.t = threshold
-    def evaluate_pnl(self):
+
+    def evaluate_pnl(self) -> float:
         return self.t
 
-def test_batch_pruning_runs():
+def test_batch_pruning_runs() -> None:
     mm = MutationManager({'threshold': 0.1}, num_agents=3)
     mm.spawn_agents(Dummy)
     before = len(mm.agents)
