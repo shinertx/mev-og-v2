@@ -58,7 +58,7 @@ class DuneAnalyticsAdapter(SignalProvider):
     def fetch(self, *, simulate_failure: str | None = None) -> Dict[str, float]:
         self.rate.wait()
         try:
-            import requests  # type: ignore
+            import requests
 
             if simulate_failure == "network":
                 raise RuntimeError("sim net")

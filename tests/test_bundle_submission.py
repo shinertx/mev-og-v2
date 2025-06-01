@@ -5,24 +5,24 @@ import types
 from strategies.cross_rollup_superbot import CrossRollupSuperbot, PoolConfig, BridgeConfig
 
 class DummyFlashbots:
-    def __init__(self):
-        self.sent = []
+    def __init__(self) -> None:
+        self.sent: list[tuple[list[str], int]] = []
 
-    def send_bundle(self, bundle, target_block):
+    def send_bundle(self, bundle: list[str], target_block: int) -> dict[str, str]:
         self.sent.append((bundle, target_block))
         return {"bundleHash": "hash"}
 
 class DummyEth:
-    def __init__(self):
+    def __init__(self) -> None:
         self.block_number = 1
 
 class DummyWeb3:
-    def __init__(self):
+    def __init__(self) -> None:
         self.eth = DummyEth()
         self.flashbots = DummyFlashbots()
 
 
-def test_bundle_send(monkeypatch):
+def test_bundle_send(monkeypatch) -> None:
     module = types.ModuleType("flashbots")
 
     def flashbot(w3, account, endpoint_uri=None):
@@ -50,7 +50,7 @@ def test_bundle_send(monkeypatch):
     assert latency >= 0
     assert w3.flashbots.sent
 
-def test_bundle_fallback(monkeypatch):
+def test_bundle_fallback(monkeypatch) -> None:
     module = types.ModuleType("flashbots")
 
     class FB:
