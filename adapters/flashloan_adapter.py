@@ -50,7 +50,7 @@ class FlashloanAdapter:
     ) -> Dict[str, Any]:
         """Perform the flashloan using an external service."""
         try:
-            import requests  # type: ignore
+            import requests  # type: ignore[import-untyped]
 
             if simulate_failure == "network":
                 raise RuntimeError("sim net")

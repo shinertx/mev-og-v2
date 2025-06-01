@@ -1,4 +1,4 @@
-web3
+web3>=6.0.0  # ensures compatibility with eth-typing v3
 pytest
 hexbytes
 requests
@@ -7,4 +7,9 @@ flake8
 flask
 # Flashbots bundle submission
 flashbots
+# dependencies for type hints
+eth-typing==3.0.0  # pinned for web3 compatibility
+eth-account>=0.5.7
+eth-utils>=1.9.5
+openai>=1.0.0  # provides bundled type hints
 # Add any others your code imports

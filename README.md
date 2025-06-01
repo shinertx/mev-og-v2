@@ -78,6 +78,8 @@ Follow this sequence to operate MEV-OG locally.
    pre-commit install
    docker compose build
    docker compose up -d
+   # Python deps pinned in requirements.txt
+   # eth-typing==3.0.0, web3>=6.0.0, openai>=1.0.0
    ```
    Makefile shortcuts are available:
    ```bash

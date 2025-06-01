@@ -52,7 +52,7 @@ class Mutator:
             return json.dumps({"params": {}})
 
         try:
-            import openai as openai_module  # type: ignore  # pragma: no cover - external
+            import openai as openai_module  # pragma: no cover - external
             openai_client = cast(Any, openai_module)
 
             openai_client.api_key = get_secret("OPENAI_API_KEY")

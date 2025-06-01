@@ -56,7 +56,7 @@ class DEXAdapter:
     ) -> Dict[str, Any]:
         params = {"sellToken": sell_token, "buyToken": buy_token, "amount": amount}
         try:
-            import requests  # type: ignore
+            import requests  # type: ignore[import-untyped]
 
             if simulate_failure == "network":
                 raise RuntimeError("sim network")
@@ -105,7 +105,7 @@ class DEXAdapter:
         simulate_failure: str | None = None,
     ) -> Dict[str, Any]:
         try:
-            import requests  # type: ignore
+            import requests  # type: ignore[import-untyped]
 
             if simulate_failure == "network":
                 raise RuntimeError("sim network")
