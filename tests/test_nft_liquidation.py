@@ -47,6 +47,25 @@ def _patch_flashbots(monkeypatch):
 
     module.flashbot = flashbot
     monkeypatch.setitem(sys.modules, "flashbots", module)
+    account = types.ModuleType("eth_account")
+    class DummyAccount:
+        @staticmethod
+        def from_key(key):
+            return "acct"
+    account.Account = DummyAccount
+    monkeypatch.setitem(sys.modules, "eth_account", account)
+    monkeypatch.delenv("KILL_SWITCH_FLAG_FILE", raising=False)
+    monkeypatch.delenv("KILL_SWITCH", raising=False)
+    monkeypatch.setattr(
+        "strategies.nft_liquidation.strategy.kill_switch_triggered", lambda: False
+    )
+    account = types.ModuleType("eth_account")
+    class DummyAccount:
+        @staticmethod
+        def from_key(key):
+            return "acct"
+    account.Account = DummyAccount
+    monkeypatch.setitem(sys.modules, "eth_account", account)
 
 
 def test_detect_sniping(monkeypatch):

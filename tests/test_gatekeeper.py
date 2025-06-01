@@ -15,6 +15,8 @@ def _ops(paused=False):
 
 def test_gates_all_green(monkeypatch):
     monkeypatch.setattr(ks, "kill_switch_triggered", lambda: False)
+    monkeypatch.setattr("agents.gatekeeper.kill_switch_triggered", lambda: False)
+    monkeypatch.delenv("OPS_CRITICAL_EVENT", raising=False)
     lock = CapitalLock(0, 0, 0)
     ops = _ops()
     drp = DRPAgent()
@@ -23,12 +25,15 @@ def test_gates_all_green(monkeypatch):
 
 def test_gate_blocks_on_failure(monkeypatch):
     monkeypatch.setattr(ks, "kill_switch_triggered", lambda: True)
+    monkeypatch.setattr("agents.gatekeeper.kill_switch_triggered", lambda: True)
+    monkeypatch.delenv("OPS_CRITICAL_EVENT", raising=False)
     lock = CapitalLock(0, 0, 0)
     ops = _ops()
     drp = DRPAgent()
     assert not gates_green(lock, ops, drp)
 
     monkeypatch.setattr(ks, "kill_switch_triggered", lambda: False)
+    monkeypatch.setattr("agents.gatekeeper.kill_switch_triggered", lambda: False)
     lock.blocked = True
     assert not gates_green(lock, ops, drp)
 

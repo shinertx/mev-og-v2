@@ -7,6 +7,7 @@ import json
 import os
 import re
 import subprocess
+import time
 import tarfile
 from pathlib import Path
 
@@ -22,8 +23,8 @@ from adapters import (
 from ai.intent_ghost import ghost_intent
 from core.node_selector import NodeSelector
 
-EXPORT_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "export_state.sh"
-ROLLBACK_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "rollback.sh"
+EXPORT_SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "export_state.sh"
+ROLLBACK_SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "rollback.sh"
 
 LOGGER = StructuredLogger("chaos_drill")
 DRILL_METRICS_FILE = Path(os.getenv("CHAOS_METRICS", "logs/drill_metrics.json"))
@@ -58,6 +59,7 @@ def _export_and_restore(env: dict[str, str]) -> None:
     LOGGER.log("restore", risk_level="low")
     _run(["bash", str(ROLLBACK_SCRIPT)], env)
     _check_for_secrets(env)
+    time.sleep(1)
 
 
 def _update_metrics(module: str) -> None:

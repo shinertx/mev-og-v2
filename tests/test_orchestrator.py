@@ -87,6 +87,7 @@ def test_dry_run_snapshot(monkeypatch, tmp_path):
 
     monkeypatch.setattr("subprocess.run", fake_run)
     monkeypatch.setattr("core.tx_engine.kill_switch.kill_switch_triggered", lambda: False)
+    monkeypatch.delenv("OPS_CRITICAL_EVENT", raising=False)
     assert orch.run_once()
     assert any("--dry-run" in c for c in calls[0])
 
@@ -95,6 +96,7 @@ def test_drp_partial_failure(monkeypatch, tmp_path):
     _make_dummy_strategy(tmp_path)
     cfg = _config(tmp_path)
     orch = StrategyOrchestrator(str(cfg))
+    monkeypatch.delenv("OPS_CRITICAL_EVENT", raising=False)
     monkeypatch.setattr(
         "core.orchestrator.StrategyOrchestrator._snapshot_state", lambda self: False
     )

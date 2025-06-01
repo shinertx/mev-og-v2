@@ -25,7 +25,7 @@ class DummyWeb3:
 def test_cache_update_and_reset(tmp_path):
     cache = tmp_path / "cache.json"
     log_file = tmp_path / "log.json"
-    w3 = DummyWeb3(start=0)
+    w3 = DummyWeb3(start=5)
     nm = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
 
     # First call fetches from RPC
@@ -59,7 +59,7 @@ def test_cache_update_and_reset(tmp_path):
 def test_concurrent_access(tmp_path):
     cache = tmp_path / "cache.json"
     log_file = tmp_path / "log.json"
-    w3 = DummyWeb3(start=0)
+    w3 = DummyWeb3(start=5)
     nm = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
 
     results = []
@@ -78,7 +78,7 @@ def test_concurrent_access(tmp_path):
 def test_reset_increment_race(tmp_path):
     cache = tmp_path / "cache.json"
     log_file = tmp_path / "log.json"
-    w3 = DummyWeb3(start=0)
+    w3 = DummyWeb3(start=5)
     nm = NonceManager(w3, cache_file=str(cache), log_file=str(log_file))
     nm.get_nonce("0xabc")
 

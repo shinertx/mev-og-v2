@@ -15,8 +15,9 @@ from core.logger import StructuredLogger, make_json_safe
 from adapters import DEXAdapter, BridgeAdapter, CEXAdapter, FlashloanAdapter
 from ai.mutation_log import log_mutation
 
-LOGGER = StructuredLogger("chaos_scheduler", log_file=os.getenv("CHAOS_SCHED_LOG", "logs/chaos_scheduler.json"))
-METRICS_FILE = Path(os.getenv("CHAOS_METRICS", "logs/drill_metrics.json"))
+LOGGER = StructuredLogger(
+    "chaos_scheduler", log_file=os.getenv("CHAOS_SCHED_LOG", "logs/chaos_scheduler.json")
+)
 
 OPS = OpsAgent({})
 
@@ -30,16 +31,17 @@ ADAPTER_FUNCS: Dict[str, Callable[[str], Dict[str, Any]]] = {
 
 
 def _update_metrics(adapter: str) -> None:
+    metrics_file = Path(os.getenv("CHAOS_METRICS", "logs/drill_metrics.json"))
     metrics: Dict[str, Dict[str, int]] = {}
-    if METRICS_FILE.exists():
+    if metrics_file.exists():
         try:
-            metrics = json.loads(METRICS_FILE.read_text())
+            metrics = json.loads(metrics_file.read_text())
         except Exception:
             metrics = {}
     metrics.setdefault(adapter, {"failures": 0})
     metrics[adapter]["failures"] += 1
-    METRICS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    METRICS_FILE.write_text(json.dumps(make_json_safe(metrics), indent=2))
+    metrics_file.parent.mkdir(parents=True, exist_ok=True)
+    metrics_file.write_text(json.dumps(make_json_safe(metrics), indent=2))
 
 
 def run_once() -> None:

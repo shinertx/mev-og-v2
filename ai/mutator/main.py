@@ -56,8 +56,15 @@ class MutationRunner:
                 log_error("mutation_main", str(exc), strategy_id=file.stem, event="log_parse")
                 continue
             pnl = sum(float(e.get("spread", 0)) for e in lines if e.get("opportunity"))
-            risk = sum(1 for e in lines if e.get("error")) / max(len(lines), 1)
-            metrics[file.stem] = {"pnl": pnl, "risk": risk}
+            fails = sum(1 for e in lines if e.get("error"))
+            total = len(lines)
+            risk = fails / max(total, 1)
+            win_rate = 1 - risk
+            metrics[file.stem] = {
+                "pnl": pnl,
+                "risk": risk,
+                "win_rate": win_rate,
+            }
         return metrics
 
     # ------------------------------------------------------------------
@@ -96,6 +103,7 @@ class MutationRunner:
 
     # ------------------------------------------------------------------
     def run_cycle(self) -> None:
+        (self.logs_dir / "errors.log").touch(exist_ok=True)
         metrics = self._collect_metrics()
         mutator = Mutator(metrics)
         result = mutator.run()
@@ -125,10 +133,15 @@ class MutationRunner:
                 continue
             try:
                 import strategies
-                strategies.__path__ = extend_path(strategies.__path__, "strategies")
+                extra = str(self.repo_root / "strategies")
+                if extra not in strategies.__path__:
+                    strategies.__path__.append(extra)
                 module = importlib.import_module(f"strategies.{sid}.strategy")
                 strat_cls = getattr(module, [n for n in dir(module) if n[0].isupper()][0])
-                strat = strat_cls({})
+                try:
+                    strat = strat_cls({})
+                except TypeError:
+                    strat = strat_cls()
                 if hasattr(strat, "mutate"):
                     strat.mutate({"threshold": 0.005})
             except Exception as exc:  # pragma: no cover - import edge
