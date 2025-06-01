@@ -1,10 +1,33 @@
-web3
-pytest
+# Core DeFi/Blockchain
+web3>=6.10.0,<7
+eth-account>=0.9.0,<0.10
+eth-typing<4
 hexbytes
-requests
-flake8
-# dashboard
-flask
-# Flashbots bundle submission
+
+# Flashbots
 flashbots
-# Add any others your code imports
+
+# HTTP/REST/Websocket/API
+requests
+websocket-client
+flask
+
+# Config/Parsing
+pyyaml
+
+# AI/LLM/Audit
+openai
+
+# Monitoring/Telemetry
+prometheus_client
+
+# Testing/Quality
+pytest
+mypy
+flake8
+
+# (Optional: Dev/test/linting, comment/remove if not needed)
+# pre-commit
+
+# Add other code-used packages here as needed (see codebase scan)
+
