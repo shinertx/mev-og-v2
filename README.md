@@ -585,6 +585,32 @@ python scripts/batch_ops.py promote cross_rollup_superbot --source-dir staging -
 
 Use `core.strategy_scoreboard.StrategyScoreboard` to benchmark live strategies against real-time DEX/CEX gaps, whale alerts, Dune queries and Coinbase order flow. Adapters are enabled via `DUNE_API_KEY`, `WHALE_ALERT_KEY` and `COINBASE_WS_URL`. `prune_and_score()` requires multi-sig founder approval. Rankings are written to `logs/scoreboard.json` and all prune events are appended to `logs/mutation_log.json` with alerts sent via the Ops agent and Prometheus metrics.
 
+## Market Event Feed Adapter
+
+`adapters.market_event_feed_adapter.MarketEventFeedAdapter` normalizes DEX/CEX
+listings, launchpad announcements, social keywords and protocol events into a
+single stream. Strategies subscribe via the agent registry:
+
+```python
+from adapters.market_event_feed_adapter import MarketEventFeedAdapter
+from agents.agent_registry import get_value
+
+feed = MarketEventFeedAdapter(dex_urls=["https://api.dex.example"], cex_urls=["https://api.cex.example"])
+feed.poll()  # fetch once
+events = get_value("market_events")
+```
+
+Set `SIM_MARKET_EVENTS=<file>` to load events from a JSON file for forked-mainnet
+tests. Errors trigger `scripts/export_state.sh --dry-run` and are logged to
+`logs/market_event_feed.json`. Metrics for each event are exported via the
+Prometheus endpoint.
+
+Run standalone tests with:
+
+```bash
+pytest tests/test_market_event_feed_adapter.py
+```
+
 
 ## Wallet Operations
 
