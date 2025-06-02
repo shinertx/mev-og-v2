@@ -27,6 +27,14 @@ services:
       - "8000:8000"
     restart: unless-stopped
 
+  pool_scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile.pool_scanner
+    ports:
+      - "9002:9002"
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:latest
     volumes:
