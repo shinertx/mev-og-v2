@@ -5,6 +5,10 @@ from __future__ import annotations
 import os
 import random
 from typing import Any, Dict, List
+import math
+
+import requests
+
 
 from agents.ops_agent import OpsAgent
 
@@ -37,6 +41,7 @@ class DEXAdapter:
         self.ops_agent = ops_agent
         self.fail_threshold = fail_threshold
         self.failures = 0
+        self.session = requests.Session()
 
     def _alert(self, event: str, err: Exception) -> None:
         self.failures += 1
@@ -44,7 +49,34 @@ class DEXAdapter:
         if self.ops_agent:
             self.ops_agent.notify(f"dex_adapter:{event}:{err}")
         if self.failures >= self.fail_threshold:
+            os.environ["OPS_CRITICAL_EVENT"] = "1"
             raise RuntimeError("circuit breaker open")
+
+    # ------------------------------------------------------------------
+    def _validate_quote(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        price = data.get("price")
+        if price is not None:
+            try:
+                val = float(price)
+            except Exception as exc:
+                raise ValueError("invalid price") from exc
+            if not math.isfinite(val):
+                raise ValueError("invalid price")
+            return {"price": val}
+        if "ok" in data:
+            if isinstance(data.get("ok"), bool):
+                return {"ok": data["ok"]}
+        raise ValueError("missing price")
+
+    def _validate_trade(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if "tx" in data:
+            if isinstance(data["tx"], str):
+                return {"tx": data["tx"]}
+            raise ValueError("invalid tx")
+        if "ok" in data:
+            if isinstance(data["ok"], bool):
+                return {"ok": data["ok"]}
+        raise ValueError("missing tx")
 
     # ------------------------------------------------------------------
     def get_quote(
@@ -60,26 +92,27 @@ class DEXAdapter:
             raise RuntimeError("Kill switch active")
         params = {"sellToken": sell_token, "buyToken": buy_token, "amount": amount}
         try:
-            import requests  # type: ignore[import-untyped]
-
             if simulate_failure == "network":
                 raise RuntimeError("sim network")
             if simulate_failure == "rpc":
                 raise ValueError("sim rpc fail")
             if simulate_failure == "data_poison":
-                return {"price": "NaN"}
+                data: Dict[str, Any] = {"price": "NaN"}
+                self._validate_quote(data)
+                return data
             if simulate_failure == "downtime":
                 raise RuntimeError("sim 503")
 
-            resp = requests.get(f"{self.api_url}/quote", params=params, timeout=5)
+            resp = self.session.get(f"{self.api_url}/quote", params=params, timeout=5)
             resp.raise_for_status()
-            return resp.json()
+            data = resp.json()
+            return self._validate_quote(data)
         except Exception as exc:  # pragma: no cover - network errors
             self._alert("quote_fail", exc)
             for alt in random.sample(self.alt_api_urls, len(self.alt_api_urls)):
                 try:
                     LOGGER.log("fallback_try", risk_level="low", alt=alt)
-                    resp = requests.get(f"{alt}/quote", params=params, timeout=5)
+                    resp = self.session.get(f"{alt}/quote", params=params, timeout=5)
                     resp.raise_for_status()
                     LOGGER.log("fallback_success", risk_level="low", alt=alt)
                     self.failures = 0
@@ -89,7 +122,8 @@ class DEXAdapter:
                         failure=simulate_failure or "runtime",
                         fallback="success",
                     )
-                    return resp.json()
+                    data = resp.json()
+                    return self._validate_quote(data)
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
             os.environ["OPS_CRITICAL_EVENT"] = "1"
@@ -112,26 +146,27 @@ class DEXAdapter:
             record_kill_event("dex_adapter.execute_trade")
             raise RuntimeError("Kill switch active")
         try:
-            import requests  # type: ignore[import-untyped]
-
             if simulate_failure == "network":
                 raise RuntimeError("sim network")
             if simulate_failure == "rpc":
                 raise ValueError("sim rpc fail")
             if simulate_failure == "data_poison":
-                return {"tx": "invalid"}
+                data: Dict[str, Any] = {"tx": "invalid"}
+                self._validate_trade(data)
+                return data
             if simulate_failure == "downtime":
                 raise RuntimeError("sim 503")
 
-            resp = requests.post(f"{self.api_url}/swap", json=tx_data, timeout=5)
+            resp = self.session.post(f"{self.api_url}/swap", json=tx_data, timeout=5)
             resp.raise_for_status()
-            return resp.json()
+            data = resp.json()
+            return self._validate_trade(data)
         except Exception as exc:  # pragma: no cover - network errors
             self._alert("trade_fail", exc)
             for alt in random.sample(self.alt_api_urls, len(self.alt_api_urls)):
                 try:
                     LOGGER.log("fallback_try", risk_level="low", alt=alt)
-                    resp = requests.post(f"{alt}/swap", json=tx_data, timeout=5)
+                    resp = self.session.post(f"{alt}/swap", json=tx_data, timeout=5)
                     resp.raise_for_status()
                     LOGGER.log("fallback_success", risk_level="low", alt=alt)
                     self.failures = 0
@@ -141,7 +176,8 @@ class DEXAdapter:
                         failure=simulate_failure or "runtime",
                         fallback="success",
                     )
-                    return resp.json()
+                    data = resp.json()
+                    return self._validate_trade(data)
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
             os.environ["OPS_CRITICAL_EVENT"] = "1"

@@ -5,6 +5,9 @@ from __future__ import annotations
 import os
 import random
 from typing import Any, Dict, List
+import math
+
+import requests
 
 from agents.ops_agent import OpsAgent
 
@@ -39,6 +42,7 @@ class CEXAdapter:
         self.ops_agent = ops_agent
         self.fail_threshold = fail_threshold
         self.failures = 0
+        self.session = requests.Session()
 
     def _alert(self, event: str, err: Exception) -> None:
         self.failures += 1
@@ -46,11 +50,37 @@ class CEXAdapter:
         if self.ops_agent:
             self.ops_agent.notify(f"cex_adapter:{event}:{err}")
         if self.failures >= self.fail_threshold:
+            os.environ["OPS_CRITICAL_EVENT"] = "1"
             raise RuntimeError("circuit breaker open")
 
     # ------------------------------------------------------------------
     def _headers(self) -> Dict[str, str]:
         return {"Authorization": f"Bearer {self.api_key}"}
+
+    def _validate_balance(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        bal = data.get("balance")
+        if bal is not None:
+            try:
+                val = float(bal)
+            except Exception as exc:
+                raise ValueError("invalid balance") from exc
+            if not math.isfinite(val):
+                raise ValueError("invalid balance")
+            return {"balance": val}
+        if "ok" in data:
+            if isinstance(data.get("ok"), bool):
+                return {"ok": data["ok"]}
+        raise ValueError("missing balance")
+
+    def _validate_order(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if "order" in data:
+            if isinstance(data["order"], str):
+                return {"order": data["order"]}
+            raise ValueError("invalid order")
+        if "ok" in data:
+            if isinstance(data.get("ok"), bool):
+                return {"ok": data["ok"]}
+        raise ValueError("missing order")
 
     # ------------------------------------------------------------------
     def get_balance(self, *, simulate_failure: str | None = None) -> Dict[str, Any]:
@@ -58,26 +88,29 @@ class CEXAdapter:
             record_kill_event("cex_adapter.get_balance")
             raise RuntimeError("Kill switch active")
         try:
-            import requests  # type: ignore[import-untyped]
-
             if simulate_failure == "network":
                 raise RuntimeError("sim net")
             if simulate_failure == "rpc":
                 raise ValueError("sim rpc")
             if simulate_failure == "data_poison":
-                return {"balance": "bad"}
+                data: Dict[str, Any] = {"balance": "bad"}
+                self._validate_balance(data)
+                return data
             if simulate_failure == "downtime":
                 raise RuntimeError("sim 429")
 
-            resp = requests.get(f"{self.api_url}/balance", headers=self._headers(), timeout=5)
+            resp = self.session.get(
+                f"{self.api_url}/balance", headers=self._headers(), timeout=5
+            )
             resp.raise_for_status()
-            return resp.json()
+            data = resp.json()
+            return self._validate_balance(data)
         except Exception as exc:  # pragma: no cover - network errors
             self._alert("balance_fail", exc)
             for alt in random.sample(self.alt_api_urls, len(self.alt_api_urls)):
                 try:
                     LOGGER.log("fallback_try", risk_level="low", alt=alt)
-                    resp = requests.get(
+                    resp = self.session.get(
                         f"{alt}/balance", headers=self._headers(), timeout=5
                     )
                     resp.raise_for_status()
@@ -89,7 +122,8 @@ class CEXAdapter:
                         failure=simulate_failure or "runtime",
                         fallback="success",
                     )
-                    return resp.json()
+                    data = resp.json()
+                    return self._validate_balance(data)
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
             os.environ["OPS_CRITICAL_EVENT"] = "1"
@@ -110,26 +144,29 @@ class CEXAdapter:
             record_kill_event("cex_adapter.place_order")
             raise RuntimeError("Kill switch active")
         try:
-            import requests  # type: ignore[import-untyped]
-
             if simulate_failure == "network":
                 raise RuntimeError("sim net")
             if simulate_failure == "rpc":
                 raise ValueError("sim rpc")
             if simulate_failure == "data_poison":
-                return {"order": "bad"}
+                od: Dict[str, Any] = {"order": "bad"}
+                self._validate_order(od)
+                return od
             if simulate_failure == "downtime":
                 raise RuntimeError("sim 503")
 
-            resp = requests.post(f"{self.api_url}/order", json=data, headers=self._headers(), timeout=5)
+            resp = self.session.post(
+                f"{self.api_url}/order", json=data, headers=self._headers(), timeout=5
+            )
             resp.raise_for_status()
-            return resp.json()
+            res = resp.json()
+            return self._validate_order(res)
         except Exception as exc:  # pragma: no cover - network errors
             self._alert("order_fail", exc)
             for alt in random.sample(self.alt_api_urls, len(self.alt_api_urls)):
                 try:
                     LOGGER.log("fallback_try", risk_level="low", alt=alt)
-                    resp = requests.post(
+                    resp = self.session.post(
                         f"{alt}/order", json=data, headers=self._headers(), timeout=5
                     )
                     resp.raise_for_status()
@@ -141,7 +178,8 @@ class CEXAdapter:
                         failure=simulate_failure or "runtime",
                         fallback="success",
                     )
-                    return resp.json()
+                    ret = resp.json()
+                    return self._validate_order(ret)
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
             os.environ["OPS_CRITICAL_EVENT"] = "1"

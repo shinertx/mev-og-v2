@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
+import os
 import importlib.util
 import json
 
@@ -146,6 +147,22 @@ def test_cex_adapter_circuit(monkeypatch, log_env):
     with pytest.raises(RuntimeError):
         adapter.get_balance(simulate_failure="network")
     assert adapter.failures == 1
+
+
+def test_dex_adapter_bad_data(monkeypatch: pytest.MonkeyPatch, log_env: Path) -> None:
+    monkeypatch.delenv("OPS_CRITICAL_EVENT", raising=False)
+    _setup_requests(monkeypatch, "none")
+    ops = DummyOps()
+    DEXAdapter = _load("dex_adapter", "adapters/dex_adapter.py").DEXAdapter
+    adapter = DEXAdapter(
+        "http://bad",
+        alt_api_url="http://alt",
+        ops_agent=ops,
+        fail_threshold=1,
+    )
+    with pytest.raises(RuntimeError):
+        adapter.get_quote("ETH", "USDC", 1, simulate_failure="data_poison")
+    assert os.getenv("OPS_CRITICAL_EVENT") == "1"
 
 
 def test_bridge_adapter_manual(
