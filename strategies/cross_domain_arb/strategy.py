@@ -342,6 +342,25 @@ class CrossDomainArb:
     def should_trade_now(self) -> bool:
         if not self.edges_enabled.get("stealth_mode", True):
             return True
+
+        # NEW: Block trading if GAS_COST_OVERRIDE is set and high
+        gas_override = os.getenv("GAS_COST_OVERRIDE")
+        if gas_override is not None:
+            try:
+                gas_val = float(gas_override)
+                if gas_val >= 0.005:
+                    LOG.log(
+                        "stealth_mode",
+                        reason="GAS_COST_OVERRIDE high",
+                        active=False,
+                        strategy_id=STRATEGY_ID,
+                        mutation_id=os.getenv("MUTATION_ID", "dev"),
+                        risk_level="low",
+                    )
+                    return False
+            except Exception:
+                pass  # fallback to normal flow if conversion fails
+
         recent_alpha = self.metrics.get("recent_alpha", 0.0)
         gas = self._estimate_gas_cost()
         active = recent_alpha > 0.1 and gas < 0.005
