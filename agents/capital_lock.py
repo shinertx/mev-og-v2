@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from core.logger import StructuredLogger
 from core import metrics
 from .agent_registry import set_value
+from .founder_gate import founder_approved
 import os
 
 LOGGER = StructuredLogger("capital_lock")
@@ -52,7 +53,7 @@ class CapitalLock:
     # ----------------------------------------------------------
     def unlock(self, approved: bool) -> bool:
         trace = os.getenv("TRACE_ID", "")
-        if not approved or os.getenv("FOUNDER_APPROVED") != "1":
+        if not approved or not founder_approved("capital_unlock"):
             LOGGER.log("unlock_rejected", risk_level="low", trace_id=trace)
             return False
         self.blocked = False

@@ -26,7 +26,7 @@ def test_batch_promote_pause(tmp_path: Path) -> None:
     staging.mkdir(parents=True)
     (staging / "file.txt").write_text("x")
     env = os.environ.copy()
-    env["FOUNDER_APPROVED"] = "1"
+    env["FOUNDER_TOKEN"] = "promote:9999999999"
     env["PWD"] = str(tmp_path)
     run_script(["promote", "s1", "--source-dir", str(staging.parent), "--dest-dir", str(active.parent)], env)
     assert active.exists()

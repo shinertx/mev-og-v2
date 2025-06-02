@@ -54,7 +54,7 @@ make mutate
 
 ## 3. Promotion
 
-Set `FOUNDER_APPROVED=1` to allow promotion and then execute:
+Set `FOUNDER_TOKEN` to allow promotion and then execute:
 
 ```bash
 python ai/promote.py            # single promotion
@@ -110,7 +110,7 @@ For continuous live execution run:
 python -m core.orchestrator --config=config.yaml --live
 ```
 
-Live mode requires `FOUNDER_APPROVED=1`. Use `--health` for an on-demand health
+Live mode requires a valid `FOUNDER_TOKEN`. Use `--health` for an on-demand health
 check without executing strategies.
 
 ## 6. Wallet Operations

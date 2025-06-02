@@ -4,12 +4,12 @@
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 from pathlib import Path
 
 from ai.promote import promote_strategy, rollback
 from core.logger import StructuredLogger
+from agents.founder_gate import founder_approved
 
 LOGGER = StructuredLogger("batch_ops")
 
@@ -34,7 +34,7 @@ def main() -> None:
     parser.add_argument("--paused-dir", default="paused")
     args = parser.parse_args()
 
-    if os.getenv("FOUNDER_APPROVED") != "1":
+    if not founder_approved("promote"):
         raise SystemExit("Founder approval required")
 
     src_dir = Path(args.source_dir)

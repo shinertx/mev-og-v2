@@ -23,7 +23,7 @@ def test_mutation_cycle(monkeypatch, tmp_path):
     strategies.__path__ = extend_path(strategies.__path__, str(tmp_path / "strategies"))
 
     monkeypatch.setenv("ERROR_LOG_FILE", str(logs / "errors.log"))
-    monkeypatch.setenv("FOUNDER_APPROVED", "1")
+    monkeypatch.setenv("FOUNDER_TOKEN", "promote:9999999999")
     monkeypatch.setenv("TRACE_ID", "okid")
 
     monkeypatch.setattr(mut_main.AuditAgent, "run_online_audit", lambda self, prompt: "ok")
@@ -64,7 +64,7 @@ def test_mutation_cycle_requires_founder(monkeypatch, tmp_path):
     strategies.__path__ = extend_path(strategies.__path__, str(tmp_path / "strategies"))
 
     monkeypatch.setenv("ERROR_LOG_FILE", str(logs / "errors.log"))
-    monkeypatch.setenv("FOUNDER_APPROVED", "0")
+    monkeypatch.setenv("FOUNDER_TOKEN", "bad:1")
     monkeypatch.setenv("TRACE_ID", "block")
 
     monkeypatch.setattr(mut_main.AuditAgent, "run_online_audit", lambda self, p: "ok")

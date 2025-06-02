@@ -3,6 +3,7 @@
 import os
 import time
 from pathlib import Path
+from typing import cast
 
 
 from strategies.cross_rollup_superbot.strategy import (
@@ -13,7 +14,7 @@ from strategies.cross_rollup_superbot.strategy import (
 
 try:  # pragma: no cover
     from web3 import Web3
-    from web3.middleware import geth_poa_middleware  # type: ignore[attr-defined]
+    from web3.middleware import geth_poa_middleware
 except Exception:  # pragma: no cover
     raise SystemExit("web3 required for fork simulation")
 
@@ -25,7 +26,7 @@ def safe_checksum(env_key: str, default: str) -> str:
     """
     addr = os.getenv(env_key, default)
     try:
-        return Web3.to_checksum_address(addr)
+        return cast(str, Web3.to_checksum_address(addr))
     except Exception as e:
         print(f"WARNING: Invalid checksum address for {env_key}={addr}: {e}")
         raise

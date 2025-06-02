@@ -55,7 +55,7 @@ def test_scoreboard_decay_prune(tmp_path, monkeypatch):
     sb.prune_and_score()  # initial run
     assert "dummy" in orch.strategies
     orch.strategies["dummy"].capital_lock.trades.extend([-1.0, -1.0, -1.0])
-    monkeypatch.setenv("FOUNDER_APPROVED", "1")
+    monkeypatch.setenv("FOUNDER_TOKEN", "prune:9999999999")
     res = sb.prune_and_score()
     assert "dummy" not in orch.strategies
     assert "dummy" in res["pruned"]
@@ -90,7 +90,7 @@ def test_multisig_blocks_prune(tmp_path, monkeypatch):
     orch = DummyOrch()
     sb = StrategyScoreboard(orch, fetcher)
     orch.strategies["dummy"].capital_lock.trades.extend([-1.0, -1.0])
-    monkeypatch.setenv("FOUNDER_APPROVED", "0")
+    monkeypatch.setenv("FOUNDER_TOKEN", "bad:1")
     res = sb.prune_and_score()
     assert "dummy" in orch.strategies  # blocked
     assert res["pruned"] == []
@@ -112,7 +112,7 @@ def test_mutation_trigger_dry_run(tmp_path, monkeypatch):
     mm = DummyMut()
     orch = DummyOrch()
     orch.strategies["dummy"].capital_lock.trades.extend([-1.0, -1.0, -1.0])
-    monkeypatch.setenv("FOUNDER_APPROVED", "1")
+    monkeypatch.setenv("FOUNDER_TOKEN", "prune:9999999999")
     monkeypatch.setenv("MUTATION_DRY_RUN", "1")
     sb = StrategyScoreboard(orch, fetcher, mutator=mm)
     sb.prune_and_score()

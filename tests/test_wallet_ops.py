@@ -28,7 +28,7 @@ def test_fund_dry_run(tmp_path: Path) -> None:
     env = os.environ.copy()
     env.update(
         {
-            "FOUNDER_APPROVED": "1",
+            "FOUNDER_TOKEN": "x:9999999999",
             "WALLET_OPS_LOG": str(tmp_path / "wallet.json"),
             "EXPORT_LOG_FILE": str(tmp_path / "export.json"),
             "EXPORT_DIR": str(tmp_path / "export"),
@@ -91,7 +91,7 @@ def test_tx_fail(tmp_path: Path) -> None:
     env = os.environ.copy()
     env.update(
         {
-            "FOUNDER_APPROVED": "1",
+            "FOUNDER_TOKEN": "x:9999999999",
             "WALLET_OPS_LOG": str(tmp_path / "wallet.json"),
             "EXPORT_LOG_FILE": str(tmp_path / "export.json"),
             "EXPORT_DIR": str(tmp_path / "export"),
@@ -122,7 +122,7 @@ def test_insufficient_funds(tmp_path: Path) -> None:
     env = os.environ.copy()
     env.update(
         {
-            "FOUNDER_APPROVED": "1",
+            "FOUNDER_TOKEN": "x:9999999999",
             "WALLET_OPS_LOG": str(tmp_path / "wallet.json"),
             "EXPORT_LOG_FILE": str(tmp_path / "export.json"),
             "EXPORT_DIR": str(tmp_path / "export"),

@@ -87,7 +87,7 @@ Follow this sequence to operate MEV-OG locally.
    make up
    ```
 2. **Configure `.env`** – copy `.env.example` then set
-   `FOUNDER_APPROVED`, `KILL_SWITCH`, `OPENAI_API_KEY` and `METRICS_PORT`.
+   `FOUNDER_TOKEN`, `KILL_SWITCH`, `OPENAI_API_KEY` and `METRICS_PORT`.
 3. **Copy and customize `config.example.yaml`**
    ```bash
    cp config.example.yaml config.yaml
@@ -154,7 +154,7 @@ MEV-OG reads settings from a `.env` file and `config.yaml`. Use
 
 ```
 OPENAI_API_KEY=<your-openai-key>          # Enables online audits
-FOUNDER_APPROVED=0                        # 1 allows promotion
+FOUNDER_TOKEN=                            # approval token
 KILL_SWITCH=0                             # 1 halts all trading
 RPC_ETHEREUM_URL=<https://mainnet.ethereum.org>
 RPC_ARBITRUM_URL=<https://arbitrum.rpc>
@@ -196,7 +196,7 @@ the values used in tests and the simulation harness:
 | `ERROR_LOG_FILE` | `logs/errors.log` | Shared error log |
 | `DRP_ENC_KEY` | `<none>` | Optional key to encrypt DRP archives |
 | `FORK_BLOCK` | `19741234` | Fork block for sim harness |
-| `FOUNDER_APPROVED` | `0` | 1 allows promote to production |
+| `FOUNDER_TOKEN` | `<none>` | token or path for founder approval |
 | `INTENT_FEED_URL` | `http://localhost:9000` | L3 intent feed |
 | `KILL_SWITCH_FLAG_FILE` | `./flags/kill_switch.txt` | Kill switch trigger file |
 | `KILL_SWITCH_LOG_FILE` | `logs/kill_log.json` | Kill switch audit log |
@@ -406,7 +406,7 @@ Paths default under `logs/` or `state/` unless overridden.
 2. Run `ai/audit_agent.py --mode=offline` and review results.
 3. If approved, run `ai/audit_agent.py --mode=online` with `OPENAI_API_KEY`.
 4. Execute `ai/mutator/main.py` to generate new parameters.
-5. Set `FOUNDER_APPROVED=1` and export a `TRACE_ID` when running
+5. Provide a valid `FOUNDER_TOKEN` and export a `TRACE_ID` when running
    `ai/promote.py` to move updated strategies into `active/`.
 6. Roll back with `ai/promote.rollback` or `scripts/rollback.sh` if needed.
 
@@ -430,14 +430,14 @@ Run automated mutation cycles and promote only after all checks pass.
 
 ```bash
 python ai/mutator/main.py
-python ai/promote.py  # requires FOUNDER_APPROVED=1
+python ai/promote.py  # requires FOUNDER_TOKEN
 ```
 
 main
 
 ## CI/CD & Canary Deployment
 
-GitHub Actions workflow `main.yml` runs linting, typing, tests, fork simulations and DRP checks on every push and pull request. Each batch is tagged `canary-<sha>-<date>` and must pass the full suite. Promotion to production requires `FOUNDER_APPROVED=1` and records the run under `TRACE_ID` in the uploaded artifacts.
+GitHub Actions workflow `main.yml` runs linting, typing, tests, fork simulations and DRP checks on every push and pull request. Each batch is tagged `canary-<sha>-<date>` and must pass the full suite. Promotion to production requires a valid `FOUNDER_TOKEN` and records the run under `TRACE_ID` in the uploaded artifacts.
 Type checking uses `mypy --strict` and CI fails on any reported type error.
 
 Local checks can be invoked via Poetry:
@@ -526,7 +526,7 @@ Set `CHAOS_INTERVAL` (seconds), `CHAOS_ADAPTERS`, and `CHAOS_MODES` to control f
 `agents/ops_agent.py` runs periodic health checks and pauses all strategies if
 any fail. Alerts are sent via `OPS_ALERT_WEBHOOK` and counted by the metrics
 server. `agents/capital_lock.py` enforces drawdown and loss limits; founder must
-approve unlock actions by setting `FOUNDER_APPROVED=1` and providing a
+approve unlock actions by supplying a valid `FOUNDER_TOKEN` and providing a
 unique `TRACE_ID` for audit.
 
 
@@ -564,7 +564,7 @@ python -m core.orchestrator --config=config.yaml --live      # continuous
 ```
 
 Use `--health` to run only OpsAgent checks. Live mode requires
-`FOUNDER_APPROVED=1`.
+`FOUNDER_TOKEN` to be present.
 
 ## Batch Operations
 
@@ -574,7 +574,7 @@ Use `--health` to run only OpsAgent checks. Live mode requires
 - `pause` – move a live strategy into the paused directory.
 - `rollback` – restore a strategy from the destination directory using the audit trail.
 
-All actions require `FOUNDER_APPROVED=1`. Control where strategies are read from
+All actions require a valid `FOUNDER_TOKEN`. Control where strategies are read from
 and written to with `--source-dir`, `--dest-dir` and `--paused-dir`.
 See the example call at the end of this README for a typical promotion command.
 
@@ -600,7 +600,7 @@ python scripts/wallet_ops.py withdraw-all --from 0xhot --to 0xbank
 python scripts/wallet_ops.py drain-to-cold --from 0xhot --to 0xcold
 ```
 
-Set `FOUNDER_APPROVED=1` and export a unique `TRACE_ID` or confirm interactively
+Set `FOUNDER_TOKEN` and export a unique `TRACE_ID` or confirm interactively
 when prompted. On failure the script aborts and logs the error.
 
 ## Orchestrator CLI
@@ -643,7 +643,7 @@ Actions append to `logs/wallet_ops.log` for auditing.
 5. `bash scripts/simulate_fork.sh --target=strategies/<module>`
 6. `python ai/mutator/main.py --dry-run`
 7. Review `logs/errors.log` and DRP archive
-8. Set `FOUNDER_APPROVED=1` and export a `TRACE_ID` then run `python ai/mutator/main.py --mode live`
+8. Set `FOUNDER_TOKEN` and export a `TRACE_ID` then run `python ai/mutator/main.py --mode live`
 9. Check metrics at `http://localhost:$METRICS_PORT/metrics`
 10. Drain funds with `wallet_ops.py` if needed
 
@@ -651,7 +651,7 @@ Actions append to `logs/wallet_ops.log` for auditing.
 
 - **RPC failures:** confirm endpoints in `config.yaml` and ensure nodes are live.
 - **Metrics missing:** run `python -m core.metrics --port $METRICS_PORT`.
-- **Promotion blocked:** check `FOUNDER_APPROVED=1`, ensure a `TRACE_ID` is set and read `logs/errors.log`.
+- **Promotion blocked:** ensure `FOUNDER_TOKEN` is valid, a `TRACE_ID` is set and read `logs/errors.log`.
 - **Rollback:** `bash scripts/rollback.sh --archive=<archive>`.
 
 ## Green-light Checklist

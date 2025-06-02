@@ -31,6 +31,7 @@ from core.logger import StructuredLogger, log_error, make_json_safe
 from ai.audit_agent import AuditAgent
 from ai.mutator import Mutator
 from ai.promote import promote_strategy
+from agents.founder_gate import founder_approved
 
 LOGGER = StructuredLogger("mutation_main")
 
@@ -154,7 +155,7 @@ class MutationRunner:
 
             tests_pass = self._run_checks(sid)
             trace = os.getenv("TRACE_ID", str(uuid.uuid4()))
-            if tests_pass and os.getenv("FOUNDER_APPROVED") == "1":
+            if tests_pass and founder_approved("promote"):
                 src = self.repo_root / "strategies" / sid
                 dst = self.repo_root / "active" / sid
                 promote_strategy(

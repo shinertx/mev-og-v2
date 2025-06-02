@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from statistics import mean
 from typing import Any, Dict, List, cast
 
@@ -161,6 +162,9 @@ if __name__ == "__main__":  # pragma: no cover - manual startup
     print(f"Metrics server running on {host}:{port}")
     try:
         while True:
+            if kill_switch_triggered():
+                record_kill_event("metrics_server")
+                break
             time.sleep(1)
     except KeyboardInterrupt:
         srv.stop()
