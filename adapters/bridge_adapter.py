@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import random
 from typing import Any, Dict, List
+import requests
 
 from agents.ops_agent import OpsAgent
 
@@ -37,6 +38,17 @@ class BridgeAdapter:
         self.ops_agent = ops_agent
         self.fail_threshold = fail_threshold
         self.failures = 0
+        self.session = requests.Session()
+
+    def _validate_result(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if "bridge" in data:
+            if isinstance(data["bridge"], str):
+                return {"bridge": data["bridge"]}
+            raise ValueError("invalid bridge result")
+        if "ok" in data:
+            if isinstance(data.get("ok"), bool):
+                return {"ok": data["ok"]}
+        raise ValueError("missing bridge result")
 
     def _alert(self, event: str, err: Exception) -> None:
         self.failures += 1
@@ -44,6 +56,7 @@ class BridgeAdapter:
         if self.ops_agent:
             self.ops_agent.notify(f"bridge_adapter:{event}:{err}")
         if self.failures >= self.fail_threshold:
+            os.environ["OPS_CRITICAL_EVENT"] = "1"
             raise RuntimeError("circuit breaker open")
 
     # ------------------------------------------------------------------
@@ -55,26 +68,27 @@ class BridgeAdapter:
             raise RuntimeError("Kill switch active")
         data = {"from": from_chain, "to": to_chain, "token": token, "amount": amount}
         try:
-            import requests  # type: ignore[import-untyped]
-
             if simulate_failure == "network":
                 raise RuntimeError("sim net")
             if simulate_failure == "rpc":
                 raise ValueError("sim rpc")
             if simulate_failure == "data_poison":
-                return {"bridge": "bad"}
+                bad: Dict[str, Any] = {"bridge": "bad"}
+                self._validate_result(bad)
+                return bad
             if simulate_failure == "downtime":
                 raise RuntimeError("sim 503")
 
-            resp = requests.post(f"{self.api_url}/bridge", json=data, timeout=5)
+            resp = self.session.post(f"{self.api_url}/bridge", json=data, timeout=5)
             resp.raise_for_status()
-            return resp.json()
+            res = resp.json()
+            return self._validate_result(res)
         except Exception as exc:  # pragma: no cover - network errors
             self._alert("bridge_fail", exc)
             for alt in random.sample(self.alt_api_urls, len(self.alt_api_urls)):
                 try:
                     LOGGER.log("fallback_try", risk_level="low", alt=alt)
-                    resp = requests.post(f"{alt}/bridge", json=data, timeout=5)
+                    resp = self.session.post(f"{alt}/bridge", json=data, timeout=5)
                     resp.raise_for_status()
                     LOGGER.log("fallback_success", risk_level="low", alt=alt)
                     self.failures = 0
@@ -84,7 +98,8 @@ class BridgeAdapter:
                         failure=simulate_failure or "runtime",
                         fallback="success",
                     )
-                    return resp.json()
+                    dat = resp.json()
+                    return self._validate_result(dat)
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
             os.environ["OPS_CRITICAL_EVENT"] = "1"
