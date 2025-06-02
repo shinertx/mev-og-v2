@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import argparse
 import importlib
-from pkgutil import extend_path
 import json
 import os
 import subprocess
