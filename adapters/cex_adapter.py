@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 from agents.ops_agent import OpsAgent
 
 from core.logger import StructuredLogger
+from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from ai.mutation_log import log_mutation
 
 LOGGER = StructuredLogger("cex_adapter")
@@ -53,6 +54,9 @@ class CEXAdapter:
 
     # ------------------------------------------------------------------
     def get_balance(self, *, simulate_failure: str | None = None) -> Dict[str, Any]:
+        if kill_switch_triggered():
+            record_kill_event("cex_adapter.get_balance")
+            raise RuntimeError("Kill switch active")
         try:
             import requests  # type: ignore[import-untyped]
 
@@ -102,6 +106,9 @@ class CEXAdapter:
         self, side: str, size: float, price: float, *, simulate_failure: str | None = None
     ) -> Dict[str, Any]:
         data = {"side": side, "size": size, "price": price}
+        if kill_switch_triggered():
+            record_kill_event("cex_adapter.place_order")
+            raise RuntimeError("Kill switch active")
         try:
             import requests  # type: ignore[import-untyped]
 

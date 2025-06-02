@@ -12,6 +12,7 @@ from typing import Any, Dict, List, cast
 
 from core.logger import StructuredLogger, log_error
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+from agents.founder_gate import founder_approved
 from core.tx_engine.nonce_manager import get_shared_nonce_manager
 from agents.ops_agent import OpsAgent
 from agents.capital_lock import CapitalLock
@@ -138,7 +139,7 @@ class StrategyOrchestrator:
                 record_kill_event("orchestrator")
             return False
 
-        if self.config.get("mode") == "live" and os.getenv("FOUNDER_APPROVED") != "1":
+        if self.config.get("mode") == "live" and not founder_approved("orchestrator_live"):
             LOGGER.log("founder_block", risk_level="high")
             return False
 
@@ -158,6 +159,10 @@ class StrategyOrchestrator:
     # ---------------------------------------------------------------
     def run_live_loop(self, interval: int = 5) -> None:
         while True:
+            if kill_switch_triggered():
+                record_kill_event("orchestrator_loop")
+                self._snapshot_state()
+                break
             cont = self.run_once()
             if not cont:
                 LOGGER.log("halt", risk_level="high")

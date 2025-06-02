@@ -7,7 +7,7 @@ import pytest
 
 def test_lock_and_unlock(monkeypatch, tmp_path):
     monkeypatch.setenv("CAPITAL_LOCK_LOG", str(tmp_path / "lock.json"))
-    monkeypatch.setenv("FOUNDER_APPROVED", "1")
+    monkeypatch.setenv("FOUNDER_TOKEN", "capital_unlock:9999999999")
     monkeypatch.setenv("TRACE_ID", "t123")
     lock = CapitalLock(max_drawdown_pct=5, max_loss_usd=100, balance_usd=1000)
     lock.record_trade(-60)
@@ -28,7 +28,7 @@ def test_lock_and_unlock(monkeypatch, tmp_path):
 
 def test_unlock_requires_founder(monkeypatch, tmp_path):
     monkeypatch.setenv("CAPITAL_LOCK_LOG", str(tmp_path / "lock.json"))
-    monkeypatch.setenv("FOUNDER_APPROVED", "0")
+    monkeypatch.setenv("FOUNDER_TOKEN", "bad:1")
     monkeypatch.setenv("TRACE_ID", "nope")
     lock = CapitalLock(max_drawdown_pct=5, max_loss_usd=100, balance_usd=1000)
     lock.blocked = True

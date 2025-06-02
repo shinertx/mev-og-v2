@@ -22,6 +22,7 @@ from agents.capital_lock import CapitalLock
 from agents.ops_agent import OpsAgent
 from agents.drp_agent import DRPAgent
 from agents.gatekeeper import gates_green
+from agents.founder_gate import founder_approved
 import os
 
 LOGGER = StructuredLogger("promote")
@@ -43,7 +44,7 @@ def promote_strategy(
     if trace_id is None:
         trace_id = os.getenv("TRACE_ID", "")
 
-    if not approved or os.getenv("FOUNDER_APPROVED") != "1":
+    if not approved or not founder_approved("promote"):
         LOGGER.log(
             "promotion_rejected",
             strategy_id=src.name,

@@ -19,7 +19,7 @@ services:
       - ./state:/app/state
       - ./export:/app/export
     environment:
-      - FOUNDER_APPROVED=${FOUNDER_APPROVED:-0}
+      - FOUNDER_TOKEN=${FOUNDER_TOKEN:-}
     depends_on:
       anvil:
         condition: service_healthy

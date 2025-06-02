@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict
 
 from agents.ops_agent import OpsAgent
 from core.logger import StructuredLogger, make_json_safe
+from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from adapters import DEXAdapter, BridgeAdapter, CEXAdapter, FlashloanAdapter
 from ai.mutation_log import log_mutation
 
@@ -66,6 +67,9 @@ def main() -> None:
     interval = int(os.getenv("CHAOS_INTERVAL", "600"))
     once = os.getenv("CHAOS_ONCE") == "1"
     while True:
+        if kill_switch_triggered():
+            record_kill_event("chaos_scheduler")
+            break
         run_once()
         if once:
             break

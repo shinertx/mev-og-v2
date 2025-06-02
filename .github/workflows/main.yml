@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      FOUNDER_APPROVED: ${{ secrets.FOUNDER_APPROVED }}
+      FOUNDER_TOKEN: ${{ secrets.FOUNDER_TOKEN }}
       TRACE_ID: ${{ github.run_id }}
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
       - name: Check gates
         run: python agents/check_gates.py
       - name: Promote
-        if: env.FOUNDER_APPROVED == '1'
+        if: env.FOUNDER_TOKEN != ''
         run: echo "Founder approval received. Ready for production."
       - name: Upload Logs
         uses: actions/upload-artifact@v4

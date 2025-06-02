@@ -8,7 +8,7 @@ from agents.ops_agent import OpsAgent
 try:
     from hexbytes import HexBytes
 except Exception:  # pragma: no cover - optional
-    HexBytes = bytes  # type: ignore
+    HexBytes = bytes
 
 from core.logger import StructuredLogger
 

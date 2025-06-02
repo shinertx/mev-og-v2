@@ -44,10 +44,10 @@ This file is the single source of truth for mutation, validation, and integratio
   * Logs to `logs/<strategy>.json`
   * Errors to `logs/errors.log`
   * Metrics to Prometheus-compatible endpoint
-* Mutation cycles are run via `ai/mutator/main.py` and require **explicit founder approval (`FOUNDER_APPROVED=1`) and a `TRACE_ID` before any live promotion**.
+* Mutation cycles are run via `ai/mutator/main.py` and require **explicit founder approval (`FOUNDER_TOKEN`) and a `TRACE_ID` before any live promotion**.
 * Every cycle **must export an audit trail and DRP snapshot** using `scripts/export_state.sh`.
 * OpsAgent monitors health, pauses on failure, and sends alerts via webhooks.
-* CapitalLock enforces drawdown/loss thresholds; unlocks require **founder approval** and a `TRACE_ID` logged for each event.
+* CapitalLock enforces drawdown/loss thresholds; unlocks require **founder approval via `FOUNDER_TOKEN`** and a `TRACE_ID` logged for each event.
 * Strategies **must call `capital_lock.trade_allowed()` before every trade**.
   If False, abort and log `"capital lock: trade not allowed"` to strategy log and `logs/errors.log` with risk level `"high"`.
 
@@ -94,7 +94,7 @@ Every PR or batch/module must pass:
   in `requirements.txt` when updating packages.
 
 **No code is merged without forked-mainnet sim, chaos test, DRP snapshot/restore, and AI/LLM audit.**
-**No promotion or live mutation occurs without explicit founder approval (`FOUNDER_APPROVED=1`) and audit artifact export.**
+**No promotion or live mutation occurs without explicit founder approval (`FOUNDER_TOKEN`) and audit artifact export.**
 
 ---
 
@@ -187,7 +187,7 @@ Every PR or batch/module must pass:
 * Start OpsAgent:
   `python -m agents.ops_agent` (health checks configured in config)
 * Use `scripts/batch_ops.py` to promote, pause, or rollback strategies.
-* CapitalLock state is shared via `agents.agent_registry` and unpaused **only when founder sets `FOUNDER_APPROVED=1` and calls unlock with a unique `TRACE_ID`**.
+* CapitalLock state is shared via `agents.agent_registry` and unpaused **only when founder provides a valid `FOUNDER_TOKEN` and calls unlock with a unique `TRACE_ID`**.
 * Example strategy integration:
 
 ```python
@@ -217,7 +217,7 @@ strat = Strategy(..., capital_lock=lock)
 
 - Run `python -m core.strategy_scoreboard` or call `StrategyScoreboard.prune_and_score()` after each trading loop.
 - Adapters for Dune Analytics, Whale Alert and Coinbase WebSocket are enabled via environment variables. Review `logs/scoreboard.json` for scores blended with external signals.
-- Multi-sig founder approval (`FOUNDER_APPROVED=1`) is required for pruning and promotion. Alerts and metrics are dispatched via `OpsAgent.notify` and Prometheus.
+- Multi-sig founder approval (`FOUNDER_TOKEN`) is required for pruning and promotion. Alerts and metrics are dispatched via `OpsAgent.notify` and Prometheus.
 - Every prune/promote/mutation event is recorded in `logs/mutation_log.json` using the current `TRACE_ID`.
 
 
@@ -225,7 +225,7 @@ strat = Strategy(..., capital_lock=lock)
 
 | Command | Purpose |
 |---------|---------|
-| `python ai/promote.py` | Promote tested strategies into the active set. Requires `FOUNDER_APPROVED=1` and `TRACE_ID`. |
+| `python ai/promote.py` | Promote tested strategies into the active set. Requires `FOUNDER_TOKEN` and `TRACE_ID`. |
 | `python scripts/batch_ops.py promote <strat>` | Batch promote one or more strategies. |
 | `python scripts/batch_ops.py pause <strat>` | Move a live strategy to the paused directory. |
 | `python scripts/batch_ops.py rollback <strat>` | Restore a strategy from audit logs. |
@@ -274,7 +274,7 @@ strat = Strategy(..., capital_lock=lock)
 
 * GitHub Actions workflow `main.yml` runs lint, type check, tests, fork simulation, DRP dry run and offline audit on every PR and push.
 * New batches are automatically tagged `canary-<sha>-<date>` and verified with the same suite.
-* Promotion to production requires all checks to pass and `FOUNDER_APPROVED=1`.
+* Promotion to production requires all checks to pass and `FOUNDER_TOKEN` is provided.
 
 ---
 

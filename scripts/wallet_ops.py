@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from core.logger import StructuredLogger, log_error
+from agents.founder_gate import founder_approved
 
 LOGGER = StructuredLogger("wallet_ops")
 
@@ -18,8 +19,8 @@ LOGGER = StructuredLogger("wallet_ops")
 def _founder_confirm() -> bool:
     """Return True if founder approval is granted."""
 
-    if os.getenv("FOUNDER_APPROVED") == "1":
-        LOGGER.log("founder_confirm", approved=True, via="env")
+    if founder_approved("wallet_ops"):
+        LOGGER.log("founder_confirm", approved=True, via="token")
         return True
     try:
         resp = input("Founder approval required. Continue? [y/N]: ").strip().lower()

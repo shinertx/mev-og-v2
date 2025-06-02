@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 from agents.ops_agent import OpsAgent
 
 from core.logger import StructuredLogger
+from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from ai.mutation_log import log_mutation
 
 LOGGER = StructuredLogger("bridge_adapter")
@@ -49,6 +50,9 @@ class BridgeAdapter:
     def bridge(
         self, from_chain: str, to_chain: str, token: str, amount: float, *, simulate_failure: str | None = None
     ) -> Dict[str, Any]:
+        if kill_switch_triggered():
+            record_kill_event("bridge_adapter.bridge")
+            raise RuntimeError("Kill switch active")
         data = {"from": from_chain, "to": to_chain, "token": token, "amount": amount}
         try:
             import requests  # type: ignore[import-untyped]

@@ -76,3 +76,29 @@ def record_kill_event(origin_module: str) -> None:
         trace_id=os.getenv("TRACE_ID", ""),
         block=os.getenv("BLOCK", ""),
     )
+
+
+def clear_kill_switch() -> None:
+    """Remove kill switch flag file and environment variable."""
+    try:
+        ff = _flag_file()
+        if ff.exists():
+            ff.unlink()
+    except Exception:
+        pass
+    os.environ.pop(ENV_VAR, None)
+
+
+def record_recovery_event(origin_module: str) -> None:
+    """Log kill switch recovery event."""
+    logger = StructuredLogger("kill_switch", log_file=str(_log_file()))
+    logger.log(
+        "kill_recovered",
+        origin_module=origin_module,
+        kill_event=False,
+        strategy_id=origin_module,
+        mutation_id=os.getenv("MUTATION_ID", "dev"),
+        risk_level="low",
+        trace_id=os.getenv("TRACE_ID", ""),
+        block=os.getenv("BLOCK", ""),
+    )

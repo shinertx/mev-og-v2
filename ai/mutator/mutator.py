@@ -25,6 +25,7 @@ from core.secret_manager import get_secret
 from ai.mutation_log import log_mutation
 from .score import score_strategies
 from .prune import prune_strategies
+from agents.founder_gate import founder_approved
 
 LOGGER = StructuredLogger("mutator")
 
@@ -119,7 +120,7 @@ class Mutator:
         """Return scores and list of pruned strategies."""
 
         trace = os.getenv("TRACE_ID", str(uuid.uuid4()))
-        if os.getenv("FOUNDER_APPROVED") != "1":
+        if not founder_approved("mutator_run"):
             LOGGER.log(
                 "mutation_blocked",
                 mutation_id=os.getenv("MUTATION_ID", "dev"),

@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 from agents.ops_agent import OpsAgent
 
 from core.logger import StructuredLogger
+from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from ai.mutation_log import log_mutation
 
 LOGGER = StructuredLogger("dex_adapter")
@@ -54,6 +55,9 @@ class DEXAdapter:
         *,
         simulate_failure: str | None = None,
     ) -> Dict[str, Any]:
+        if kill_switch_triggered():
+            record_kill_event("dex_adapter.get_quote")
+            raise RuntimeError("Kill switch active")
         params = {"sellToken": sell_token, "buyToken": buy_token, "amount": amount}
         try:
             import requests  # type: ignore[import-untyped]
@@ -104,6 +108,9 @@ class DEXAdapter:
         *,
         simulate_failure: str | None = None,
     ) -> Dict[str, Any]:
+        if kill_switch_triggered():
+            record_kill_event("dex_adapter.execute_trade")
+            raise RuntimeError("Kill switch active")
         try:
             import requests  # type: ignore[import-untyped]
 

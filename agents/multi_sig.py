@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any, Dict
 
 from core.logger import StructuredLogger
+from .founder_gate import founder_approved
 
 LOG = StructuredLogger("multi_sig")
 
@@ -19,7 +19,7 @@ class MultiSigApproval:
     def request(self, action: str, payload: Dict[str, Any]) -> bool:
         """Return True if approval granted."""
         try:
-            if os.getenv("FOUNDER_APPROVED") == "1":
+            if founder_approved(action):
                 LOG.log("multisig_approved", action=action, risk_level="low")
                 return True
             LOG.log("multisig_blocked", action=action, risk_level="high")

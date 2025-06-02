@@ -9,7 +9,7 @@ from strategies.cross_domain_arb.strategy import CrossDomainArb, PoolConfig, Bri
 
 try:  # pragma: no cover
     from web3 import Web3
-    from web3.middleware import geth_poa_middleware  # type: ignore[attr-defined]
+    from web3.middleware import geth_poa_middleware
 except Exception:  # pragma: no cover
     raise SystemExit("web3 required for fork simulation")
 

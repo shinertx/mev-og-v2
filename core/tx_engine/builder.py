@@ -194,9 +194,13 @@ class TransactionBuilder:
         gas_with_margin = int(estimated_gas * 1.2)
 
         max_attempts = 3
-        last_err = None
+        last_err: Exception | None = None
         tx_hash: HexBytes | None = None
         for attempt in range(1, max_attempts + 1):
+            if kill_switch_triggered():
+                record_kill_event("TransactionBuilder_loop")
+                last_err = RuntimeError("Kill switch active")
+                break
             try:
                 self.nonce_manager.get_nonce(from_address, tx_id=tx_id)
                 if hasattr(self.web3, "eth"):

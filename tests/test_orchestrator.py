@@ -120,3 +120,18 @@ def test_live_loop(monkeypatch, tmp_path):
     orch.run_once = fake_run_once
     orch.run_live_loop(interval=0)
     assert count == 3
+
+
+def test_live_loop_kill(monkeypatch, tmp_path):
+    _make_dummy_strategy(tmp_path)
+    cfg = _config(tmp_path)
+    orch = StrategyOrchestrator(str(cfg), dry_run=False)
+    monkeypatch.setattr("core.orchestrator.kill_switch_triggered", lambda: True)
+    monkeypatch.setattr("core.orchestrator.record_kill_event", lambda *a, **k: None)
+    calls = []
+    def fake_run_once():
+        calls.append(1)
+        return True
+    orch.run_once = fake_run_once
+    orch.run_live_loop(interval=0)
+    assert not calls

@@ -10,6 +10,7 @@ from typing import List
 from agents.ops_agent import OpsAgent
 
 from core.logger import StructuredLogger
+from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from ai.mutation_log import log_mutation
 
 LOG = StructuredLogger("pool_scanner")
@@ -53,6 +54,9 @@ class PoolScanner:
             raise RuntimeError("circuit breaker open")
 
     def scan(self, *, simulate_failure: str | None = None) -> List[PoolInfo]:
+        if kill_switch_triggered():
+            record_kill_event("pool_scanner.scan")
+            return []
         try:
             import requests  # type: ignore[import-untyped]
 
@@ -99,6 +103,9 @@ class PoolScanner:
 
     def scan_l3(self, *, simulate_failure: str | None = None) -> List[PoolInfo]:
         """Discover L3/app rollup pools."""
+        if kill_switch_triggered():
+            record_kill_event("pool_scanner.scan_l3")
+            return []
         try:
             import requests  # type: ignore[import-untyped]
 

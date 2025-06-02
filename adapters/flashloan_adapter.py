@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 from agents.ops_agent import OpsAgent
 
 from core.logger import StructuredLogger
+from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from ai.mutation_log import log_mutation
 
 LOG = StructuredLogger("flashloan_adapter")
@@ -49,6 +50,9 @@ class FlashloanAdapter:
         self, token: str, amount: float, *, simulate_failure: str | None = None
     ) -> Dict[str, Any]:
         """Perform the flashloan using an external service."""
+        if kill_switch_triggered():
+            record_kill_event("flashloan_adapter.trigger")
+            raise RuntimeError("Kill switch active")
         try:
             import requests  # type: ignore[import-untyped]
 
