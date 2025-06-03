@@ -19,6 +19,7 @@ MEV-OG is an AI-native, adversarial crypto trading system built to compound $5K 
 - [Mutation Workflow](#mutation-workflow)
 - [DRP Recovery](#drp-recovery)
 - [CI/CD](#cicd--canary-deployment)
+- [AI/LLM Safety](docs/AI_LLM_SAFETY.md)
 
 ## System Architecture
 
