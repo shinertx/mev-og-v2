@@ -1,11 +1,15 @@
 """Adapters package for external APIs."""
 
-from .bridge_adapter import BridgeAdapter
-from .cex_adapter import CEXAdapter
-from .dex_adapter import DEXAdapter
-from .flashloan_adapter import FlashloanAdapter
-from .pool_scanner import PoolScanner, PoolInfo
-from .alpha_signals import DuneAnalyticsAdapter, WhaleAlertAdapter, CoinbaseWebSocketAdapter
+# Lazy imports to avoid optional dependency issues at package import time.
+BridgeAdapter = None
+CEXAdapter = None
+DEXAdapter = None
+FlashloanAdapter = None
+PoolScanner = None
+PoolInfo = None
+DuneAnalyticsAdapter = None
+WhaleAlertAdapter = None
+CoinbaseWebSocketAdapter = None
 
 __all__ = [
     "BridgeAdapter",

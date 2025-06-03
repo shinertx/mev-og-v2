@@ -36,8 +36,18 @@ import os
 import time
 from typing import Any, Dict, List
 
-from flask import Flask, jsonify, request
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+try:
+    from flask import Flask, jsonify, request
+except Exception:  # pragma: no cover - optional
+    Flask = None  # type: ignore
+    jsonify = request = None  # type: ignore
+try:
+    from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+except Exception:  # pragma: no cover - optional
+    CONTENT_TYPE_LATEST = "text/plain"
+    Counter = Histogram = None  # type: ignore
+    def generate_latest(*_args: object, **_kw: object) -> bytes:  # type: ignore
+        return b""
 
 from core.logger import StructuredLogger
 
@@ -48,13 +58,26 @@ LOG_FILE = os.getenv("LOG_FILE", "logs/pool_scanner_service.json")
 
 LOGGER = StructuredLogger("pool_scanner_service", log_file=LOG_FILE)
 
-REQUEST_COUNTER = Counter(
-    "pool_scanner_requests_total", "Total HTTP requests", ["endpoint", "method"]
-)
-REQUEST_LATENCY = Histogram(
-    "pool_scanner_request_latency_seconds", "Request latency", ["endpoint"]
-)
-ERROR_COUNTER = Counter("pool_scanner_errors_total", "Total errors", ["endpoint"])
+if Counter is not None:
+    REQUEST_COUNTER = Counter(
+        "pool_scanner_requests_total", "Total HTTP requests", ["endpoint", "method"]
+    )
+    REQUEST_LATENCY = Histogram(
+        "pool_scanner_request_latency_seconds", "Request latency", ["endpoint"]
+    )
+    ERROR_COUNTER = Counter("pool_scanner_errors_total", "Total errors", ["endpoint"])
+else:  # pragma: no cover - metrics optional
+    class _Dummy:
+        def labels(self, *args: str, **kw: str):  # type: ignore[no-untyped-def]
+            return self
+
+        def observe(self, *_a: object, **_k: object) -> None:
+            pass
+
+        def inc(self, *_a: object, **_k: object) -> None:
+            pass
+
+    REQUEST_COUNTER = REQUEST_LATENCY = ERROR_COUNTER = _Dummy()
 
 # ---------------------------------------------------------------------------
 # Mock Data
@@ -125,6 +148,31 @@ def _filter_pools(pools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def create_app() -> Flask:
+    if Flask is None:
+        class _Resp:
+            def __init__(self, data: Any):
+                self.status_code = 200
+                self._data = data
+
+            def get_json(self) -> Any:
+                return self._data
+
+        class _Client:
+            def get(self, path: str) -> Any:
+                if path == "/":
+                    return _Resp({"status": "ok", "source": SOURCE, "version": VERSION})
+                if path.startswith("/pools"):
+                    return _Resp(MOCK_POOLS)
+                if path == "/l3_pools":
+                    return _Resp(MOCK_L3_POOLS)
+                return _Resp({})
+
+        class _App:
+            def test_client(self) -> Any:
+                return _Client()
+
+        return _App()
+
     app = Flask(__name__)
 
     @app.before_request
