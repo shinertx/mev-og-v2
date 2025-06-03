@@ -5,7 +5,7 @@
 # --- Core DeFi/Blockchain ---
 web3>=6.10.0,<7              # for all on-chain/ETH interactions (compatible with eth-typing v3)
 eth-account>=0.9.0,<0.10     # accounts/signing for L1/L2/EVM
-eth-typing==3.0.0            # required/pinned for web3 compatibility
+eth-typing==3.3.0            # required/pinned for web3 compatibility
 eth-utils>=1.9.5             # required by web3/eth-account
 hexbytes                     # common hex util (used throughout adapters/tx)
 flashbots                    # for Flashbots bundle submission
