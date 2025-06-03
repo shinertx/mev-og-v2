@@ -1,10 +1,5 @@
-# =======================
-# MEV-OG Institutional Requirements
-# (Pin ALL versions for reproducibility and safety)
-# =======================
-
 # --- Core DeFi/Blockchain ---
-web3==6.11.5
+web3==6.11.4
 eth-account==0.10.0
 eth-typing==3.5.2
 eth-utils==2.3.1
@@ -30,10 +25,3 @@ pytest==7.4.4
 mypy==1.10.0
 ruff==0.4.4
 flake8==7.0.0
-
-# --- (Optional) Dev/CI ---
-# pre-commit==3.7.0
-
-# =======================
-# End Institutional Requirements
-# =======================
