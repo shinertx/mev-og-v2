@@ -22,7 +22,6 @@ pyyaml                       # universal config parsing
 openai>=1.0.0                # AI audit/mutation/LLM integration
 
 # --- Monitoring/Telemetry ---
-prometheus_client            # Prometheus metrics export (used by core.metrics, etc)
 prometheus-client==0.19.0
 
 
