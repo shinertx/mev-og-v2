@@ -36,6 +36,7 @@ from core.tx_engine.nonce_manager import NonceManager, get_shared_nonce_manager
 from core.logger import StructuredLogger, log_error, make_json_safe
 from core import metrics
 from agents.capital_lock import CapitalLock
+from core.strategy_base import BaseStrategy
 
 from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
 from core.oracles.intent_feed import IntentFeed, IntentData
@@ -96,7 +97,7 @@ class PoolConfig:
     domain: str
 
 
-class CrossDomainArb:
+class CrossDomainArb(BaseStrategy):
     """Detect price spreads across domains and execute cost-aware trades."""
 
     DEFAULT_THRESHOLD = 0.003
@@ -111,7 +112,9 @@ class CrossDomainArb:
         edges_enabled: Optional[Dict[str, bool]] = None,
         capital_lock: CapitalLock | None = None,
         nonce_manager: NonceManager | None = None,
+        prune_epochs: int | None = None,
     ) -> None:
+        super().__init__(STRATEGY_ID, prune_epochs=prune_epochs, log_file=str(LOG_FILE))
         self.feed = UniswapV3Feed()
         self.pools = pools
         self.bridge_costs = bridge_costs
@@ -405,6 +408,16 @@ class CrossDomainArb:
             pnl=pnl,
         )
 
+    def _validate_price_data(self, data: PriceData) -> bool:
+        """Ensure price feed schema and freshness are valid."""
+        if not isinstance(data.price, (int, float)):
+            log_error(STRATEGY_ID, "invalid price type", event="feed_schema")
+            return False
+        if data.block_age > int(os.getenv("PRICE_FRESHNESS_SEC", "30")):
+            log_error(STRATEGY_ID, "stale price detected", event="stale_price")
+            return False
+        return True
+
     def _detect_opportunity(self, prices: Dict[str, float]) -> Optional[Dict[str, object]]:
         domains = list(prices.keys())
         if len(domains) < 2:
@@ -432,6 +445,8 @@ class CrossDomainArb:
 
     # ------------------------------------------------------------------
     def run_once(self) -> Optional[Dict[str, object]]:
+        if self.disabled:
+            return None
         if kill_switch_triggered():
             record_kill_event(STRATEGY_ID)
             LOG.log(
@@ -467,6 +482,9 @@ class CrossDomainArb:
                 log_error(STRATEGY_ID, str(exc), event="price_fetch")
                 metrics.record_fail()
                 return None
+            if not self._validate_price_data(data):
+                metrics.record_fail()
+                return None
             price_data[label] = data
             self.last_prices[label] = data.price
             self._record(cfg.domain, data, False, 0.0)
@@ -482,8 +500,8 @@ class CrossDomainArb:
         self.metrics["recent_alpha"] = float(opp["spread"]) if opp else 0.0
         if opp:
             profit = self._compute_profit(opp["buy"], opp["sell"], prices)
-            if profit <= 0:
-                metrics.record_fail()
+            if profit <= 0 or not self.validate_costs(profit):
+                self.record_result(False, profit)
                 return None
             self.hedge_risk(profit, "ETH")
             if not self.capital_lock.trade_allowed():
@@ -528,9 +546,9 @@ class CrossDomainArb:
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
 
-            metrics.record_opportunity(float(opp["spread"]), profit, latency)
-
             self.capital_lock.record_trade(profit)
+
+            self.record_result(True, profit)
 
             for label, data in price_data.items():
                 self._record(
@@ -543,7 +561,7 @@ class CrossDomainArb:
                     pnl=profit,
                 )
         else:
-            metrics.record_fail()
+            self.record_result(False, 0.0)
 
         return opp
 
