@@ -1,42 +1,39 @@
 # =======================
-# MEV-OG Universal Requirements
+# MEV-OG Institutional Requirements
+# (Pin ALL versions for reproducibility and safety)
 # =======================
 
 # --- Core DeFi/Blockchain ---
-web3>=6.10.0,<7              # for all on-chain/ETH interactions (compatible with eth-typing v3)
-eth-account>=0.9.0,<0.10     # accounts/signing for L1/L2/EVM
-eth-typing==3.3.0            # required/pinned for web3 compatibility
-eth-utils>=1.9.5             # required by web3/eth-account
-hexbytes                     # common hex util (used throughout adapters/tx)
-flashbots                    # for Flashbots bundle submission
+web3==6.11.5
+eth-account==0.10.0
+eth-typing==3.5.2
+eth-utils==2.3.1
+hexbytes==0.3.1
+flashbots==1.2.0
 
 # --- HTTP/REST/Websocket/API ---
-requests                     # for API calls (pool scanner, price feeds, etc)
-websocket-client             # CEX/DEX adapter feeds (if any)
-flask                        # for microservices (e.g., pool_scanner_service.py)
+requests==2.31.0
+websocket-client==1.7.0
+flask==2.3.3
 
 # --- Config/Parsing ---
-pyyaml                       # universal config parsing
+pyyaml==6.0.1
 
 # --- AI/LLM/Audit ---
-openai>=1.0.0                # AI audit/mutation/LLM integration
+openai==1.12.0
 
 # --- Monitoring/Telemetry ---
 prometheus-client==0.19.0
 
-
 # --- Testing/Quality/Hygiene ---
-pytest                       # unit/integration/chaos tests
-mypy                         # type checks (required for CI pass)
-ruff                         # linter (codestyle, enforced in CI)
-flake8                       # optional, if used in your CI
+pytest==7.4.4
+mypy==1.10.0
+ruff==0.4.4
+flake8==7.0.0
 
 # --- (Optional) Dev/CI ---
-# pre-commit                # dev hook, optional
-
-# --- Any code-imported package (from adapters/, scripts/, ai/, agents/, etc) ---
-# Add here if you see an ImportError or missing module in logs!
+# pre-commit==3.7.0
 
 # =======================
-# End Universal Requirements
+# End Institutional Requirements
 # =======================
