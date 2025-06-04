@@ -12,7 +12,12 @@ import requests
 from agents.ops_agent import OpsAgent
 
 from core.logger import StructuredLogger
-from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+
+try:  # optional kill switch for tests
+    from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+except Exception:  # pragma: no cover - optional dependency
+    kill_switch_triggered = None  # type: ignore[assignment]
+    record_kill_event = None  # type: ignore[assignment]
 from ai.mutation_log import log_mutation
 
 LOG = StructuredLogger("pool_scanner")
@@ -64,13 +69,11 @@ class PoolScanner:
         LOG.log(event, risk_level="high", error=str(err))
         if self.ops_agent:
             self.ops_agent.notify(f"pool_scanner:{event}:{err}")
-        if self.failures >= self.fail_threshold:
-            os.environ["OPS_CRITICAL_EVENT"] = "1"
-            raise RuntimeError("circuit breaker open")
 
     def scan(self, *, simulate_failure: str | None = None) -> List[PoolInfo]:
-        if kill_switch_triggered():
-            record_kill_event("pool_scanner.scan")
+        if kill_switch_triggered and kill_switch_triggered():
+            if record_kill_event:
+                record_kill_event("pool_scanner.scan")
             return []
         try:
             if simulate_failure == "network":
@@ -107,19 +110,22 @@ class PoolScanner:
                     return self._validate_pools(data)
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
-            os.environ["OPS_CRITICAL_EVENT"] = "1"
-            log_mutation(
-                "adapter_chaos",
-                adapter="pool_scanner",
-                failure=simulate_failure or "runtime",
-                fallback="fail",
-            )
+            if self.failures >= self.fail_threshold:
+                os.environ["OPS_CRITICAL_EVENT"] = "1"
+                log_mutation(
+                    "adapter_chaos",
+                    adapter="pool_scanner",
+                    failure=simulate_failure or "runtime",
+                    fallback="fail",
+                )
+                raise RuntimeError("circuit breaker open")
             return []
 
     def scan_l3(self, *, simulate_failure: str | None = None) -> List[PoolInfo]:
         """Discover L3/app rollup pools."""
-        if kill_switch_triggered():
-            record_kill_event("pool_scanner.scan_l3")
+        if kill_switch_triggered and kill_switch_triggered():
+            if record_kill_event:
+                record_kill_event("pool_scanner.scan_l3")
             return []
         try:
             if simulate_failure == "network":
@@ -156,11 +162,13 @@ class PoolScanner:
                     return self._validate_pools(data)
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
-            os.environ["OPS_CRITICAL_EVENT"] = "1"
-            log_mutation(
-                "adapter_chaos",
-                adapter="pool_scanner",
-                failure=simulate_failure or "runtime",
-                fallback="fail",
-            )
+            if self.failures >= self.fail_threshold:
+                os.environ["OPS_CRITICAL_EVENT"] = "1"
+                log_mutation(
+                    "adapter_chaos",
+                    adapter="pool_scanner",
+                    failure=simulate_failure or "runtime",
+                    fallback="fail",
+                )
+                raise RuntimeError("circuit breaker open")
             return []

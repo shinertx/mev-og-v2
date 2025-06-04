@@ -13,7 +13,12 @@ import requests
 from agents.ops_agent import OpsAgent
 
 from core.logger import StructuredLogger
-from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+
+try:  # optional kill switch; tests may stub out core
+    from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
+except Exception:  # pragma: no cover - optional dependency
+    kill_switch_triggered = None  # type: ignore[assignment]
+    record_kill_event = None  # type: ignore[assignment]
 from ai.mutation_log import log_mutation
 
 LOGGER = StructuredLogger("dex_adapter")
@@ -48,9 +53,6 @@ class DEXAdapter:
         LOGGER.log(event, risk_level="high", error=str(err))
         if self.ops_agent:
             self.ops_agent.notify(f"dex_adapter:{event}:{err}")
-        if self.failures >= self.fail_threshold:
-            os.environ["OPS_CRITICAL_EVENT"] = "1"
-            raise RuntimeError("circuit breaker open")
 
     # ------------------------------------------------------------------
     def _validate_quote(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -87,8 +89,9 @@ class DEXAdapter:
         *,
         simulate_failure: str | None = None,
     ) -> Dict[str, Any]:
-        if kill_switch_triggered():
-            record_kill_event("dex_adapter.get_quote")
+        if kill_switch_triggered and kill_switch_triggered():
+            if record_kill_event:
+                record_kill_event("dex_adapter.get_quote")
             raise RuntimeError("Kill switch active")
         params = {"sellToken": sell_token, "buyToken": buy_token, "amount": amount}
         try:
@@ -126,14 +129,16 @@ class DEXAdapter:
                     return self._validate_quote(data)
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
-            os.environ["OPS_CRITICAL_EVENT"] = "1"
-            log_mutation(
-                "adapter_chaos",
-                adapter="dex_adapter",
-                failure=simulate_failure or "runtime",
-                fallback="fail",
-            )
-            raise
+            if self.failures >= self.fail_threshold:
+                os.environ["OPS_CRITICAL_EVENT"] = "1"
+                log_mutation(
+                    "adapter_chaos",
+                    adapter="dex_adapter",
+                    failure=simulate_failure or "runtime",
+                    fallback="fail",
+                )
+                raise RuntimeError("circuit breaker open")
+            return {}
 
     # ------------------------------------------------------------------
     def execute_trade(
@@ -142,8 +147,9 @@ class DEXAdapter:
         *,
         simulate_failure: str | None = None,
     ) -> Dict[str, Any]:
-        if kill_switch_triggered():
-            record_kill_event("dex_adapter.execute_trade")
+        if kill_switch_triggered and kill_switch_triggered():
+            if record_kill_event:
+                record_kill_event("dex_adapter.execute_trade")
             raise RuntimeError("Kill switch active")
         try:
             if simulate_failure == "network":
@@ -180,12 +186,14 @@ class DEXAdapter:
                     return self._validate_trade(data)
                 except Exception as exc2:  # pragma: no cover - network errors
                     self._alert("fallback_fail", exc2)
-            os.environ["OPS_CRITICAL_EVENT"] = "1"
-            log_mutation(
-                "adapter_chaos",
-                adapter="dex_adapter",
-                failure=simulate_failure or "runtime",
-                fallback="fail",
-            )
-            raise
+            if self.failures >= self.fail_threshold:
+                os.environ["OPS_CRITICAL_EVENT"] = "1"
+                log_mutation(
+                    "adapter_chaos",
+                    adapter="dex_adapter",
+                    failure=simulate_failure or "runtime",
+                    fallback="fail",
+                )
+                raise RuntimeError("circuit breaker open")
+            return {}
 

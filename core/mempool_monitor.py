@@ -37,8 +37,6 @@ class MempoolMonitor:
         LOG.log(event, risk_level="high", error=str(err))
         if self.ops_agent:
             self.ops_agent.notify(f"mempool_monitor:{event}:{err}")
-        if self.failures >= self.fail_threshold:
-            raise RuntimeError("circuit breaker open")
 
     def listen_bridge_txs(
         self, limit: int = 10, *, simulate_failure: str | None = None

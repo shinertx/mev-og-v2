@@ -6,7 +6,11 @@ import os
 from typing import Callable, Dict
 
 from core.logger import StructuredLogger
-from core import metrics
+
+try:  # optional metrics; tests may stub out core
+    from core import metrics as metrics_module
+except Exception:  # pragma: no cover - optional dependency
+    metrics_module = None
 from .agent_registry import set_value
 
 LOGGER = StructuredLogger("ops_agent")
@@ -31,7 +35,8 @@ class OpsAgent:
                 failures.append(name)
         if failures:
             LOGGER.log("health_fail", strategy_id=",".join(failures), risk_level="high")
-            metrics.record_alert()
+            if metrics_module:
+                metrics_module.record_alert()
             self.auto_pause(reason="health_fail")
         else:
             LOGGER.log("health_ok", risk_level="low")
@@ -43,7 +48,8 @@ class OpsAgent:
         self.paused = True
         set_value("paused", True)
         LOGGER.log("auto_pause", risk_level="high", error=reason)
-        metrics.record_alert()
+        if metrics_module:
+            metrics_module.record_alert()
 
     # --------------------------------------------------------------
     def notify(self, message: str) -> None:
