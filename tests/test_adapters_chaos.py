@@ -87,10 +87,17 @@ def _setup_requests(
             return _dummy_response(data or {"ok": True})
         raise RuntimeError("fail")
 
+    class _Session:
+        def get(self, url: str, *a: Any, **k: Any) -> Any:
+            return fake_get(url, *a, **k)
+
+        def post(self, url: str, *a: Any, **k: Any) -> Any:
+            return fake_post(url, *a, **k)
+
     monkeypatch.setitem(
         sys.modules,
         "requests",
-        SimpleNamespace(get=fake_get, post=fake_post),
+        SimpleNamespace(get=fake_get, post=fake_post, Session=lambda: _Session()),
     )
 
 
@@ -114,10 +121,16 @@ def test_multi_endpoint_fallback(monkeypatch, log_env):
             return _dummy_response({"ok": True})
         raise RuntimeError("fail")
 
+    class _Session:
+        def get(self, url: str, *a: Any, **k: Any) -> Any:
+            return fake_get(url, *a, **k)
+
+        post = get
+
     monkeypatch.setitem(
         sys.modules,
         "requests",
-        SimpleNamespace(get=fake_get, post=fake_get),
+        SimpleNamespace(get=fake_get, post=fake_get, Session=lambda: _Session()),
     )
     ops = DummyOps()
     DEXAdapter = _load("dex_adapter", "adapters/dex_adapter.py").DEXAdapter

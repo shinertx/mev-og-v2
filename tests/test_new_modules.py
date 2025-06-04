@@ -36,6 +36,25 @@ def test_mutation_manager(monkeypatch):
 
 
 def test_hedge_risk(monkeypatch):
+    called = {}
+
+    def fake_post(url, json, timeout):
+        called['url'] = url
+        class Resp:
+            def raise_for_status(self):
+                pass
+        return Resp()
+
+    class _Session:
+        def post(self, url, json, timeout):
+            return fake_post(url, json, timeout)
+
+    monkeypatch.setitem(
+        sys.modules,
+        'requests',
+        types.SimpleNamespace(post=fake_post, Session=lambda: _Session())
+    )
+
     from strategies.cross_domain_arb import CrossDomainArb, PoolConfig
     from agents.capital_lock import CapitalLock
 
@@ -48,13 +67,5 @@ def test_hedge_risk(monkeypatch):
         ),  # test-only
     }
     strat = CrossDomainArb(pools, {}, threshold=0.0, capital_lock=CapitalLock(1000, 1e9, 0), edges_enabled={"hedge": True})
-    called = {}
-    def fake_post(url, json, timeout):
-        called['url'] = url
-        class Resp:
-            def raise_for_status(self):
-                pass
-        return Resp()
-    monkeypatch.setitem(sys.modules, 'requests', types.SimpleNamespace(post=fake_post))
     strat.hedge_risk(1.0, "ETH")
     assert called['url'].startswith("http://")
