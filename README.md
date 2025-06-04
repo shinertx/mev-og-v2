@@ -23,6 +23,7 @@ You must use Python 3.11 and activate your virtual environment before running an
 - [Mutation Workflow](#mutation-workflow)
 - [DRP Recovery](#drp-recovery)
 - [CI/CD](#cicd--canary-deployment)
+- [AI/LLM Safety](docs/AI_LLM_SAFETY.md)
 
 ## System Architecture
 
