@@ -33,7 +33,7 @@ def test_chaos_drill(tmp_path):
     subprocess.run([sys.executable, str(SCRIPT)], check=True, env=env, text=True)
 
     exports = list((tmp_path / "export").glob("drp_export_*.tar.gz"))
-    assert len(exports) >= 9
+    assert len(exports) >= 13
     assert (tmp_path / "rollback.log").exists()
     with open(tmp_path / "export_log.json") as fh:
         lines = [json.loads(line) for line in fh]
@@ -41,3 +41,4 @@ def test_chaos_drill(tmp_path):
 
     metrics = json.loads(Path(tmp_path / "logs" / "drill_metrics.json").read_text())
     assert metrics["dex_adapter"]["failures"] >= 1
+    assert metrics["reorg"]["failures"] >= 1

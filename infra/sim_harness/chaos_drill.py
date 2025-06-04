@@ -22,6 +22,8 @@ from adapters import (
 )
 from ai.intent_ghost import ghost_intent
 from core.node_selector import NodeSelector
+from core.tx_engine.nonce_manager import NonceManager
+from strategies.l3_sequencer_mev.strategy import L3SequencerMEV
 
 EXPORT_SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "export_state.sh"
 ROLLBACK_SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "rollback.sh"
@@ -122,7 +124,7 @@ def _drill_lost_agent(env: dict[str, str]) -> None:
 
 def _drill_adapter_fail(env: dict[str, str]) -> None:
     try:
-        adapter = DEXAdapter("http://127.0.0.1:1")
+        adapter = DEXAdapter("http://127.0.0.1:1")  # type: ignore[misc]
         adapter.get_quote("ETH", "USDC", 1)
     except Exception:
         LOGGER.log("adapter_fail", risk_level="high")
@@ -132,7 +134,7 @@ def _drill_adapter_fail(env: dict[str, str]) -> None:
 
 def _drill_bridge_fail(env: dict[str, str]) -> None:
     try:
-        adapter = BridgeAdapter("http://127.0.0.1:1")
+        adapter = BridgeAdapter("http://127.0.0.1:1")  # type: ignore[misc]
         adapter.bridge("eth", "arb", "ETH", 1)
     except Exception:
         LOGGER.log("bridge_fail", risk_level="high")
@@ -142,7 +144,7 @@ def _drill_bridge_fail(env: dict[str, str]) -> None:
 
 def _drill_cex_fail(env: dict[str, str]) -> None:
     try:
-        adapter = CEXAdapter("http://127.0.0.1:1", "bad")
+        adapter = CEXAdapter("http://127.0.0.1:1", "bad")  # type: ignore[misc]
         adapter.place_order("buy", 1, 1)
     except Exception:
         LOGGER.log("cex_fail", risk_level="high")
@@ -152,7 +154,7 @@ def _drill_cex_fail(env: dict[str, str]) -> None:
 
 def _drill_flashloan_fail(env: dict[str, str]) -> None:
     try:
-        adapter = FlashloanAdapter("http://127.0.0.1:1")
+        adapter = FlashloanAdapter("http://127.0.0.1:1")  # type: ignore[misc]
         adapter.trigger("ETH", 1)
     except Exception:
         LOGGER.log("flashloan_fail", risk_level="high")
@@ -191,6 +193,54 @@ def _drill_sequencer_fail(env: dict[str, str]) -> None:
     _export_and_restore(env)
 
 
+def _drill_reorg_fail(env: dict[str, str]) -> None:
+    try:
+        strat = L3SequencerMEV({})
+        strat.last_block = 5
+        strat._detect_opportunity({"a": 1.0, "b": 2.0}, block=3, timestamp=1)
+    except Exception:
+        pass
+    LOGGER.log("reorg_fail", risk_level="high")
+    _update_metrics("reorg")
+    _export_and_restore(env)
+
+
+def _drill_nonce_gap(env: dict[str, str]) -> None:
+    nm = NonceManager(None, cache_file="state/nc.json", log_file="logs/nl.json")
+    nm.update_nonce("0xabc", 1)
+    nm.update_nonce("0xabc", 5)
+    LOGGER.log("nonce_gap", risk_level="high")
+    _update_metrics("nonce")
+    _export_and_restore(env)
+
+
+def _drill_rpc_fail(env: dict[str, str]) -> None:
+    class BadWeb3:
+        class Eth:
+            def get_transaction_count(self, address: str) -> int:
+                raise RuntimeError("rpc fail")
+
+        eth = Eth()
+
+    nm = NonceManager(BadWeb3(), cache_file="state/rpc.json", log_file="logs/rpc.json")
+    try:
+        nm.get_nonce("0xabc")
+    except Exception:
+        LOGGER.log("rpc_fail", risk_level="high")
+        _update_metrics("rpc")
+    _export_and_restore(env)
+
+
+def _drill_data_dos(env: dict[str, str]) -> None:
+    try:
+        adapter = DEXAdapter("http://127.0.0.1:1")  # type: ignore[misc]
+        adapter.get_quote("ETH", "USDC", 1, simulate_failure="data_poison")
+    except Exception:
+        LOGGER.log("data_dos", risk_level="high")
+        _update_metrics("dos")
+    _export_and_restore(env)
+
+
 def run_drill() -> None:
     env = os.environ.copy()
     _drill_kill_switch(env)
@@ -202,6 +252,10 @@ def run_drill() -> None:
     _drill_intent_fail(env)
     _drill_node_fail(env)
     _drill_sequencer_fail(env)
+    _drill_reorg_fail(env)
+    _drill_nonce_gap(env)
+    _drill_rpc_fail(env)
+    _drill_data_dos(env)
 
 
 if __name__ == "__main__":
