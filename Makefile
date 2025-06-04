@@ -19,10 +19,10 @@ simulate:
 bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
 
 mutate:
-python ai/mutator/main.py
+python3.11 ai/mutator/main.py
 
 export:
 bash scripts/export_state.sh
 
 promote:
-FOUNDER_TOKEN=dummy python ai/promote.py
+FOUNDER_TOKEN=dummy python3.11 ai/promote.py

@@ -2,6 +2,10 @@
 
 This quick-start guide summarizes how to set up and run the project. For detailed policies and runbooks, see [AGENTS.md](../AGENTS.md) and [PROJECT_BIBLE.md](../PROJECT_BIBLE.md).
 
+**Python 3.11 Required**
+
+You must use Python 3.11 and activate your virtual environment before running any `python` or `pip` command.
+
 ## 1. Install Dependencies
 
 ```bash
@@ -48,7 +52,7 @@ make test
 Run a mutation cycle if simulations succeed:
 
 ```bash
-python ai/mutator/main.py
+python3.11 ai/mutator/main.py
 make mutate
 ```
 
@@ -57,9 +61,9 @@ make mutate
 Set `FOUNDER_TOKEN` to allow promotion and then execute:
 
 ```bash
-python ai/promote.py            # single promotion
+python3.11 ai/promote.py            # single promotion
 # or
-python scripts/batch_ops.py promote <strategy> --source-dir staging --dest-dir active
+python3.11 scripts/batch_ops.py promote <strategy> --source-dir staging --dest-dir active
 make promote
 ```
 
@@ -90,7 +94,7 @@ Use `scripts/kill_switch.sh` to toggle the system kill switch. Start the metrics
 server for Prometheus scraping with:
 
 ```bash
-python -m core.metrics --port $METRICS_PORT
+python3.11 -m core.metrics --port $METRICS_PORT
 ```
 If you set `METRICS_TOKEN`, include the header
 `Authorization: Bearer $METRICS_TOKEN` when scraping.
@@ -101,13 +105,13 @@ Start all enabled strategies using the unified orchestrator. Use dry-run mode
 first to verify configuration:
 
 ```bash
-python -m core.orchestrator --config=config.yaml --dry-run
+python3.11 -m core.orchestrator --config=config.yaml --dry-run
 ```
 
 For continuous live execution run:
 
 ```bash
-python -m core.orchestrator --config=config.yaml --live
+python3.11 -m core.orchestrator --config=config.yaml --live
 ```
 
 Live mode requires a valid `FOUNDER_TOKEN`. Use `--health` for an on-demand health
@@ -119,9 +123,9 @@ check without executing strategies.
 requires founder confirmation and logs to `logs/wallet_ops.json`.
 
 ```bash
-python scripts/wallet_ops.py fund --from 0xabc --to 0xdef --amount 1
-python scripts/wallet_ops.py withdraw-all --from 0xhot --to 0xbank
-python scripts/wallet_ops.py drain-to-cold --from 0xhot --to 0xcold
+python3.11 scripts/wallet_ops.py fund --from 0xabc --to 0xdef --amount 1
+python3.11 scripts/wallet_ops.py withdraw-all --from 0xhot --to 0xbank
+python3.11 scripts/wallet_ops.py drain-to-cold --from 0xhot --to 0xcold
 ```
 
 Use `--dry-run` to simulate without sending a transaction. State snapshots are
@@ -142,7 +146,7 @@ list of options. The most important flags are:
 Example dry-run:
 
 ```bash
-python ai/mutator/main.py --logs-dir logs --dry-run
+python3.11 ai/mutator/main.py --logs-dir logs --dry-run
 ```
 
 If the run completes with no errors you can promote to live trading by removing
@@ -160,8 +164,8 @@ bash scripts/rollback.sh --archive=<exported-archive>
 ### Kill/Pause/Rollback flows
 
 * **Kill switch:** `bash scripts/kill_switch.sh` toggles trading halt.
-* **Pause strategy:** `python scripts/batch_ops.py pause <strategy>`.
-* **Rollback:** `python scripts/batch_ops.py rollback <strategy>` or use the DRP
+* **Pause strategy:** `python3.11 scripts/batch_ops.py pause <strategy>`.
+* **Rollback:** `python3.11 scripts/batch_ops.py rollback <strategy>` or use the DRP
   archive as shown above.
 
 ### Troubleshooting

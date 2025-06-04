@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 """Scheduled chaos injection harness."""
 
 from __future__ import annotations

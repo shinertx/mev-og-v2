@@ -23,8 +23,8 @@ jobs:
           python-version: '3.11'
       - name: Install deps
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt mypy ruff
+          python3.11 -m pip install --upgrade pip
+          python3.11 -m pip install -r requirements.txt mypy ruff
       - name: Lint
         run: ruff check .
       - name: Type check
@@ -36,9 +36,9 @@ jobs:
       - name: DRP dry run
         run: bash scripts/export_state.sh --dry-run
       - name: Offline audit
-        run: python ai/audit_agent.py --mode=offline --logs logs/cross_domain_arb.json
+        run: python3.11 ai/audit_agent.py --mode=offline --logs logs/cross_domain_arb.json
       - name: Chaos drill
-        run: python infra/sim_harness/chaos_drill.py
+        run: python3.11 infra/sim_harness/chaos_drill.py
       - name: Tag canary
         run: |
           TAG="canary-${{ github.sha }}-$(date +%Y%m%d)"
@@ -50,9 +50,9 @@ jobs:
           pytest -v
           bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
           bash scripts/export_state.sh --dry-run
-          python ai/audit_agent.py --mode=offline --logs logs/cross_domain_arb.json
+          python3.11 ai/audit_agent.py --mode=offline --logs logs/cross_domain_arb.json
       - name: Check gates
-        run: python agents/check_gates.py
+        run: python3.11 agents/check_gates.py
       - name: Promote
         if: env.FOUNDER_TOKEN != ''
         run: echo "Founder approval received. Ready for production."

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 """Replay historical MEV transactions for benchmarking."""
 from __future__ import annotations
 

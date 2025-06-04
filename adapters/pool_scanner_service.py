@@ -24,7 +24,7 @@ GET /metrics     -- Prometheus metrics if ``ENABLE_METRICS=1``.
 
 Usage
 =====
-Run directly via ``python -m adapters.pool_scanner_service`` or build the
+Run directly via ``python3.11 -m adapters.pool_scanner_service`` or build the
 provided Dockerfile (see repo ``docker-compose.yml`` example service block).
 
 """
