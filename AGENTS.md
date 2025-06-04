@@ -3,6 +3,10 @@ Certainly! Below is the **fully augmented AGENTS.md**, enhanced with the missing
 
 This version is **safe to integrate without breaking current flows**, as it only adds explicit compliance, documentation, and enforcement clarity, **no logic or code changes**.
 
+**Python 3.11 Required**
+
+You must use Python 3.11 and activate your virtual environment before running any `python` or `pip` command.
+
 ---
 
 # AGENTS.md — Codex & LLM Instructions for MEV-OG
@@ -84,7 +88,7 @@ Every PR or batch/module must pass:
 * `foundry test` (or documented alternate if missing)
 * `scripts/simulate_fork.sh --target=strategies/<module>`
 * `scripts/export_state.sh --dry-run`
-* `python ai/audit_agent.py --mode=offline --logs logs/<module>.json`
+* `python3.11 ai/audit_agent.py --mode=offline --logs logs/<module>.json`
 
 ### Static Type Hygiene
 
@@ -109,7 +113,7 @@ Every PR or batch/module must pass:
 * Rollback:
   `bash scripts/rollback.sh --archive=<path>`
 * Mutation cycle:
-  `python ai/mutator/main.py --logs-dir logs`
+  `python3.11 ai/mutator/main.py --logs-dir logs`
 
 ### cross\_domain\_arb
 
@@ -120,7 +124,7 @@ Every PR or batch/module must pass:
 * Rollback:
   `bash scripts/rollback.sh --archive=<path>`
 * Mutation cycle:
-  `python ai/mutator/main.py --logs-dir logs`
+  `python3.11 ai/mutator/main.py --logs-dir logs`
 * Env vars:
   `CROSS_ARB_STATE_PRE`, `CROSS_ARB_STATE_POST`, `CROSS_ARB_TX_PRE`, `CROSS_ARB_TX_POST`, `CROSS_ARB_LOG`
 
@@ -133,7 +137,7 @@ Every PR or batch/module must pass:
 * Rollback:
   `bash scripts/rollback.sh --archive=<path>`
 * Mutation cycle:
-  `python ai/mutator/main.py --logs-dir logs`
+  `python3.11 ai/mutator/main.py --logs-dir logs`
 
 ### l3\_sequencer\_mev
 
@@ -144,7 +148,7 @@ Every PR or batch/module must pass:
 * Rollback:
   `bash scripts/rollback.sh --archive=<path>`
 * Mutation cycle:
-  `python ai/mutator/main.py --logs-dir logs`
+  `python3.11 ai/mutator/main.py --logs-dir logs`
 
 ### nft\_liquidation
 
@@ -155,12 +159,12 @@ Every PR or batch/module must pass:
 * Rollback:
   `bash scripts/rollback.sh --archive=<path>`
 * Mutation cycle:
-  `python ai/mutator/main.py --logs-dir logs`
+  `python3.11 ai/mutator/main.py --logs-dir logs`
 
 ### chaos_drill
 
 * Run harness:
-  `python infra/sim_harness/chaos_drill.py`
+  `python3.11 infra/sim_harness/chaos_drill.py`
 * Validate:
   `pytest tests/test_chaos_drill.py`
 * Results are written to `logs/chaos_drill.json` with per-adapter failure counts in `logs/drill_metrics.json`.
@@ -171,13 +175,13 @@ Every PR or batch/module must pass:
 * Run targeted adapter chaos tests:
   `pytest tests/test_adapters_chaos.py`
 * Manual simulation:
-  `python tests/test_adapters_chaos.py --simulate bridge_downtime`
+  `python3.11 tests/test_adapters_chaos.py --simulate bridge_downtime`
 * Expect `fallback_success` events in module logs and OpsAgent alerts for each failure.
 
 ### chaos_scheduler
 
 * Run scheduler:
-  `CHAOS_ONCE=1 python infra/sim_harness/chaos_scheduler.py`
+  `CHAOS_ONCE=1 python3.11 infra/sim_harness/chaos_scheduler.py`
 * Configure via ENV:
   `CHAOS_INTERVAL`, `CHAOS_ADAPTERS`, `CHAOS_MODES`, `CHAOS_SCHED_LOG`.
 * Scheduler logs to `logs/chaos_scheduler.json` and updates `logs/drill_metrics.json`.
@@ -185,7 +189,7 @@ Every PR or batch/module must pass:
 ### OpsAgent & CapitalLock Runbook
 
 * Start OpsAgent:
-  `python -m agents.ops_agent` (health checks configured in config)
+  `python3.11 -m agents.ops_agent` (health checks configured in config)
 * Use `scripts/batch_ops.py` to promote, pause, or rollback strategies.
 * CapitalLock state is shared via `agents.agent_registry` and unpaused **only when founder provides a valid `FOUNDER_TOKEN` and calls unlock with a unique `TRACE_ID`**.
 * Example strategy integration:
@@ -205,7 +209,7 @@ strat = Strategy(..., capital_lock=lock)
 * Rollback:
   `bash scripts/rollback.sh --archive=<path>`
 * Mutation cycle:
-  `python ai/mutator/main.py --logs-dir logs`
+  `python3.11 ai/mutator/main.py --logs-dir logs`
 
 ### Gas/Latency Runbook
 
@@ -215,7 +219,7 @@ strat = Strategy(..., capital_lock=lock)
 - Bundle latency is returned for metrics and log entry enrichment.
 ### Strategy Review & Pruning
 
-- Run `python -m core.strategy_scoreboard` or call `StrategyScoreboard.prune_and_score()` after each trading loop.
+- Run `python3.11 -m core.strategy_scoreboard` or call `StrategyScoreboard.prune_and_score()` after each trading loop.
 - Adapters for Dune Analytics, Whale Alert and Coinbase WebSocket are enabled via environment variables. Review `logs/scoreboard.json` for scores blended with external signals.
 - Multi-sig founder approval (`FOUNDER_TOKEN`) is required for pruning and promotion. Alerts and metrics are dispatched via `OpsAgent.notify` and Prometheus.
 - Every prune/promote/mutation event is recorded in `logs/mutation_log.json` using the current `TRACE_ID`.
@@ -225,10 +229,10 @@ strat = Strategy(..., capital_lock=lock)
 
 | Command | Purpose |
 |---------|---------|
-| `python ai/promote.py` | Promote tested strategies into the active set. Requires `FOUNDER_TOKEN` and `TRACE_ID`. |
-| `python scripts/batch_ops.py promote <strat>` | Batch promote one or more strategies. |
-| `python scripts/batch_ops.py pause <strat>` | Move a live strategy to the paused directory. |
-| `python scripts/batch_ops.py rollback <strat>` | Restore a strategy from audit logs. |
+| `python3.11 ai/promote.py` | Promote tested strategies into the active set. Requires `FOUNDER_TOKEN` and `TRACE_ID`. |
+| `python3.11 scripts/batch_ops.py promote <strat>` | Batch promote one or more strategies. |
+| `python3.11 scripts/batch_ops.py pause <strat>` | Move a live strategy to the paused directory. |
+| `python3.11 scripts/batch_ops.py rollback <strat>` | Restore a strategy from audit logs. |
 | `bash scripts/kill_switch.sh` | Toggle the global kill switch. |
 | `bash scripts/export_state.sh` | Export logs and state into `$EXPORT_DIR`. |
 | `bash scripts/rollback.sh --archive=<file>` | Restore from a DRP archive. |

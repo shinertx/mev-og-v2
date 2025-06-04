@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 """Automated chaos/disaster recovery drill harness."""
 
 from __future__ import annotations

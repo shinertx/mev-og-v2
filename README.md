@@ -9,6 +9,10 @@ MEV-OG is an AI-native, adversarial crypto trading system built to compound $5K 
 > NOTE: All operational law, workflow, and validation in this file derive from PROJECT_BIBLE.md.  
 > Any contradiction: PROJECT_BIBLE.md is the source of truth.
 
+**Python 3.11 Required**
+
+You must use Python 3.11 and activate your virtual environment before running any `python` or `pip` command.
+
 
 ## Table of Contents
 
@@ -115,13 +119,13 @@ Follow this sequence to operate MEV-OG locally.
    ```
 7. **Execute the mutation workflow**
    ```bash
-   python ai/mutator/main.py
+   python3.11 ai/mutator/main.py
    # or
    make mutate
    ```
 8. **Promote when checks pass**
    ```bash
-   python ai/promote.py
+   python3.11 ai/promote.py
    # or
    make promote
    ```
@@ -140,7 +144,7 @@ Follow this sequence to operate MEV-OG locally.
 
 Start the metrics endpoint with:
 ```bash
-python -m core.metrics --port $METRICS_PORT
+python3.11 -m core.metrics --port $METRICS_PORT
 ```
 and point Prometheus to `http://localhost:$METRICS_PORT/metrics` for monitoring.
 If `METRICS_TOKEN` is set, include `Authorization: Bearer $METRICS_TOKEN` in
@@ -273,11 +277,11 @@ the values used in tests and the simulation harness:
 
 ```bash
 # Start metrics server
-python -m core.metrics &
+python3.11 -m core.metrics &
 # Run fork simulation
 bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
 # Run mutation cycle (updates threshold)
-python ai/mutator/main.py --logs-dir logs
+python3.11 ai/mutator/main.py --logs-dir logs
 # Export DRP snapshot
 bash scripts/export_state.sh
 ```
@@ -304,11 +308,11 @@ All logs and DRP exports are sanitized with `make_json_safe()` so that every ent
 
 ```bash
 # Start metrics server
-python -m core.metrics --port $METRICS_PORT &
+python3.11 -m core.metrics --port $METRICS_PORT &
 # Run fork simulation
 bash scripts/simulate_fork.sh --target=strategies/cross_rollup_superbot
 # Run a mutation and audit cycle
-python ai/mutator/main.py --logs-dir logs
+python3.11 ai/mutator/main.py --logs-dir logs
 # Export DRP snapshot and rollback if needed
 bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
@@ -324,11 +328,11 @@ Paths default under `logs/` or `state/` unless overridden.
 
 ```bash
 # Start metrics server
-python -m core.metrics --port $METRICS_PORT &
+python3.11 -m core.metrics --port $METRICS_PORT &
 # Run fork simulation
 bash scripts/simulate_fork.sh --target=strategies/l3_app_rollup_mev
 # Run a mutation and audit cycle
-python ai/mutator/main.py --logs-dir logs
+python3.11 ai/mutator/main.py --logs-dir logs
 # Export DRP snapshot and rollback if needed
 bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
@@ -344,11 +348,11 @@ Paths default under `logs/` or `state/` unless overridden.
 
 ```bash
 # Start metrics server
-python -m core.metrics --port $METRICS_PORT &
+python3.11 -m core.metrics --port $METRICS_PORT &
 # Run fork simulation
 bash scripts/simulate_fork.sh --target=strategies/l3_sequencer_mev
 # Run a mutation and audit cycle
-python ai/mutator/main.py --logs-dir logs
+python3.11 ai/mutator/main.py --logs-dir logs
 # Export DRP snapshot and rollback if needed
 bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
@@ -364,11 +368,11 @@ Paths default under `logs/` or `state/` unless overridden.
 
 ```bash
 # Start metrics server
-python -m core.metrics --port $METRICS_PORT &
+python3.11 -m core.metrics --port $METRICS_PORT &
 # Run fork simulation
 bash scripts/simulate_fork.sh --target=strategies/nft_liquidation
 # Run a mutation and audit cycle
-python ai/mutator/main.py --logs-dir logs
+python3.11 ai/mutator/main.py --logs-dir logs
 # Export DRP snapshot and rollback if needed
 bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
@@ -384,11 +388,11 @@ Paths default under `logs/` or `state/` unless overridden.
 
 ```bash
 # Start metrics server
-python -m core.metrics --port $METRICS_PORT &
+python3.11 -m core.metrics --port $METRICS_PORT &
 # Run fork simulation
 bash scripts/simulate_fork.sh --target=strategies/rwa_settlement
 # Run a mutation and audit cycle
-python ai/mutator/main.py --logs-dir logs
+python3.11 ai/mutator/main.py --logs-dir logs
 # Export DRP snapshot and rollback if needed
 bash scripts/export_state.sh
 bash scripts/rollback.sh --archive=<exported-archive>
@@ -429,8 +433,8 @@ error log `logs/errors.log`. Metrics use the global `/metrics` endpoint.
 Run automated mutation cycles and promote only after all checks pass.
 
 ```bash
-python ai/mutator/main.py
-python ai/promote.py  # requires FOUNDER_TOKEN
+python3.11 ai/mutator/main.py
+python3.11 ai/promote.py  # requires FOUNDER_TOKEN
 ```
 
 main
@@ -478,7 +482,7 @@ the flag and log paths.
 Run the automated chaos/disaster recovery drill harness:
 
 ```bash
-python infra/sim_harness/chaos_drill.py
+python3.11 infra/sim_harness/chaos_drill.py
 ```
 
 This triggers the kill switch, pauses capital via OpsAgent, simulates a lost agent, and forces failure across every supported adapter (DEX, bridge, CEX, flashloan, intent, sequencer and node). After each event the drill exports state with `scripts/export_state.sh`, restores it with `scripts/rollback.sh`, and scans all logs/archives for secrets or PII. Any secret causes an immediate failure. Export archives are stored in `export/`, drill logs in `logs/chaos_drill.json`, and per-module failure counts in `logs/drill_metrics.json`.
@@ -500,7 +504,7 @@ pytest tests/test_adapters_chaos.py
 Manual simulation example:
 
 ```bash
-python tests/test_adapters_chaos.py --simulate bridge_downtime
+python3.11 tests/test_adapters_chaos.py --simulate bridge_downtime
 ```
 
 During a network outage the logs include entries like:
@@ -516,7 +520,7 @@ Metrics from the chaos run are written to `logs/drill_metrics.json` and OpsAgent
 Run scheduled chaos injections that randomly target adapters and failure modes:
 
 ```bash
-CHAOS_ONCE=1 python infra/sim_harness/chaos_scheduler.py
+CHAOS_ONCE=1 python3.11 infra/sim_harness/chaos_scheduler.py
 ```
 
 Set `CHAOS_INTERVAL` (seconds), `CHAOS_ADAPTERS`, and `CHAOS_MODES` to control frequency and scope. Scheduler logs to `logs/chaos_scheduler.json` and updates `logs/drill_metrics.json` on each run.
@@ -550,7 +554,7 @@ All bundle-based strategies share a common gas and latency tuning flow.
 Example:
 
 ```bash
-PRIORITY_FEE_GWEI=3 python -m core.orchestrator --config=config.yaml --dry-run
+PRIORITY_FEE_GWEI=3 python3.11 -m core.orchestrator --config=config.yaml --dry-run
 ```
 
 ## Strategy Orchestrator
@@ -559,8 +563,8 @@ PRIORITY_FEE_GWEI=3 python -m core.orchestrator --config=config.yaml --dry-run
 enforces kill switch, capital lock and founder approval on every iteration.
 
 ```bash
-python -m core.orchestrator --config=config.yaml --dry-run   # single cycle
-python -m core.orchestrator --config=config.yaml --live      # continuous
+python3.11 -m core.orchestrator --config=config.yaml --dry-run   # single cycle
+python3.11 -m core.orchestrator --config=config.yaml --live      # continuous
 ```
 
 Use `--health` to run only OpsAgent checks. Live mode requires
@@ -581,7 +585,7 @@ See the example call at the end of this README for a typical promotion command.
 Example usage:
 
 ```bash
-python scripts/batch_ops.py promote cross_rollup_superbot --source-dir staging --dest-dir active
+python3.11 scripts/batch_ops.py promote cross_rollup_superbot --source-dir staging --dest-dir active
 ```
 ## Strategy Review & Pruning
 
@@ -595,9 +599,9 @@ action logs to `logs/wallet_ops.json` and snapshots state via
 `scripts/export_state.sh` before and after execution.
 
 ```
-python scripts/wallet_ops.py fund --from 0xabc --to 0xdef --amount 1 --dry-run
-python scripts/wallet_ops.py withdraw-all --from 0xhot --to 0xbank
-python scripts/wallet_ops.py drain-to-cold --from 0xhot --to 0xcold
+python3.11 scripts/wallet_ops.py fund --from 0xabc --to 0xdef --amount 1 --dry-run
+python3.11 scripts/wallet_ops.py withdraw-all --from 0xhot --to 0xbank
+python3.11 scripts/wallet_ops.py drain-to-cold --from 0xhot --to 0xcold
 ```
 
 Set `FOUNDER_TOKEN` and export a unique `TRACE_ID` or confirm interactively
@@ -617,7 +621,7 @@ when prompted. On failure the script aborts and logs the error.
 Dry-run example:
 
 ```bash
-python ai/mutator/main.py --logs-dir logs --dry-run
+python3.11 ai/mutator/main.py --logs-dir logs --dry-run
 ```
 
 After verifying results, remove `--dry-run` and set `mode: live` in
@@ -628,8 +632,8 @@ After verifying results, remove `--dry-run` and set `mode: live` in
 Use `scripts/wallet_ops.py` to safely fund or drain wallets.
 
 ```bash
-python scripts/wallet_ops.py deposit 1.0   # fund 1 ETH
-python scripts/wallet_ops.py withdraw 0.5  # withdraw 0.5 ETH
+python3.11 scripts/wallet_ops.py deposit 1.0   # fund 1 ETH
+python3.11 scripts/wallet_ops.py withdraw 0.5  # withdraw 0.5 ETH
 ```
 
 Actions append to `logs/wallet_ops.log` for auditing.
@@ -641,16 +645,16 @@ Actions append to `logs/wallet_ops.log` for auditing.
 3. Copy `config.example.yaml` to `config.yaml`
 4. Run `pytest -v` and `foundry test`
 5. `bash scripts/simulate_fork.sh --target=strategies/<module>`
-6. `python ai/mutator/main.py --dry-run`
+6. `python3.11 ai/mutator/main.py --dry-run`
 7. Review `logs/errors.log` and DRP archive
-8. Set `FOUNDER_TOKEN` and export a `TRACE_ID` then run `python ai/mutator/main.py --mode live`
+8. Set `FOUNDER_TOKEN` and export a `TRACE_ID` then run `python3.11 ai/mutator/main.py --mode live`
 9. Check metrics at `http://localhost:$METRICS_PORT/metrics`
 10. Drain funds with `wallet_ops.py` if needed
 
 ## Troubleshooting / FAQ
 
 - **RPC failures:** confirm endpoints in `config.yaml` and ensure nodes are live.
-- **Metrics missing:** run `python -m core.metrics --port $METRICS_PORT`.
+- **Metrics missing:** run `python3.11 -m core.metrics --port $METRICS_PORT`.
 - **Promotion blocked:** ensure `FOUNDER_TOKEN` is valid, a `TRACE_ID` is set and read `logs/errors.log`.
 - **Rollback:** `bash scripts/rollback.sh --archive=<archive>`.
 

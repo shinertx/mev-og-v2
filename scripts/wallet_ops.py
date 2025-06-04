@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.11
 """Founder-gated wallet operations: fund, withdraw-all, drain-to-cold."""
 
 from __future__ import annotations

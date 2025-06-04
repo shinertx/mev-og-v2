@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.11
 """Batch operations for promoting, pausing, or rolling back strategies."""
 
 from __future__ import annotations
