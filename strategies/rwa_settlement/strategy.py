@@ -1,17 +1,25 @@
-"""Real-world asset (RWA) cross-venue settlement strategy.
-
-Module purpose and system role:
-    - Monitor tokenized asset prices across venues and settle when spreads exceed fees.
-
-Integration points and dependencies:
-    - :class:`core.oracles.rwa_feed.RWAFeed` for asset price and fee data.
-    - :class:`core.tx_engine.TransactionBuilder` and :class:`core.tx_engine.NonceManager` for replay defense.
-    - Kill switch utilities to halt operations.
-
-Simulation/test hooks and kill conditions:
-    - Validated via ``infra/sim_harness`` fork simulations.
-    - Circuit breaks if kill switch is active or prices are stale.
 """
+strategy_id: "BridgeArb_001"
+edge_type: "BridgeDelay"
+ttl_hours: 48
+triggers:
+  - bridge_delay_secs > 8
+  - price_gap_pct > 2
+"""
+
+# Real-world asset (RWA) cross-venue settlement strategy.
+#
+# Module purpose and system role:
+#     - Monitor tokenized asset prices across venues and settle when spreads exceed fees.
+#
+# Integration points and dependencies:
+#     - :class:`core.oracles.rwa_feed.RWAFeed` for asset price and fee data.
+#     - :class:`core.tx_engine.TransactionBuilder` and :class:`core.tx_engine.NonceManager` for replay defense.
+#     - Kill switch utilities to halt operations.
+#
+# Simulation/test hooks and kill conditions:
+#     - Validated via ``infra/sim_harness`` fork simulations.
+#     - Circuit breaks if kill switch is active or prices are stale.
 
 from __future__ import annotations
 
@@ -20,6 +28,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, TypedDict, cast
+import yaml
 
 from core.logger import StructuredLogger, log_error, make_json_safe
 from core import metrics
@@ -39,7 +48,8 @@ except Exception:  # pragma: no cover - optional
 
 LOG_FILE = Path(os.getenv("RWA_SETTLE_LOG", "logs/rwa_settlement.json"))
 LOG = StructuredLogger("rwa_settlement", log_file=str(LOG_FILE))
-STRATEGY_ID = "rwa_settlement"
+EDGE_SCHEMA: Dict[str, Any] = yaml.safe_load(__doc__ or "")
+STRATEGY_ID = EDGE_SCHEMA["strategy_id"]
 
 if Counter:
     arb_opportunities_found = Counter(
@@ -137,7 +147,7 @@ class RWASettlementMEV:
         LOG.log(
             "price",
             tx_id=tx_id,
-            strategy_id=STRATEGY_ID,
+            strategy_id=EDGE_SCHEMA["strategy_id"],
             mutation_id=os.getenv("MUTATION_ID", "dev"),
             risk_level="low",
             venue=venue,
@@ -193,11 +203,11 @@ class RWASettlementMEV:
             return str(result.get("bundleHash")), latency
         except Exception as exc:  # pragma: no cover - runtime
             latency = time.time() - start
-            log_error(STRATEGY_ID, f"bundle send: {exc}", event="bundle_fail")
+            log_error(EDGE_SCHEMA["strategy_id"], f"bundle send: {exc}", event="bundle_fail")
             tx_hash = self.tx_builder.send_transaction(
                 self.sample_tx,
                 self.executor,
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="low",
             )
@@ -211,10 +221,10 @@ class RWASettlementMEV:
     # ------------------------------------------------------------------
     def run_once(self) -> Optional[Opportunity]:
         if kill_switch_triggered():
-            record_kill_event(STRATEGY_ID)
+            record_kill_event(EDGE_SCHEMA["strategy_id"])
             LOG.log(
                 "killed",
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="high",
             )
@@ -225,7 +235,7 @@ class RWASettlementMEV:
             try:
                 data = self.feed.fetch(cfg.asset, cfg.venue)
             except Exception as exc:
-                log_error(STRATEGY_ID, str(exc), event="price_fetch", venue=cfg.venue)
+                log_error(EDGE_SCHEMA["strategy_id"], str(exc), event="price_fetch", venue=cfg.venue)
                 metrics.record_fail()
                 arb_error_count.inc()
                 return None
@@ -249,7 +259,7 @@ class RWASettlementMEV:
             if profit < min_gas_cost:
                 LOG.log(
                     "trade_abort",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                     reason="low_pnl",
@@ -262,7 +272,7 @@ class RWASettlementMEV:
             if est_slippage > slip_tol:
                 LOG.log(
                     "trade_abort",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="medium",
                     reason="slippage",
@@ -276,12 +286,12 @@ class RWASettlementMEV:
                 msg = "capital lock: trade not allowed"
                 LOG.log(
                     "capital_lock",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="high",
                     error=msg,
                 )
-                log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
+                log_error(EDGE_SCHEMA["strategy_id"], msg, event="capital_lock", risk_level="high")
                 return None
 
             pre = os.getenv("RWA_STATE_PRE", "state/rwa_pre.json")
@@ -324,14 +334,14 @@ class RWASettlementMEV:
                 self.threshold = float(params["threshold"])
                 LOG.log(
                     "mutate",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                     param="threshold",
                     value=self.threshold,
                 )
             except Exception as exc:
-                log_error(STRATEGY_ID, f"mutate threshold: {exc}", event="mutate_error")
+                log_error(EDGE_SCHEMA["strategy_id"], f"mutate threshold: {exc}", event="mutate_error")
 
 
 async def run(
@@ -355,7 +365,7 @@ async def run(
     latency = time.monotonic() - start
     LOG.log(
         "run_latency",
-        strategy_id=STRATEGY_ID,
+        strategy_id=EDGE_SCHEMA["strategy_id"],
         mutation_id=os.getenv("MUTATION_ID", "dev"),
         risk_level="low",
         latency=latency,
