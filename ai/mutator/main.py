@@ -106,7 +106,14 @@ class MutationRunner:
         (self.logs_dir / "errors.log").touch(exist_ok=True)
         metrics = self._collect_metrics()
         mutator = Mutator(metrics)
-        result = mutator.run()
+        block_number = int(os.getenv("BLOCK_NUMBER", "0"))
+        chain_id = int(os.getenv("CHAIN_ID", "0"))
+        test_mode = os.getenv("TEST_MODE") == "1"
+        result = mutator.run(
+            block_number=block_number,
+            chain_id=chain_id,
+            test_mode=test_mode,
+        )
 
         log_paths = [str(p) for p in self.logs_dir.glob("*.json") if p.name != "errors.log"]
         audit_summary = self.audit_agent.run_audit(log_paths)

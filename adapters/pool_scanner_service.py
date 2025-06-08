@@ -34,6 +34,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from pathlib import Path
 from typing import Any, Dict, List
 
 try:
@@ -231,12 +232,34 @@ def create_app() -> Flask:
     return app
 
 
-def run() -> None:
+def run(
+    block_number: int | None = None,
+    chain_id: int | None = None,
+    test_mode: bool = False,
+) -> None:
     app = create_app()
     port = DEFAULT_PORT
     LOGGER.log("start", port=port)
+    if test_mode:
+        out_dir = Path("telemetry/strategies")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / "pool_scanner_service.json"
+        with out_path.open("w") as fh:
+            json.dump(
+                {
+                    "block_number": block_number,
+                    "chain_id": chain_id,
+                    "port": port,
+                },
+                fh,
+                indent=2,
+            )
+        return
     app.run(host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":  # pragma: no cover - manual run
-    run()
+    bn = int(os.getenv("BLOCK_NUMBER", "0"))
+    cid = int(os.getenv("CHAIN_ID", "0"))
+    tm = os.getenv("TEST_MODE") == "1"
+    run(block_number=bn, chain_id=cid, test_mode=tm)
