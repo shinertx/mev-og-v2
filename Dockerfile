@@ -27,4 +27,6 @@ COPY . .
 
 USER mevog
 # Default command can be overridden at runtime
-CMD ["python", "-m", "core.orchestrator", "--config=config.yaml", "--dry-run"]
+COPY scripts/start_with_metrics.sh scripts/start_with_metrics.sh
+
+CMD ["/bin/bash", "scripts/start_with_metrics.sh", "--dry-run"]
