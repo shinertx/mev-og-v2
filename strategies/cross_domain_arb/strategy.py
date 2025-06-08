@@ -1,20 +1,27 @@
-"""Cross-domain ETH/USDC price arbitrage detection strategy.
+"""
+strategy_id: "BridgeArb_001"
+edge_type: "BridgeDelay"
+ttl_hours: 48
+triggers:
+  - bridge_delay_secs > 8
+  - price_gap_pct > 2
+"""
 
 # mypy: ignore-errors
-
-Module purpose and system role:
-    - Scan Ethereum, Arbitrum, and Optimism Uniswap V3 pools for price
-      discrepancies.
-    - Log actionable arbitrage signals with DRP snapshot/restore support.
-
-Integration points and dependencies:
-    - Utilizes :class:`core.oracles.uniswap_feed.UniswapV3Feed` for price data.
-    - Relies on kill switch utilities and TransactionBuilder for execution.
-
-Simulation/test hooks and kill conditions:
-    - Designed for forked-mainnet simulation via infra/sim_harness.
-    - Aborts operation if kill switch is triggered.
-"""
+# Cross-domain ETH/USDC price arbitrage detection strategy.
+#
+# Module purpose and system role:
+#     - Scan Ethereum, Arbitrum, and Optimism Uniswap V3 pools for price
+#       discrepancies.
+#     - Log actionable arbitrage signals with DRP snapshot/restore support.
+#
+# Integration points and dependencies:
+#     - Utilizes :class:`core.oracles.uniswap_feed.UniswapV3Feed` for price data.
+#     - Relies on kill switch utilities and TransactionBuilder for execution.
+#
+# Simulation/test hooks and kill conditions:
+#     - Designed for forked-mainnet simulation via infra/sim_harness.
+#     - Aborts operation if kill switch is triggered.
 
 from __future__ import annotations
 
@@ -37,6 +44,7 @@ except Exception:  # pragma: no cover - allow missing dependency
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager, get_shared_nonce_manager
 from core.logger import StructuredLogger, log_error, make_json_safe
+import yaml
 from core import metrics
 from agents.capital_lock import CapitalLock
 from core.strategy_base import BaseStrategy
@@ -65,7 +73,8 @@ LOG_FILE = Path(os.getenv("CROSS_ARB_LOG", "logs/cross_domain_arb.json"))
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(level=logging.INFO)
 
-STRATEGY_ID = "cross_domain_arb"
+EDGE_SCHEMA: Dict[str, Any] = yaml.safe_load(__doc__ or "")
+STRATEGY_ID = EDGE_SCHEMA["strategy_id"]
 
 LOG = StructuredLogger("cross_domain_arb", log_file=str(LOG_FILE))
 
@@ -123,7 +132,7 @@ def start_metrics_server(port: int = 8000) -> None:
 
 
 def _log(event: str, **entry: object) -> None:
-    LOG.log(event, strategy_id=STRATEGY_ID, mutation_id=os.getenv("MUTATION_ID", "dev"), risk_level="low", **entry)
+    LOG.log(event, strategy_id=EDGE_SCHEMA["strategy_id"], mutation_id=os.getenv("MUTATION_ID", "dev"), risk_level="low", **entry)
 
 
 def _send_alert(payload: Dict[str, object]) -> None:
@@ -136,7 +145,7 @@ def _send_alert(payload: Dict[str, object]) -> None:
         metrics.record_alert()
     except Exception as exc:  # pragma: no cover - network
         logging.warning("webhook failed: %s", exc)
-        log_error(STRATEGY_ID, f"webhook failed: {exc}", event="webhook_fail")
+        log_error(EDGE_SCHEMA["strategy_id"], f"webhook failed: {exc}", event="webhook_fail")
 
 
 @dataclass
@@ -234,7 +243,7 @@ class CrossDomainArb(BaseStrategy):
                     "new_pool",
                     pool=info.pool,
                     domain=info.domain,
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                 )
@@ -245,7 +254,7 @@ class CrossDomainArb(BaseStrategy):
                     "new_l3_pool",
                     pool=info.pool,
                     domain=info.domain,
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                 )
@@ -260,7 +269,7 @@ class CrossDomainArb(BaseStrategy):
                         "add_social_pool",
                         pool=pool,
                         domain=dom,
-                        strategy_id=STRATEGY_ID,
+                        strategy_id=EDGE_SCHEMA["strategy_id"],
                         mutation_id=os.getenv("MUTATION_ID", "dev"),
                         risk_level="low",
                     )
@@ -283,19 +292,19 @@ class CrossDomainArb(BaseStrategy):
                 front = self.tx_builder.send_transaction(
                     self.sample_tx,
                     self.executor,
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                 )
                 back = self.tx_builder.send_transaction(
                     self.sample_tx,
                     self.executor,
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                 )
             except Exception as exc:
-                log_error(STRATEGY_ID, f"sandwich tx fail: {exc}", event="sandwich_fail")
+                log_error(EDGE_SCHEMA["strategy_id"], f"sandwich tx fail: {exc}", event="sandwich_fail")
                 metrics.record_fail()
                 arb_error_count.inc()
                 return False
@@ -307,7 +316,7 @@ class CrossDomainArb(BaseStrategy):
                 tx_id=str(front),
                 related=str(back),
                 bridge_tx=str(tx.get("hash")),
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="low",
             )
@@ -325,7 +334,7 @@ class CrossDomainArb(BaseStrategy):
             try:
                 intents: List[IntentData] = self.intent_feed.fetch_intents(domain)
             except Exception as exc:
-                log_error(STRATEGY_ID, f"intent fetch: {exc}", event="intent_fetch", domain=domain)
+                log_error(EDGE_SCHEMA["strategy_id"], f"intent fetch: {exc}", event="intent_fetch", domain=domain)
                 continue
             for intent in intents:
                 dest = classify_intent(intent.__dict__)
@@ -334,7 +343,7 @@ class CrossDomainArb(BaseStrategy):
                     intent_id=intent.intent_id,
                     predicted=dest,
                     domain=domain,
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                 )
@@ -352,12 +361,12 @@ class CrossDomainArb(BaseStrategy):
                 token=token,
                 amount=amount,
                 result=str(res),
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="low",
             )
         except Exception as exc:
-            log_error(STRATEGY_ID, f"flashloan: {exc}", event="flashloan_fail")
+            log_error(EDGE_SCHEMA["strategy_id"], f"flashloan: {exc}", event="flashloan_fail")
 
     # ------------------------------------------------------------------
     def _maybe_ghost(self) -> None:
@@ -384,7 +393,7 @@ class CrossDomainArb(BaseStrategy):
                 size=size,
                 asset=asset,
                 status="ok",
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="low",
             )
@@ -392,7 +401,7 @@ class CrossDomainArb(BaseStrategy):
             LOG.log(
                 "hedge_fail",
                 error=str(exc),
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="low",
             )
@@ -412,7 +421,7 @@ class CrossDomainArb(BaseStrategy):
                         "stealth_mode",
                         reason="GAS_COST_OVERRIDE high",
                         active=False,
-                        strategy_id=STRATEGY_ID,
+                        strategy_id=EDGE_SCHEMA["strategy_id"],
                         mutation_id=os.getenv("MUTATION_ID", "dev"),
                         risk_level="low",
                     )
@@ -428,7 +437,7 @@ class CrossDomainArb(BaseStrategy):
                 "stealth_mode",
                 reason="low_alpha or high_gas",
                 active=False,
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="low",
             )
@@ -467,10 +476,10 @@ class CrossDomainArb(BaseStrategy):
     def _validate_price_data(self, data: PriceData) -> bool:
         """Ensure price feed schema and freshness are valid."""
         if not isinstance(data.price, (int, float)):
-            log_error(STRATEGY_ID, "invalid price type", event="feed_schema")
+            log_error(EDGE_SCHEMA["strategy_id"], "invalid price type", event="feed_schema")
             return False
         if data.block_age > int(os.getenv("PRICE_FRESHNESS_SEC", "30")):
-            log_error(STRATEGY_ID, "stale price detected", event="stale_price")
+            log_error(EDGE_SCHEMA["strategy_id"], "stale price detected", event="stale_price")
             return False
         return True
 
@@ -504,10 +513,10 @@ class CrossDomainArb(BaseStrategy):
         if self.disabled:
             return None
         if kill_switch_triggered():
-            record_kill_event(STRATEGY_ID)
+            record_kill_event(EDGE_SCHEMA["strategy_id"])
             LOG.log(
                 "killed",
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="high",
             )
@@ -524,7 +533,7 @@ class CrossDomainArb(BaseStrategy):
             LOG.log(
                 "node_selected",
                 node=node,
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="low",
             )
@@ -535,7 +544,7 @@ class CrossDomainArb(BaseStrategy):
                 data = self.feed.fetch_price(cfg.pool, cfg.domain)
             except Exception as exc:  # pragma: no cover - dependency errors
                 logging.warning("price fetch failed: %s", exc)
-                log_error(STRATEGY_ID, str(exc), event="price_fetch")
+                log_error(EDGE_SCHEMA["strategy_id"], str(exc), event="price_fetch")
                 metrics.record_fail()
                 arb_error_count.inc()
                 return None
@@ -549,7 +558,7 @@ class CrossDomainArb(BaseStrategy):
 
         if any(d.block_age > int(os.getenv("PRICE_FRESHNESS_SEC", "30")) for d in price_data.values()):
             logging.warning("stale price detected")
-            log_error(STRATEGY_ID, "stale price detected", event="stale_price")
+            log_error(EDGE_SCHEMA["strategy_id"], "stale price detected", event="stale_price")
             metrics.record_fail()
             arb_error_count.inc()
             return None
@@ -571,7 +580,7 @@ class CrossDomainArb(BaseStrategy):
             if profit < min_gas_cost:
                 LOG.log(
                     "trade_abort",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                     reason="low_pnl",
@@ -584,7 +593,7 @@ class CrossDomainArb(BaseStrategy):
             if est_slippage > slip_tol:
                 LOG.log(
                     "trade_abort",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="medium",
                     reason="slippage",
@@ -597,10 +606,10 @@ class CrossDomainArb(BaseStrategy):
             self.hedge_risk(profit, "ETH")
             if not self.capital_lock.trade_allowed():
                 msg = "capital lock: trade not allowed"
-                log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
+                log_error(EDGE_SCHEMA["strategy_id"], msg, event="capital_lock", risk_level="high")
                 LOG.log(
                     "capital_lock",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="high",
                     error=msg,
@@ -626,7 +635,7 @@ class CrossDomainArb(BaseStrategy):
             tx_hash = self.tx_builder.send_transaction(
                 self.sample_tx,
                 self.executor,
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="low",
             )
@@ -676,7 +685,7 @@ class CrossDomainArb(BaseStrategy):
                 self.threshold = float(params["threshold"])
                 LOG.log(
                     "mutate",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                     param="threshold",
@@ -684,13 +693,13 @@ class CrossDomainArb(BaseStrategy):
                 )
                 log_mutation(
                     "param_mutation",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     param="threshold",
                     before=old,
                     after=self.threshold,
                 )
             except Exception as exc:  # pragma: no cover - input validation
-                log_error(STRATEGY_ID, f"mutate threshold: {exc}", event="mutate_error")
+                log_error(EDGE_SCHEMA["strategy_id"], f"mutate threshold: {exc}", event="mutate_error")
 
 
 async def run(
@@ -728,7 +737,7 @@ async def run(
             strategy.run_once()
             errors = 0
         except Exception as exc:  # pragma: no cover - runtime error
-            log_error(STRATEGY_ID, str(exc), event="run_error")
+            log_error(EDGE_SCHEMA["strategy_id"], str(exc), event="run_error")
             arb_error_count.inc()
             errors += 1
         latency = time.monotonic() - start
@@ -739,7 +748,7 @@ async def run(
 
         LOG.log(
             "run_latency",
-            strategy_id=STRATEGY_ID,
+            strategy_id=EDGE_SCHEMA["strategy_id"],
             mutation_id=os.getenv("MUTATION_ID", "dev"),
             risk_level="low",
             latency=latency,
@@ -749,7 +758,7 @@ async def run(
         )
 
         if avg_latency > latency_threshold or errors > error_limit:
-            record_kill_event(STRATEGY_ID)
+            record_kill_event(EDGE_SCHEMA["strategy_id"])
             sys.exit(137)
         if test_mode:
             break

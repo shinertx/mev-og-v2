@@ -1,18 +1,26 @@
-"""L3 Sequencer builder/sequencer MEV strategy.
-
-Module purpose and system role:
-    - Monitor L3 rollup pools for sandwich and time-band opportunities.
-    - Detect reorg windows and execute reorg arbitrage when profitable.
-
-Integration points and dependencies:
-    - :class:`core.oracles.uniswap_feed.UniswapV3Feed` for pricing data.
-    - :class:`core.tx_engine.TransactionBuilder` and :class:`core.tx_engine.NonceManager` for dispatch and replay defense.
-    - Kill switch utilities for halting execution on demand.
-
-Simulation/test hooks and kill conditions:
-    - Designed for forked-mainnet simulation with ``infra/sim_harness``.
-    - Aborts immediately if the kill switch is triggered or data is stale.
 """
+strategy_id: "BridgeArb_001"
+edge_type: "BridgeDelay"
+ttl_hours: 48
+triggers:
+  - bridge_delay_secs > 8
+  - price_gap_pct > 2
+"""
+
+# L3 Sequencer builder/sequencer MEV strategy.
+#
+# Module purpose and system role:
+#     - Monitor L3 rollup pools for sandwich and time-band opportunities.
+#     - Detect reorg windows and execute reorg arbitrage when profitable.
+#
+# Integration points and dependencies:
+#     - :class:`core.oracles.uniswap_feed.UniswapV3Feed` for pricing data.
+#     - :class:`core.tx_engine.TransactionBuilder` and :class:`core.tx_engine.NonceManager` for dispatch and replay defense.
+#     - Kill switch utilities for halting execution on demand.
+#
+# Simulation/test hooks and kill conditions:
+#     - Designed for forked-mainnet simulation with ``infra/sim_harness``.
+#     - Aborts immediately if the kill switch is triggered or data is stale.
 
 from __future__ import annotations
 
@@ -21,6 +29,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, TypedDict, cast
+import yaml
 import time
 try:
     from prometheus_client import Counter, Histogram, start_http_server
@@ -40,7 +49,8 @@ from agents.capital_lock import CapitalLock
 
 LOG_FILE = Path(os.getenv("L3_SEQ_LOG", "logs/l3_sequencer_mev.json"))
 LOG = StructuredLogger("l3_sequencer_mev", log_file=str(LOG_FILE))
-STRATEGY_ID = "l3_sequencer_mev"
+EDGE_SCHEMA: Dict[str, Any] = yaml.safe_load(__doc__ or "")
+STRATEGY_ID = EDGE_SCHEMA["strategy_id"]
 
 if Counter:
     arb_opportunities_found = Counter(
@@ -159,7 +169,7 @@ class L3SequencerMEV:
         LOG.log(
             "price",
             tx_id=tx_id,
-            strategy_id=STRATEGY_ID,
+            strategy_id=EDGE_SCHEMA["strategy_id"],
             mutation_id=os.getenv("MUTATION_ID", "dev"),
             risk_level="low",
             domain=domain,
@@ -233,11 +243,11 @@ class L3SequencerMEV:
             return str(result.get("bundleHash")), latency
         except Exception as exc:  # pragma: no cover - runtime
             latency = time.time() - start
-            log_error(STRATEGY_ID, f"bundle send: {exc}", event="bundle_fail")
+            log_error(EDGE_SCHEMA["strategy_id"], f"bundle send: {exc}", event="bundle_fail")
             tx_hash = self.tx_builder.send_transaction(
                 self.sample_tx,
                 self.executor,
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="low",
             )
@@ -251,10 +261,10 @@ class L3SequencerMEV:
     # ------------------------------------------------------------------
     def run_once(self) -> Optional[Opportunity]:
         if kill_switch_triggered():
-            record_kill_event(STRATEGY_ID)
+            record_kill_event(EDGE_SCHEMA["strategy_id"])
             LOG.log(
                 "killed",
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="high",
             )
@@ -267,7 +277,7 @@ class L3SequencerMEV:
             try:
                 data = self.feed.fetch_price(cfg.pool, cfg.domain)
             except Exception as exc:
-                log_error(STRATEGY_ID, str(exc), event="price_fetch", domain=cfg.domain)
+                log_error(EDGE_SCHEMA["strategy_id"], str(exc), event="price_fetch", domain=cfg.domain)
                 metrics.record_fail()
                 arb_error_count.inc()
                 return None
@@ -281,7 +291,7 @@ class L3SequencerMEV:
             return None
 
         if any(d.block_age > int(os.getenv("PRICE_FRESHNESS_SEC", "30")) for d in price_data.values()):
-            log_error(STRATEGY_ID, "stale price detected", event="stale_price")
+            log_error(EDGE_SCHEMA["strategy_id"], "stale price detected", event="stale_price")
             metrics.record_fail()
             arb_error_count.inc()
             return None
@@ -299,7 +309,7 @@ class L3SequencerMEV:
             if profit < min_gas_cost:
                 LOG.log(
                     "trade_abort",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                     reason="low_pnl",
@@ -313,7 +323,7 @@ class L3SequencerMEV:
             if est_slippage > slip_tol:
                 LOG.log(
                     "trade_abort",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="medium",
                     reason="slippage",
@@ -328,12 +338,12 @@ class L3SequencerMEV:
                 msg = "capital lock: trade not allowed"
                 LOG.log(
                     "capital_lock",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="high",
                     error=msg,
                 )
-                log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
+                log_error(EDGE_SCHEMA["strategy_id"], msg, event="capital_lock", risk_level="high")
                 self.last_block = block
                 return None
 
@@ -377,40 +387,40 @@ class L3SequencerMEV:
                 self.threshold = float(params["threshold"])
                 LOG.log(
                     "mutate",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                     param="threshold",
                     value=self.threshold,
                 )
             except Exception as exc:
-                log_error(STRATEGY_ID, f"mutate threshold: {exc}", event="mutate_error")
+                log_error(EDGE_SCHEMA["strategy_id"], f"mutate threshold: {exc}", event="mutate_error")
         if "time_band_sec" in params:
             try:
                 self.time_band_sec = int(params["time_band_sec"])
                 LOG.log(
                     "mutate",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                     param="time_band_sec",
                     value=self.time_band_sec,
                 )
             except Exception as exc:
-                log_error(STRATEGY_ID, f"mutate time_band_sec: {exc}", event="mutate_error")
+                log_error(EDGE_SCHEMA["strategy_id"], f"mutate time_band_sec: {exc}", event="mutate_error")
         if "reorg_window" in params:
             try:
                 self.reorg_window = int(params["reorg_window"])
                 LOG.log(
                     "mutate",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                     param="reorg_window",
                     value=self.reorg_window,
                 )
             except Exception as exc:
-                log_error(STRATEGY_ID, f"mutate reorg_window: {exc}", event="mutate_error")
+                log_error(EDGE_SCHEMA["strategy_id"], f"mutate reorg_window: {exc}", event="mutate_error")
 
 
 async def run(
@@ -434,7 +444,7 @@ async def run(
     latency = time.monotonic() - start
     LOG.log(
         "run_latency",
-        strategy_id=STRATEGY_ID,
+        strategy_id=EDGE_SCHEMA["strategy_id"],
         mutation_id=os.getenv("MUTATION_ID", "dev"),
         risk_level="low",
         latency=latency,

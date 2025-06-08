@@ -1,26 +1,34 @@
-"""Cross-rollup MEV execution bot with DRP and mutation hooks.
-
-This strategy scans specified Uniswap V3 pools across Ethereum and major L2s
-for price discrepancies. It factors in gas and bridge costs to identify
-arbitrage or sandwich opportunities and submits bundles via
-:class:`~core.tx_engine.builder.TransactionBuilder`.
-
-Module purpose and system role:
-    - Monitor cross-domain prices and bridge costs.
-    - Simulate bundle execution (Flashbots/SUAVE placeholder).
-    - Record structured logs, metrics, and DRP snapshots.
-
-Integration points and dependencies:
-    - Uses :class:`core.oracles.uniswap_feed.UniswapV3Feed` for pricing.
-    - Relies on :class:`core.tx_engine.TransactionBuilder` and
-      :class:`core.tx_engine.NonceManager` for transaction dispatch.
-    - Kill switch utilities abort operation when triggered.
-
-Simulation/test hooks and kill conditions:
-    - Designed for forked-mainnet simulation via ``infra/sim_harness``.
-    - Automatically blacklists pools after repeated failures.
-    - Aborts on kill switch activation or stale data.
 """
+strategy_id: "BridgeArb_001"
+edge_type: "BridgeDelay"
+ttl_hours: 48
+triggers:
+  - bridge_delay_secs > 8
+  - price_gap_pct > 2
+"""
+
+# Cross-rollup MEV execution bot with DRP and mutation hooks.
+#
+# This strategy scans specified Uniswap V3 pools across Ethereum and major L2s
+# for price discrepancies. It factors in gas and bridge costs to identify
+# arbitrage or sandwich opportunities and submits bundles via
+# :class:`~core.tx_engine.builder.TransactionBuilder`.
+#
+# Module purpose and system role:
+#     - Monitor cross-domain prices and bridge costs.
+#     - Simulate bundle execution (Flashbots/SUAVE placeholder).
+#     - Record structured logs, metrics, and DRP snapshots.
+#
+# Integration points and dependencies:
+#     - Uses :class:`core.oracles.uniswap_feed.UniswapV3Feed` for pricing.
+#     - Relies on :class:`core.tx_engine.TransactionBuilder` and
+#       :class:`core.tx_engine.NonceManager` for transaction dispatch.
+#     - Kill switch utilities abort operation when triggered.
+#
+# Simulation/test hooks and kill conditions:
+#     - Designed for forked-mainnet simulation via ``infra/sim_harness``.
+#     - Automatically blacklists pools after repeated failures.
+#     - Aborts on kill switch activation or stale data.
 
 from __future__ import annotations
 
@@ -29,6 +37,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, TypedDict, cast
+import yaml
 
 from core.logger import StructuredLogger, log_error, make_json_safe
 from core import metrics
@@ -48,7 +57,8 @@ except Exception:  # pragma: no cover - optional
 
 LOG_FILE = Path(os.getenv("CROSS_ROLLUP_LOG", "logs/cross_rollup_superbot.json"))
 LOG = StructuredLogger("cross_rollup_superbot", log_file=str(LOG_FILE))
-STRATEGY_ID = "cross_rollup_superbot"
+EDGE_SCHEMA: Dict[str, Any] = yaml.safe_load(__doc__ or "")
+STRATEGY_ID = EDGE_SCHEMA["strategy_id"]
 
 if Counter:
     arb_opportunities_found = Counter(
@@ -166,7 +176,7 @@ class CrossRollupSuperbot:
         LOG.log(
             "price",
             tx_id=tx_id,
-            strategy_id=STRATEGY_ID,
+            strategy_id=EDGE_SCHEMA["strategy_id"],
             mutation_id=os.getenv("MUTATION_ID", "dev"),
             risk_level="low",
             domain=domain,
@@ -245,11 +255,11 @@ class CrossRollupSuperbot:
             return str(result.get("bundleHash")), latency
         except Exception as exc:  # pragma: no cover - runtime
             latency = time.time() - start
-            log_error(STRATEGY_ID, f"bundle send: {exc}", event="bundle_fail")
+            log_error(EDGE_SCHEMA["strategy_id"], f"bundle send: {exc}", event="bundle_fail")
             tx_hash = self.tx_builder.send_transaction(
                 self.sample_tx,
                 self.executor,
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="low",
             )
@@ -263,10 +273,10 @@ class CrossRollupSuperbot:
     # ------------------------------------------------------------------
     def run_once(self) -> Optional[Opportunity]:
         if kill_switch_triggered():
-            record_kill_event(STRATEGY_ID)
+            record_kill_event(EDGE_SCHEMA["strategy_id"])
             LOG.log(
                 "killed",
-                strategy_id=STRATEGY_ID,
+                strategy_id=EDGE_SCHEMA["strategy_id"],
                 mutation_id=os.getenv("MUTATION_ID", "dev"),
                 risk_level="high",
             )
@@ -279,7 +289,7 @@ class CrossRollupSuperbot:
             try:
                 data = self.feed.fetch_price(cfg.pool, cfg.domain)
             except Exception as exc:
-                log_error(STRATEGY_ID, str(exc), event="price_fetch", domain=cfg.domain)
+                log_error(EDGE_SCHEMA["strategy_id"], str(exc), event="price_fetch", domain=cfg.domain)
                 self.failed_pools[label] = self.failed_pools.get(label, 0) + 1
                 metrics.record_fail()
                 arb_error_count.inc()
@@ -292,7 +302,7 @@ class CrossRollupSuperbot:
             return None
 
         if any(d.block_age > int(os.getenv("PRICE_FRESHNESS_SEC", "30")) for d in price_data.values()):
-            log_error(STRATEGY_ID, "stale price detected", event="stale_price")
+            log_error(EDGE_SCHEMA["strategy_id"], "stale price detected", event="stale_price")
             metrics.record_fail()
             arb_error_count.inc()
             return None
@@ -310,7 +320,7 @@ class CrossRollupSuperbot:
             if profit < min_gas_cost:
                 LOG.log(
                     "trade_abort",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                     reason="low_pnl",
@@ -323,7 +333,7 @@ class CrossRollupSuperbot:
             if est_slippage > slip_tol:
                 LOG.log(
                     "trade_abort",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="medium",
                     reason="slippage",
@@ -337,12 +347,12 @@ class CrossRollupSuperbot:
                 msg = "capital lock: trade not allowed"
                 LOG.log(
                     "capital_lock",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="high",
                     error=msg,
                 )
-                log_error(STRATEGY_ID, msg, event="capital_lock", risk_level="high")
+                log_error(EDGE_SCHEMA["strategy_id"], msg, event="capital_lock", risk_level="high")
                 return None
 
             pre = os.getenv("SUPERBOT_STATE_PRE", "state/superbot_pre.json")
@@ -385,14 +395,14 @@ class CrossRollupSuperbot:
                 self.threshold = float(params["threshold"])
                 LOG.log(
                     "mutate",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                     param="threshold",
                     value=self.threshold,
                 )
             except Exception as exc:
-                log_error(STRATEGY_ID, f"mutate threshold: {exc}", event="mutate_error")
+                log_error(EDGE_SCHEMA["strategy_id"], f"mutate threshold: {exc}", event="mutate_error")
         if "bridge_costs" in params:
             try:
                 for k, v in params["bridge_costs"].items():
@@ -400,13 +410,13 @@ class CrossRollupSuperbot:
                     self.bridge_costs[pair] = BridgeConfig(**v)
                 LOG.log(
                     "mutate",
-                    strategy_id=STRATEGY_ID,
+                    strategy_id=EDGE_SCHEMA["strategy_id"],
                     mutation_id=os.getenv("MUTATION_ID", "dev"),
                     risk_level="low",
                     param="bridge_costs",
                 )
             except Exception as exc:
-                log_error(STRATEGY_ID, f"mutate bridge_costs: {exc}", event="mutate_error")
+                log_error(EDGE_SCHEMA["strategy_id"], f"mutate bridge_costs: {exc}", event="mutate_error")
 
 
 async def run(
@@ -430,7 +440,7 @@ async def run(
     latency = time.monotonic() - start
     LOG.log(
         "run_latency",
-        strategy_id=STRATEGY_ID,
+        strategy_id=EDGE_SCHEMA["strategy_id"],
         mutation_id=os.getenv("MUTATION_ID", "dev"),
         risk_level="low",
         latency=latency,
