@@ -65,6 +65,17 @@ This file is the single source of truth for mutation, validation, and integratio
   * Explicit founder gating, logged and archived in CI with a `TRACE_ID`
 * All mutation and promotion events **must be traceable by unique IDs (`TRACE_ID`) in logs and CI artifacts**.
 
+#### Ensemble Agent Quorum Voting
+
+The orchestrator consults four ensemble agents before any promotion:
+
+1. `Codex_v1`
+2. `Codex_v2`
+3. `ClaudeSim`
+4. `InternalDRL`
+
+Each agent issues an approval or rejection vote. At least **three of the four agents must approve** for the promotion to proceed. Vote results are stored in `telemetry/ai_votes/` as `vote_<TRACE_ID>_<agent>.json` with the agent name, decision, timestamp and diff hash. **The orchestrator must reject any promotion attempt lacking this quorum.**
+
 ---
 
 ## FOLDER CONVENTIONS
