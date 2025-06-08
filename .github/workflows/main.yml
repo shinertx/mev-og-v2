@@ -31,6 +31,13 @@ jobs:
         run: mypy --strict .
       - name: Run tests
         run: pytest -v
+      - name: Metrics endpoint
+        run: |
+          python3.11 -m core.metrics --port 8001 &
+          PID=$!
+          sleep 2
+          curl -f http://localhost:8001/metrics
+          kill $PID
       - name: Fork simulation
         run: bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
       - name: DRP dry run
