@@ -322,3 +322,40 @@ class CrossRollupSuperbot:
             except Exception as exc:
                 log_error(STRATEGY_ID, f"mutate bridge_costs: {exc}", event="mutate_error")
 
+
+async def run(
+    block_number: int | None = None,
+    chain_id: int | None = None,
+    test_mode: bool = False,
+    **kwargs: Any,
+) -> None:
+    """Execute :meth:`CrossRollupSuperbot.run_once` with latency tracking."""
+
+    if block_number is not None:
+        os.environ["BLOCK_NUMBER"] = str(block_number)
+    if chain_id is not None:
+        os.environ["CHAIN_ID"] = str(chain_id)
+    if test_mode:
+        os.environ["TEST_MODE"] = "1"
+
+    strategy = CrossRollupSuperbot({}, {}, **kwargs)
+    start = time.monotonic()
+    strategy.run_once()
+    latency = time.monotonic() - start
+    LOG.log(
+        "run_latency",
+        strategy_id=STRATEGY_ID,
+        mutation_id=os.getenv("MUTATION_ID", "dev"),
+        risk_level="low",
+        latency=latency,
+        block=block_number,
+        chain_id=chain_id,
+        test_mode=test_mode,
+    )
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    asyncio.run(run())
+
