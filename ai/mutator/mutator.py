@@ -29,6 +29,7 @@ from ai.mutation_log import log_mutation
 from .score import score_strategies
 from .prune import prune_strategies
 from agents.founder_gate import founder_approved
+from ai.voting import get_votes
 
 LOGGER = StructuredLogger("mutator")
 
@@ -63,6 +64,7 @@ def _log_codex_diff(strategy_id: str, prompt: str) -> None:
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "patch_id": patch_id,
         "prompt_hash": prompt_hash,
+        "votes": get_votes(strategy_id, patch_id),
     }
 
     entries = []
@@ -77,6 +79,13 @@ def _log_codex_diff(strategy_id: str, prompt: str) -> None:
     with file.open("w") as fh:
         for e in entries:
             fh.write(json.dumps(e) + "\n")
+    log_mutation(
+        "codex_diff",
+        strategy_id=strategy_id,
+        patch_id=patch_id,
+        prompt_hash=prompt_hash,
+        votes=entry["votes"],
+    )
 
 
 class Mutator:

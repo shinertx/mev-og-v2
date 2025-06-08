@@ -43,3 +43,4 @@ def test_codex_diff_logging(monkeypatch, tmp_path):
     assert len(entries) == 3
     assert "patch_id" in entries[-1]
     assert "prompt_hash" in entries[-1]
+    assert "votes" in entries[-1]
