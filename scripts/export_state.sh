@@ -55,7 +55,7 @@ fi
 # export mode
 ITEMS=()
 ROOT_DIR="$(pwd)"
-for d in logs state active keys; do
+for d in logs state active keys telemetry/ai_votes; do
     if [[ -e "$d" ]]; then
         real="$(realpath "$d")"
         case "$real" in
