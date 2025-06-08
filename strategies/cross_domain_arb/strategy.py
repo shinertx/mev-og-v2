@@ -546,9 +546,12 @@ class CrossDomainArb(BaseStrategy):
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
 
+            metrics.record_opportunity(float(opp["spread"]), profit, latency)
+
             self.capital_lock.record_trade(profit)
 
-            self.record_result(True, profit)
+            self.performance.record(True, profit)
+            self._check_prune()
 
             for label, data in price_data.items():
                 self._record(
