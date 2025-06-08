@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import os
-from typing import Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 from core.logger import StructuredLogger
-
-try:  # optional metrics; tests may stub out core
-    from core import metrics as metrics_module
-except Exception:  # pragma: no cover - optional dependency
-    metrics_module = None
 from .agent_registry import set_value
+
+metrics_module: Optional[Any] = None
+try:  # optional metrics; tests may stub out core
+    from core import metrics as _metrics
+    metrics_module = _metrics
+except Exception:  # pragma: no cover - optional dependency
+    pass
 
 LOGGER = StructuredLogger("ops_agent")
 
