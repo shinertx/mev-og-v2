@@ -124,7 +124,7 @@ def _drill_lost_agent(env: dict[str, str]) -> None:
 
 def _drill_adapter_fail(env: dict[str, str]) -> None:
     try:
-        adapter = DEXAdapter("http://127.0.0.1:1")  # type: ignore[misc]
+        adapter = DEXAdapter("http://127.0.0.1:1")
         adapter.get_quote("ETH", "USDC", 1)
     except Exception:
         LOGGER.log("adapter_fail", risk_level="high")
@@ -134,7 +134,7 @@ def _drill_adapter_fail(env: dict[str, str]) -> None:
 
 def _drill_bridge_fail(env: dict[str, str]) -> None:
     try:
-        adapter = BridgeAdapter("http://127.0.0.1:1")  # type: ignore[misc]
+        adapter = BridgeAdapter("http://127.0.0.1:1")
         adapter.bridge("eth", "arb", "ETH", 1)
     except Exception:
         LOGGER.log("bridge_fail", risk_level="high")
@@ -144,7 +144,7 @@ def _drill_bridge_fail(env: dict[str, str]) -> None:
 
 def _drill_cex_fail(env: dict[str, str]) -> None:
     try:
-        adapter = CEXAdapter("http://127.0.0.1:1", "bad")  # type: ignore[misc]
+        adapter = CEXAdapter("http://127.0.0.1:1", "bad")
         adapter.place_order("buy", 1, 1)
     except Exception:
         LOGGER.log("cex_fail", risk_level="high")
@@ -154,7 +154,7 @@ def _drill_cex_fail(env: dict[str, str]) -> None:
 
 def _drill_flashloan_fail(env: dict[str, str]) -> None:
     try:
-        adapter = FlashloanAdapter("http://127.0.0.1:1")  # type: ignore[misc]
+        adapter = FlashloanAdapter("http://127.0.0.1:1")
         adapter.trigger("ETH", 1)
     except Exception:
         LOGGER.log("flashloan_fail", risk_level="high")
@@ -233,7 +233,7 @@ def _drill_rpc_fail(env: dict[str, str]) -> None:
 
 def _drill_data_dos(env: dict[str, str]) -> None:
     try:
-        adapter = DEXAdapter("http://127.0.0.1:1")  # type: ignore[misc]
+        adapter = DEXAdapter("http://127.0.0.1:1")
         adapter.get_quote("ETH", "USDC", 1, simulate_failure="data_poison")
     except Exception:
         LOGGER.log("data_dos", risk_level="high")

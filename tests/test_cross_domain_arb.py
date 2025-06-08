@@ -140,6 +140,20 @@ def test_should_trade_now_high_gas(monkeypatch):
     assert not strat.should_trade_now()
 
 
+@pytest.mark.asyncio
+async def test_run_kill_on_latency(monkeypatch):
+    pools = {"eth": PoolConfig("0x0", "ethereum")}
+    strat = CrossDomainArb(pools, {}, capital_lock=CapitalLock(1000, 1e9, 0))
+    strat.feed = DummyFeed({"ethereum": 100})
+    strat.tx_builder.web3 = strat.feed.web3s["ethereum"]
+    strat.nonce_manager.web3 = strat.feed.web3s["ethereum"]
+    monkeypatch.setenv("ARB_LATENCY_THRESHOLD", "0")
+    monkeypatch.setenv("ARB_ERROR_LIMIT", "1")
+    with pytest.raises(SystemExit) as exc:
+        await strat.run(interval=0)
+    assert exc.value.code == 137
+
+
 # All other tests below similarly mock network and transactions,
 # no real RPC calls, no infinite waits, suitable for fast CI runs.
 # (Include the rest of your original tests exactly as is,

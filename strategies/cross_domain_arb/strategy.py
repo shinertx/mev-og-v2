@@ -21,6 +21,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
+import time
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -597,3 +600,42 @@ class CrossDomainArb(BaseStrategy):
                 )
             except Exception as exc:  # pragma: no cover - input validation
                 log_error(STRATEGY_ID, f"mutate threshold: {exc}", event="mutate_error")
+
+    # ------------------------------------------------------------------
+    async def run(self, interval: int = 5) -> None:
+        """Run the strategy loop with kill conditions.
+
+        Exits with code 137 when average latency or consecutive errors exceed
+        configurable thresholds.
+
+        Environment variables:
+        ``ARB_LATENCY_THRESHOLD`` - max avg latency in seconds (default 60)
+        ``ARB_ERROR_LIMIT`` - allowed consecutive errors (default 5)
+        """
+
+        latency_threshold = float(os.getenv("ARB_LATENCY_THRESHOLD", "60"))
+        error_limit = int(os.getenv("ARB_ERROR_LIMIT", "5"))
+
+        consecutive_errors = 0
+        while True:
+            start = time.monotonic()
+            try:
+                self.run_once()
+            except Exception as exc:  # pragma: no cover - runtime errors
+                log_error(STRATEGY_ID, f"run_once: {exc}", event="run_error")
+                metrics.record_arb_error()
+                consecutive_errors += 1
+            else:
+                consecutive_errors = 0
+
+            latency = time.monotonic() - start
+            metrics.record_latency(latency)
+
+            if (
+                metrics.get_avg_arb_latency() > latency_threshold
+                or consecutive_errors >= error_limit
+            ):
+                record_kill_event(STRATEGY_ID)
+                sys.exit(137)
+
+            await asyncio.sleep(interval)

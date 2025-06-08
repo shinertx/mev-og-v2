@@ -23,11 +23,14 @@ def test_metrics_server(tmp_path):
         "arb_profit": 0.0,
         "arb_latency": [],
         "error_count": 0,
+        "arb_error_count": 0,
     })
 
     metrics.record_opportunity(0.1, 5.0, 0.5)
     metrics.record_fail()
     metrics.record_alert()
+    metrics.record_latency(0.5)
+    metrics.record_arb_error()
 
     host, port = srv.server.server_address
     url = f"http://{host}:{port}/metrics"
@@ -40,6 +43,8 @@ def test_metrics_server(tmp_path):
     assert "opportunities_found_total 1" in data
     assert "arb_profit_total 5.0" in data
     assert "error_count 1" in data
+    assert "arb_error_count 1" in data
+    assert "avg_arb_latency_seconds 0.5" in data
 
 
 def _start_server_with_token(monkeypatch, token):

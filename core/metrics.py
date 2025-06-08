@@ -38,6 +38,7 @@ _METRICS: Dict[str, Any] = {
     "arb_profit": 0.0,
     "arb_latency": [],
     "error_count": 0,
+    "arb_error_count": 0,
 }
 _LOCK = threading.Lock()
 _METRICS_TOKEN = os.getenv("METRICS_TOKEN")
@@ -68,6 +69,31 @@ def record_fail() -> None:
 def record_error() -> None:
     with _LOCK:
         _METRICS["error_count"] = cast(int, _METRICS.get("error_count", 0)) + 1
+
+
+def record_arb_error() -> None:
+    """Increment arb_error_count."""
+    with _LOCK:
+        _METRICS["arb_error_count"] = cast(int, _METRICS.get("arb_error_count", 0)) + 1
+
+
+def record_latency(latency: float) -> None:
+    """Record latency for arbitrage operations."""
+    with _LOCK:
+        cast(List[float], _METRICS.setdefault("arb_latency", [])).append(latency)
+
+
+def get_avg_arb_latency() -> float:
+    """Return average recorded arbitrage latency."""
+    with _LOCK:
+        vals = cast(List[float], _METRICS.get("arb_latency", []))
+    return mean(vals) if vals else 0.0
+
+
+def get_arb_error_count() -> int:
+    """Return number of recorded arbitrage errors."""
+    with _LOCK:
+        return cast(int, _METRICS.get("arb_error_count", 0))
 
 def record_alert() -> None:
     with _LOCK:
@@ -133,6 +159,7 @@ class _Handler(BaseHTTPRequestHandler):
                 f"arb_profit_total {_METRICS['arb_profit']}\n"
                 f"avg_arb_latency_seconds {avg_arb_latency}\n"
                 f"error_count {_METRICS['error_count']}\n"
+                f"arb_error_count {_METRICS['arb_error_count']}\n"
             ).encode()
             scores = cast(Dict[str, float], _METRICS.get("strategy_scores", {}))
             for sid, val in scores.items():

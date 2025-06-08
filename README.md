@@ -203,6 +203,8 @@ the values used in tests and the simulation harness:
 | `CROSS_ARB_STATE_PRE` | `state/cross_arb_pre.json` | DRP snapshot before execution |
 | `CROSS_ARB_TX_POST` | `state/tx_post.json` | Tx builder snapshot after |
 | `CROSS_ARB_TX_PRE` | `state/tx_pre.json` | Tx builder snapshot before |
+| `ARB_LATENCY_THRESHOLD` | `60` | Max average latency before shutdown |
+| `ARB_ERROR_LIMIT` | `5` | Consecutive errors before shutdown |
 | `CROSS_ROLLUP_LOG` | `logs/cross_rollup_superbot.json` | cross_rollup_superbot log |
 | `ERROR_LOG_FILE` | `logs/errors.log` | Shared error log |
 | `DRP_ENC_KEY` | `<none>` | Optional key to encrypt DRP archives |

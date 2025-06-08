@@ -28,10 +28,10 @@ OPS = OpsAgent({})
 
 
 ADAPTER_FUNCS: Dict[str, Callable[[str], Dict[str, Any]]] = {
-    "dex": lambda mode: DEXAdapter("http://bad", alt_api_urls=["http://alt"], ops_agent=OPS).get_quote("ETH", "USDC", 1, simulate_failure=mode),  # type: ignore[misc]
-    "bridge": lambda mode: BridgeAdapter("http://bad", alt_api_urls=["http://alt"], ops_agent=OPS).bridge("eth", "arb", "ETH", 1, simulate_failure=mode),  # type: ignore[misc]
-    "cex": lambda mode: CEXAdapter("http://bad", "k", alt_api_urls=["http://alt"], ops_agent=OPS).get_balance(simulate_failure=mode),  # type: ignore[misc]
-    "flashloan": lambda mode: FlashloanAdapter("http://bad", alt_api_urls=["http://alt"], ops_agent=OPS).trigger("ETH", 1, simulate_failure=mode),  # type: ignore[misc]
+    "dex": lambda mode: DEXAdapter("http://bad", alt_api_urls=["http://alt"], ops_agent=OPS).get_quote("ETH", "USDC", 1, simulate_failure=mode),
+    "bridge": lambda mode: BridgeAdapter("http://bad", alt_api_urls=["http://alt"], ops_agent=OPS).bridge("eth", "arb", "ETH", 1, simulate_failure=mode),
+    "cex": lambda mode: CEXAdapter("http://bad", "k", alt_api_urls=["http://alt"], ops_agent=OPS).get_balance(simulate_failure=mode),
+    "flashloan": lambda mode: FlashloanAdapter("http://bad", alt_api_urls=["http://alt"], ops_agent=OPS).trigger("ETH", 1, simulate_failure=mode),
 }
 
 
@@ -71,8 +71,8 @@ def main() -> None:
     interval = int(os.getenv("CHAOS_INTERVAL", "600"))
     once = os.getenv("CHAOS_ONCE") == "1"
     while True:
-        if kill_switch_triggered and kill_switch_triggered():
-            if record_kill_event:
+        if kill_switch_triggered is not None and kill_switch_triggered():
+            if record_kill_event is not None:
                 record_kill_event("chaos_scheduler")
             break
         run_once()
