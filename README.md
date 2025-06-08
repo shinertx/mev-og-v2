@@ -70,6 +70,7 @@ You must use Python 3.11 and activate your virtual environment before running an
 - All modules are self-logging, hot-swappable, and DRP-recoverable.
 - No key access, scaling, or mutation without founder sign-off.
 - One-command audit export available (`scripts/export_state.sh`).
+- AI consensus vote logs are stored in `telemetry/ai_votes/`.
 
 ---
 
