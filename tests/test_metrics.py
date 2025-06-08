@@ -1,12 +1,34 @@
 """Tests for Prometheus metrics server."""
 
 import urllib.request
+import pytest
 
 
 from core import metrics
 import importlib
 
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
+@pytest.fixture(autouse=True)
+def reset_metrics() -> None:
+    metrics._METRICS = {
+        "opportunities": 0,
+        "fails": 0,
+        "pnl": 0.0,
+        "spreads": [],
+        "latencies": [],
+        "alert_count": 0,
+        "strategy_scores": {},
+        "prune_total": 0,
+        "decay_alerts": 0,
+        "mutation_events": 0,
+        "opportunities_found": 0,
+        "arb_profit": 0.0,
+        "arb_latency": [],
+        "error_count": 0,
+    }
+    yield
 
 
 def test_metrics_server(tmp_path):
@@ -39,6 +61,7 @@ def test_metrics_server(tmp_path):
     assert "alert_count 1" in data
     assert "opportunities_found_total 1" in data
     assert "arb_profit_total 5.0" in data
+    assert "avg_arb_latency_seconds 0.5" in data
     assert "error_count 1" in data
 
 
