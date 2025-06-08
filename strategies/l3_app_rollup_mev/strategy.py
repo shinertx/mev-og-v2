@@ -36,9 +36,9 @@ import time
 try:
     from prometheus_client import Counter, Histogram, start_http_server
 except Exception:  # pragma: no cover - optional
-    Counter = Histogram = None  # type: ignore
+    Counter = Histogram = None
 
-    def start_http_server(*_a: object, **_k: object) -> None:  # type: ignore
+    def start_http_server(*_a: object, **_k: object) -> None:
         pass
 
 LOG_FILE = Path(os.getenv("L3_APP_ROLLUP_LOG", "logs/l3_app_rollup_mev.json"))
@@ -56,6 +56,10 @@ if Counter:
     arb_error_count = Counter(
         "arb_error_count", "Errors during arb"
     )
+    arb_abort_count = Counter(
+        "arb_abort_count",
+        "Aborted arb trades",
+    )
     try:
         start_http_server(int(os.getenv("PROMETHEUS_PORT", "8000")))
     except Exception:
@@ -68,7 +72,15 @@ else:  # pragma: no cover - metrics optional
         def observe(self, *_a: object, **_k: object) -> None:
             pass
 
-    arb_opportunities_found = arb_profit_eth = arb_latency = arb_error_count = _Dummy()
+    arb_opportunities_found = (
+        arb_profit_eth
+    ) = (
+        arb_latency
+    ) = (
+        arb_error_count
+    ) = (
+        arb_abort_count
+    ) = _Dummy()
 
 
 @dataclass
@@ -110,6 +122,7 @@ class L3AppRollupMEV:
         edges_enabled: Optional[Dict[str, bool]] = None,
         capital_lock: CapitalLock | None = None,
         nonce_manager: NonceManager | None = None,
+        capital_base_eth: float = 1.0,
     ) -> None:
         self.feed = UniswapV3Feed()
         self.intent_feed = IntentFeed()
@@ -124,6 +137,8 @@ class L3AppRollupMEV:
         self.pending_bridges: Dict[str, int] = {}
         self.failed_pools: Dict[str, int] = {}
         self.max_failures = 3
+
+        self.capital_base_eth = capital_base_eth
 
         self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
 
@@ -179,7 +194,7 @@ class L3AppRollupMEV:
         price_sell = prices[sell]
         spread = (price_sell - price_buy) / price_buy
         fee = self.bridge_costs.get((buy, sell), BridgeConfig(0.0)).cost
-        return (spread - fee)
+        return (spread * self.capital_base_eth) - fee
 
     def _detect_sandwich(self, prices: Dict[str, float]) -> Optional[Opportunity]:
         if not self.edges_enabled.get("l3_sandwich", True):
@@ -315,6 +330,39 @@ class L3AppRollupMEV:
             opp = self._detect_bridge_race(prices)
 
         if opp:
+            profit = float(opp["profit"])
+            gas_price = getattr(self.tx_builder.web3.eth, "gas_price", 0)
+            min_gas_cost = float(gas_price * 21000) / 1e18 * 1.5
+            est_slippage = abs(
+                prices[opp["buy"]] - self.last_prices.get(opp["buy"], prices[opp["buy"]])
+            ) / prices[opp["buy"]]
+            slip_tol = float(os.getenv("SLIPPAGE_PCT", "0"))
+            if profit < min_gas_cost:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="low_pnl",
+                    projected_pnl=profit,
+                    threshold=min_gas_cost,
+                )
+                metrics.record_abort()
+                arb_abort_count.inc()
+                return None
+            if est_slippage > slip_tol:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="medium",
+                    reason="slippage",
+                    slippage=est_slippage,
+                    tolerance=slip_tol,
+                )
+                metrics.record_abort()
+                arb_abort_count.inc()
+                return None
             if not self.capital_lock.trade_allowed():
                 msg = "capital lock: trade not allowed"
                 LOG.log(

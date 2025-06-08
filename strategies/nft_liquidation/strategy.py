@@ -33,9 +33,9 @@ from agents.capital_lock import CapitalLock
 try:
     from prometheus_client import Counter, Histogram, start_http_server
 except Exception:  # pragma: no cover - optional
-    Counter = Histogram = None  # type: ignore
+    Counter = Histogram = None
 
-    def start_http_server(*_a: object, **_k: object) -> None:  # type: ignore
+    def start_http_server(*_a: object, **_k: object) -> None:
         pass
 
 LOG_FILE = Path(os.getenv("NFT_LIQ_LOG", "logs/nft_liquidation.json"))
@@ -53,6 +53,10 @@ if Counter:
     arb_error_count = Counter(
         "arb_error_count", "Errors during arb"
     )
+    arb_abort_count = Counter(
+        "arb_abort_count",
+        "Aborted arb trades",
+    )
     try:
         start_http_server(int(os.getenv("PROMETHEUS_PORT", "8000")))
     except Exception:
@@ -65,7 +69,15 @@ else:  # pragma: no cover - metrics optional
         def observe(self, *_a: object, **_k: object) -> None:
             pass
 
-    arb_opportunities_found = arb_profit_eth = arb_latency = arb_error_count = _Dummy()
+    arb_opportunities_found = (
+        arb_profit_eth
+    ) = (
+        arb_latency
+    ) = (
+        arb_error_count
+    ) = (
+        arb_abort_count
+    ) = _Dummy()
 
 
 @dataclass
@@ -86,6 +98,7 @@ class NFTLiquidationMEV:
         discount: float | None = None,
         capital_lock: CapitalLock | None = None,
         nonce_manager: NonceManager | None = None,
+        capital_base_eth: float = 1.0,
     ) -> None:
         self.feed = NFTLiquidationFeed()
         self.auctions = auctions
@@ -99,6 +112,7 @@ class NFTLiquidationMEV:
         self.sample_tx = HexBytes(b"\x01")
 
         self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
+        self.capital_base_eth = capital_base_eth
 
     # ------------------------------------------------------------------
     def snapshot(self, path: str) -> None:
@@ -213,6 +227,37 @@ class NFTLiquidationMEV:
 
         opp = self._detect(all_auctions)
         if opp:
+            profit = opp.value - opp.price
+            gas_price = getattr(self.tx_builder.web3.eth, "gas_price", 0)
+            min_gas_cost = float(gas_price * 21000) / 1e18 * 1.5
+            est_slippage = 0.0
+            slip_tol = float(os.getenv("SLIPPAGE_PCT", "0"))
+            if profit < min_gas_cost:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="low_pnl",
+                    projected_pnl=profit,
+                    threshold=min_gas_cost,
+                )
+                metrics.record_abort()
+                arb_abort_count.inc()
+                return None
+            if est_slippage > slip_tol:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="medium",
+                    reason="slippage",
+                    slippage=est_slippage,
+                    tolerance=slip_tol,
+                )
+                metrics.record_abort()
+                arb_abort_count.inc()
+                return None
             if not self.capital_lock.trade_allowed():
                 msg = "capital lock: trade not allowed"
                 LOG.log(
