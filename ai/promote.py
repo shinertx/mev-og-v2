@@ -18,7 +18,8 @@ from pathlib import Path
 from typing import Any, Dict
 
 from core.logger import StructuredLogger, log_error
-from ai.voting import quorum_met
+from ai.voting import quorum_met, get_votes
+from ai.mutation_log import log_mutation
 from agents.capital_lock import CapitalLock
 from agents.ops_agent import OpsAgent
 from agents.drp_agent import DRPAgent
@@ -45,6 +46,14 @@ def promote_strategy(
     if trace_id is None:
         trace_id = os.getenv("TRACE_ID", "")
 
+    patch_hash = os.getenv("PATCH_HASH", "unknown")
+    votes = get_votes(src.name, patch_hash)
+    vote_summary = {
+        "approvals": sum(1 for v in votes.values() if v),
+        "rejections": sum(1 for v in votes.values() if not v),
+        "quorum": quorum_met(src.name, patch_hash),
+    }
+
     if not approved or not founder_approved("promote"):
         LOGGER.log(
             "promotion_rejected",
@@ -52,6 +61,13 @@ def promote_strategy(
             risk_level="low",
             info=evidence or {},
             trace_id=trace_id,
+        )
+        log_mutation(
+            "promotion_rejected",
+            strategy_id=src.name,
+            patch_hash=patch_hash,
+            votes=votes,
+            vote_summary=vote_summary,
         )
         return False
     if capital_lock and ops_agent and drp_agent:
@@ -62,14 +78,27 @@ def promote_strategy(
                 risk_level="high",
                 trace_id=trace_id,
             )
+            log_mutation(
+                "promotion_blocked",
+                strategy_id=src.name,
+                patch_hash=patch_hash,
+                votes=votes,
+                vote_summary=vote_summary,
+            )
             return False
-    patch_hash = os.getenv("PATCH_HASH", "unknown")
-    if not quorum_met(src.name, patch_hash):
+    if not vote_summary["quorum"]:
         LOGGER.log(
             "promotion_blocked",
             strategy_id=src.name,
             risk_level="high",
             trace_id=trace_id,
+        )
+        log_mutation(
+            "promotion_blocked",
+            strategy_id=src.name,
+            patch_hash=patch_hash,
+            votes=votes,
+            vote_summary=vote_summary,
         )
         return False
     try:
@@ -83,6 +112,13 @@ def promote_strategy(
             info={"src": str(src), "dst": str(dst), "evidence": evidence},
             trace_id=trace_id,
         )
+        log_mutation(
+            "promotion",
+            strategy_id=src.name,
+            patch_hash=patch_hash,
+            votes=votes,
+            vote_summary=vote_summary,
+        )
         return True
     except Exception as exc:
         log_error(
@@ -91,6 +127,14 @@ def promote_strategy(
             strategy_id=src.name,
             event="promotion_fail",
             trace_id=trace_id,
+        )
+        log_mutation(
+            "promotion_fail",
+            strategy_id=src.name,
+            patch_hash=patch_hash,
+            votes=votes,
+            vote_summary=vote_summary,
+            error=str(exc),
         )
         return False
 

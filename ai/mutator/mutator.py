@@ -29,7 +29,7 @@ from ai.mutation_log import log_mutation
 from .score import score_strategies
 from .prune import prune_strategies
 from agents.founder_gate import founder_approved
-from ai.voting import get_votes
+from ai.voting import get_votes, quorum_met
 
 LOGGER = StructuredLogger("mutator")
 
@@ -60,11 +60,19 @@ def _log_codex_diff(strategy_id: str, prompt: str) -> None:
     except Exception:
         patch_id = "unknown"
 
+    votes = get_votes(strategy_id, patch_id)
+    vote_summary = {
+        "approvals": sum(1 for v in votes.values() if v),
+        "rejections": sum(1 for v in votes.values() if not v),
+        "quorum": quorum_met(strategy_id, patch_id),
+    }
+    os.environ["PATCH_HASH"] = patch_id
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "patch_id": patch_id,
         "prompt_hash": prompt_hash,
-        "votes": get_votes(strategy_id, patch_id),
+        "votes": votes,
+        "vote_summary": vote_summary,
     }
 
     entries = []
@@ -84,7 +92,8 @@ def _log_codex_diff(strategy_id: str, prompt: str) -> None:
         strategy_id=strategy_id,
         patch_id=patch_id,
         prompt_hash=prompt_hash,
-        votes=entry["votes"],
+        votes=votes,
+        vote_summary=vote_summary,
     )
 
 
