@@ -81,6 +81,9 @@ def log_error(
     with path.open("a") as fh:
         fh.write(json.dumps(make_json_safe(entry)) + "\n")
 
+    from core import metrics as _metrics
+    _metrics.record_error()
+
 
 _HOOKS: List[Callable[[Dict[str, Any]], None]] = []
 _ALERT_WEBHOOKS = [w for w in os.getenv("OPS_ALERT_WEBHOOK", "").split(",") if w]

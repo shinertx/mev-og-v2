@@ -34,6 +34,10 @@ _METRICS: Dict[str, Any] = {
     "prune_total": 0,
     "decay_alerts": 0,
     "mutation_events": 0,
+    "opportunities_found": 0,
+    "arb_profit": 0.0,
+    "arb_latency": [],
+    "error_count": 0,
 }
 _LOCK = threading.Lock()
 _METRICS_TOKEN = os.getenv("METRICS_TOKEN")
@@ -46,15 +50,24 @@ _METRICS_TOKEN = os.getenv("METRICS_TOKEN")
 def record_opportunity(spread: float, pnl: float, latency: float) -> None:
     with _LOCK:
         _METRICS["opportunities"] = cast(int, _METRICS["opportunities"]) + 1
+        _METRICS["opportunities_found"] = cast(int, _METRICS.get("opportunities_found", 0)) + 1
         _METRICS["pnl"] = cast(float, _METRICS["pnl"]) + pnl
+        _METRICS["arb_profit"] = cast(float, _METRICS.get("arb_profit", 0.0)) + pnl
         cast(list, _METRICS["spreads"]).append(spread)  # type: ignore[arg-type]
         cast(list, _METRICS["latencies"]).append(latency)  # type: ignore[arg-type]
+        cast(list, _METRICS["arb_latency"]).append(latency)  # type: ignore[arg-type]
 
 
 def record_fail() -> None:
     with _LOCK:
         _METRICS["fails"] = cast(int, _METRICS["fails"]) + 1
 
+    record_error()
+
+
+def record_error() -> None:
+    with _LOCK:
+        _METRICS["error_count"] = cast(int, _METRICS.get("error_count", 0)) + 1
 
 def record_alert() -> None:
     with _LOCK:
@@ -102,8 +115,10 @@ class _Handler(BaseHTTPRequestHandler):
         with _LOCK:
             spreads = cast(List[float], _METRICS["spreads"])
             latencies = cast(List[float], _METRICS["latencies"])
+            arb_latencies = cast(List[float], _METRICS.get("arb_latency", []))
             avg_spread = mean(spreads) if spreads else 0.0
             avg_latency = mean(latencies) if latencies else 0.0
+            avg_arb_latency = mean(arb_latencies) if arb_latencies else 0.0
             body = (
                 f"opportunities_total {_METRICS['opportunities']}\n"
                 f"fails_total {_METRICS['fails']}\n"
@@ -114,6 +129,10 @@ class _Handler(BaseHTTPRequestHandler):
                 f"prune_total {_METRICS['prune_total']}\n"
                 f"decay_alerts {_METRICS['decay_alerts']}\n"
                 f"mutation_events {_METRICS['mutation_events']}\n"
+                f"opportunities_found_total {_METRICS['opportunities_found']}\n"
+                f"arb_profit_total {_METRICS['arb_profit']}\n"
+                f"avg_arb_latency_seconds {avg_arb_latency}\n"
+                f"error_count {_METRICS['error_count']}\n"
             ).encode()
             scores = cast(Dict[str, float], _METRICS.get("strategy_scores", {}))
             for sid, val in scores.items():
