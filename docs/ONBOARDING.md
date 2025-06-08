@@ -90,14 +90,14 @@ make down
 
 ## 5. Kill Switch and Metrics
 
-Use `scripts/kill_switch.sh` to toggle the system kill switch. Start the metrics
-server for Prometheus scraping with:
+Use `scripts/kill_switch.sh` to toggle the system kill switch. The metrics
+server now starts automatically when you run the Docker stack:
 
 ```bash
-python3.11 -m core.metrics --port $METRICS_PORT
+make up  # or `docker compose up -d`
 ```
-If you set `METRICS_TOKEN`, include the header
-`Authorization: Bearer $METRICS_TOKEN` when scraping.
+Verify it by visiting `http://localhost:8000/metrics`. If you set `METRICS_TOKEN`,
+include the header `Authorization: Bearer $METRICS_TOKEN` when scraping.
 
 ## Running the Strategy Orchestrator
 
@@ -172,7 +172,7 @@ bash scripts/rollback.sh --archive=<exported-archive>
 
 * Check `logs/errors.log` for stack traces.
 * Ensure RPC endpoints in `config.yaml` are reachable.
-* Verify the metrics server is running on `$METRICS_PORT`.
+* Verify `http://localhost:8000/metrics` responds with Prometheus data.
 
 
 
