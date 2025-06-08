@@ -150,7 +150,7 @@ python3.11 -m core.metrics --port $METRICS_PORT
 and point Prometheus to `http://localhost:$METRICS_PORT/metrics` for monitoring.
 If `METRICS_TOKEN` is set, include `Authorization: Bearer $METRICS_TOKEN` in
 requests.
-Import `infra/grafana/strategy_scoreboard.json` into Grafana to visualize scores and pruning history.
+Import `grafana/strategy_scoreboard.json` into Grafana to visualize scores and pruning history.
 
 ### Environment & Configuration
 
