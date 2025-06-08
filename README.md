@@ -197,6 +197,8 @@ the values used in tests and the simulation harness:
 |----------|---------|---------|
 | `ARB_ALERT_WEBHOOK` | `<none>` | Alert URL for cross_domain_arb |
 | `ARB_EXECUTOR_ADDR` | `0x000...` | Executor address for cross_domain_arb |
+| `ARB_ERROR_LIMIT` | `3` | Consecutive error threshold before kill |
+| `ARB_LATENCY_THRESHOLD` | `30` | Average latency threshold in seconds |
 | `BRIDGE_LATENCY_MAX` | `30` | Max seconds for bridge to finalize |
 | `CROSS_ARB_LOG` | `logs/cross_domain_arb.json` | cross_domain_arb log |
 | `CROSS_ARB_STATE_POST` | `state/cross_arb_post.json` | DRP snapshot after execution |
