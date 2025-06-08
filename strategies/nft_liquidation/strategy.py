@@ -30,10 +30,42 @@ from core.tx_engine.nonce_manager import NonceManager, get_shared_nonce_manager
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 import time
 from agents.capital_lock import CapitalLock
+try:
+    from prometheus_client import Counter, Histogram, start_http_server
+except Exception:  # pragma: no cover - optional
+    Counter = Histogram = None  # type: ignore
+
+    def start_http_server(*_a: object, **_k: object) -> None:  # type: ignore
+        pass
 
 LOG_FILE = Path(os.getenv("NFT_LIQ_LOG", "logs/nft_liquidation.json"))
 LOG = StructuredLogger("nft_liquidation", log_file=str(LOG_FILE))
 STRATEGY_ID = "nft_liquidation"
+
+if Counter:
+    arb_opportunities_found = Counter(
+        "arb_opportunities_found", "Total arb opps"
+    )
+    arb_profit_eth = Counter(
+        "arb_profit_eth", "Cumulative ETH profit"
+    )
+    arb_latency = Histogram("arb_latency", "Latency for arbs")
+    arb_error_count = Counter(
+        "arb_error_count", "Errors during arb"
+    )
+    try:
+        start_http_server(int(os.getenv("PROMETHEUS_PORT", "8000")))
+    except Exception:
+        pass
+else:  # pragma: no cover - metrics optional
+    class _Dummy:
+        def inc(self, *_a: object, **_k: object) -> None:
+            pass
+
+        def observe(self, *_a: object, **_k: object) -> None:
+            pass
+
+    arb_opportunities_found = arb_profit_eth = arb_latency = arb_error_count = _Dummy()
 
 
 @dataclass
@@ -170,6 +202,7 @@ class NFTLiquidationMEV:
             except Exception as exc:
                 log_error(STRATEGY_ID, str(exc), event="fetch_auctions", domain=cfg.domain)
                 metrics.record_fail()
+                arb_error_count.inc()
                 return None
             all_auctions.extend(data)
             for a in data:
@@ -204,6 +237,9 @@ class NFTLiquidationMEV:
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
             metrics.record_opportunity(0.0, opp.value - opp.price, latency)
+            arb_opportunities_found.inc()
+            arb_profit_eth.inc(opp.value - opp.price)
+            arb_latency.observe(latency)
 
             self.capital_lock.record_trade(opp.value - opp.price)
             self.last_seen[opp.nft] = opp.auction_id
@@ -211,6 +247,7 @@ class NFTLiquidationMEV:
             return {"opportunity": True, "auction_id": opp.auction_id, "nft": opp.nft}
 
         metrics.record_fail()
+        arb_error_count.inc()
         return None
 
     # ------------------------------------------------------------------

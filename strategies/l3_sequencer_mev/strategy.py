@@ -22,6 +22,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, TypedDict, cast
 import time
+try:
+    from prometheus_client import Counter, Histogram, start_http_server
+except Exception:  # pragma: no cover - optional
+    Counter = Histogram = None  # type: ignore
+
+    def start_http_server(*_a: object, **_k: object) -> None:  # type: ignore
+        pass
 
 from core.logger import StructuredLogger, log_error, make_json_safe
 from core import metrics
@@ -34,6 +41,31 @@ from agents.capital_lock import CapitalLock
 LOG_FILE = Path(os.getenv("L3_SEQ_LOG", "logs/l3_sequencer_mev.json"))
 LOG = StructuredLogger("l3_sequencer_mev", log_file=str(LOG_FILE))
 STRATEGY_ID = "l3_sequencer_mev"
+
+if Counter:
+    arb_opportunities_found = Counter(
+        "arb_opportunities_found", "Total arb opps"
+    )
+    arb_profit_eth = Counter(
+        "arb_profit_eth", "Cumulative ETH profit"
+    )
+    arb_latency = Histogram("arb_latency", "Latency for arbs")
+    arb_error_count = Counter(
+        "arb_error_count", "Errors during arb"
+    )
+    try:
+        start_http_server(int(os.getenv("PROMETHEUS_PORT", "8000")))
+    except Exception:
+        pass
+else:  # pragma: no cover - metrics optional
+    class _Dummy:
+        def inc(self, *_a: object, **_k: object) -> None:
+            pass
+
+        def observe(self, *_a: object, **_k: object) -> None:
+            pass
+
+    arb_opportunities_found = arb_profit_eth = arb_latency = arb_error_count = _Dummy()
 
 
 @dataclass
@@ -222,6 +254,7 @@ class L3SequencerMEV:
             except Exception as exc:
                 log_error(STRATEGY_ID, str(exc), event="price_fetch", domain=cfg.domain)
                 metrics.record_fail()
+                arb_error_count.inc()
                 return None
             price_data[label] = data
             self.last_prices[label] = data.price
@@ -235,6 +268,7 @@ class L3SequencerMEV:
         if any(d.block_age > int(os.getenv("PRICE_FRESHNESS_SEC", "30")) for d in price_data.values()):
             log_error(STRATEGY_ID, "stale price detected", event="stale_price")
             metrics.record_fail()
+            arb_error_count.inc()
             return None
 
         prices = {k: d.price for k, d in price_data.items()}
@@ -265,6 +299,9 @@ class L3SequencerMEV:
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
             metrics.record_opportunity(float(opp["spread"]), float(opp["profit"]), latency)
+            arb_opportunities_found.inc()
+            arb_profit_eth.inc(float(opp["profit"]))
+            arb_latency.observe(latency)
             self.capital_lock.record_trade(float(opp["profit"]))
             self.last_block = block
             for label, data in price_data.items():
@@ -278,6 +315,7 @@ class L3SequencerMEV:
                 )
         else:
             metrics.record_fail()
+            arb_error_count.inc()
             self.last_block = block
 
         return opp
