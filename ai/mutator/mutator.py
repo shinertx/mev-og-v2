@@ -21,6 +21,9 @@ from pathlib import Path
 from typing import Any, Dict, List, cast
 
 from core.logger import StructuredLogger, log_error, make_json_safe
+from datetime import datetime, timezone
+import hashlib
+import subprocess
 from core.secret_manager import get_secret
 from ai.mutation_log import log_mutation
 from .score import score_strategies
@@ -28,6 +31,52 @@ from .prune import prune_strategies
 from agents.founder_gate import founder_approved
 
 LOGGER = StructuredLogger("mutator")
+
+
+def _log_codex_diff(strategy_id: str, prompt: str) -> None:
+    """Record prompt and patch hash for ``strategy_id``."""
+
+    base = Path(os.getenv("CODEX_DIFF_DIR", "/last_3_codex_diffs"))
+    base.mkdir(parents=True, exist_ok=True)
+    file = base / f"{strategy_id}.json"
+
+    prompt_hash = hashlib.sha256(prompt.encode()).hexdigest()
+    patch_id = "unknown"
+    try:
+        diff = subprocess.run(
+            ["git", "diff"], capture_output=True, text=True, check=True
+        ).stdout
+        if diff:
+            patch_out = subprocess.run(
+                ["git", "patch-id", "--stable"],
+                input=diff,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+            if patch_out:
+                patch_id = patch_out.split()[0]
+    except Exception:
+        patch_id = "unknown"
+
+    entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "patch_id": patch_id,
+        "prompt_hash": prompt_hash,
+    }
+
+    entries = []
+    if file.exists():
+        for line in file.read_text().splitlines():
+            try:
+                entries.append(json.loads(line))
+            except Exception:
+                continue
+    entries.append(entry)
+    entries = entries[-3:]
+    with file.open("w") as fh:
+        for e in entries:
+            fh.write(json.dumps(e) + "\n")
 
 
 class Mutator:
@@ -113,6 +162,7 @@ class Mutator:
             prompt=summary,
             response=data,
         )
+        _log_codex_diff(strategy_id, summary)
         return cast(Dict[str, Any], data["params"])
 
     # ------------------------------------------------------------------
