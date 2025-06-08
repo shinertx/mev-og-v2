@@ -71,8 +71,8 @@ def main() -> None:
     interval = int(os.getenv("CHAOS_INTERVAL", "600"))
     once = os.getenv("CHAOS_ONCE") == "1"
     while True:
-        if kill_switch_triggered and kill_switch_triggered():
-            if record_kill_event:
+        if callable(kill_switch_triggered) and kill_switch_triggered():
+            if callable(record_kill_event):
                 record_kill_event("chaos_scheduler")
             break
         run_once()
