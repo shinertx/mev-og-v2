@@ -42,6 +42,8 @@ jobs:
         run: bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
       - name: DRP dry run
         run: bash scripts/export_state.sh --dry-run
+      - name: Project audit export
+        run: bash scripts/export_project_state.sh --dry-run
       - name: Offline audit
         run: python3.11 ai/audit_agent.py --mode=offline --logs logs/cross_domain_arb.json
       - name: Chaos drill
