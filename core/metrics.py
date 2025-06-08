@@ -38,6 +38,7 @@ _METRICS: Dict[str, Any] = {
     "arb_profit": 0.0,
     "arb_latency": [],
     "error_count": 0,
+    "abort_total": 0,
 }
 _LOCK = threading.Lock()
 _METRICS_TOKEN = os.getenv("METRICS_TOKEN")
@@ -95,6 +96,12 @@ def record_mutation_event() -> None:
         _METRICS["mutation_events"] = cast(int, _METRICS.get("mutation_events", 0)) + 1
 
 
+def record_abort() -> None:
+    """Record a trade abort decision."""
+    with _LOCK:
+        _METRICS["abort_total"] = cast(int, _METRICS.get("abort_total", 0)) + 1
+
+
 # ----------------------------------------------------------------------
 # Metrics server
 # ----------------------------------------------------------------------
@@ -129,6 +136,7 @@ class _Handler(BaseHTTPRequestHandler):
                 f"prune_total {_METRICS['prune_total']}\n"
                 f"decay_alerts {_METRICS['decay_alerts']}\n"
                 f"mutation_events {_METRICS['mutation_events']}\n"
+                f"abort_total {_METRICS['abort_total']}\n"
                 f"opportunities_found_total {_METRICS['opportunities_found']}\n"
                 f"arb_profit_total {_METRICS['arb_profit']}\n"
                 f"avg_arb_latency_seconds {avg_arb_latency}\n"

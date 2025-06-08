@@ -25,9 +25,9 @@ import time
 try:
     from prometheus_client import Counter, Histogram, start_http_server
 except Exception:  # pragma: no cover - optional
-    Counter = Histogram = None  # type: ignore
+    Counter = Histogram = None
 
-    def start_http_server(*_a: object, **_k: object) -> None:  # type: ignore
+    def start_http_server(*_a: object, **_k: object) -> None:
         pass
 
 from core.logger import StructuredLogger, log_error, make_json_safe
@@ -53,6 +53,10 @@ if Counter:
     arb_error_count = Counter(
         "arb_error_count", "Errors during arb"
     )
+    arb_abort_count = Counter(
+        "arb_abort_count",
+        "Aborted arb trades",
+    )
     try:
         start_http_server(int(os.getenv("PROMETHEUS_PORT", "8000")))
     except Exception:
@@ -65,7 +69,15 @@ else:  # pragma: no cover - metrics optional
         def observe(self, *_a: object, **_k: object) -> None:
             pass
 
-    arb_opportunities_found = arb_profit_eth = arb_latency = arb_error_count = _Dummy()
+    arb_opportunities_found = (
+        arb_profit_eth
+    ) = (
+        arb_latency
+    ) = (
+        arb_error_count
+    ) = (
+        arb_abort_count
+    ) = _Dummy()
 
 
 @dataclass
@@ -99,6 +111,7 @@ class L3SequencerMEV:
         reorg_window: int = 1,
         capital_lock: CapitalLock | None = None,
         nonce_manager: NonceManager | None = None,
+        capital_base_eth: float = 1.0,
     ) -> None:
         self.feed = UniswapV3Feed()
         self.pools = pools
@@ -107,6 +120,8 @@ class L3SequencerMEV:
         self.reorg_window = reorg_window
         self.last_prices: Dict[str, float] = {}
         self.last_block = 0
+
+        self.capital_base_eth = capital_base_eth
 
         w3 = self.feed.web3s.get("ethereum") if self.feed.web3s else None
         self.nonce_manager = nonce_manager or get_shared_nonce_manager(w3)
@@ -164,7 +179,7 @@ class L3SequencerMEV:
         price_buy = prices[buy]
         price_sell = prices[sell]
         spread = (price_sell - price_buy) / price_buy
-        return spread
+        return spread * self.capital_base_eth
 
     def _detect_opportunity(self, prices: Dict[str, float], block: int, timestamp: int) -> Optional[Opportunity]:
         if not self._time_band_ok(timestamp):
@@ -274,6 +289,41 @@ class L3SequencerMEV:
         prices = {k: d.price for k, d in price_data.items()}
         opp = self._detect_opportunity(prices, block, timestamp)
         if opp:
+            profit = float(opp["profit"])
+            gas_price = getattr(self.tx_builder.web3.eth, "gas_price", 0)
+            min_gas_cost = float(gas_price * 21000) / 1e18 * 1.5
+            est_slippage = abs(
+                prices[opp["buy"]] - self.last_prices.get(opp["buy"], prices[opp["buy"]])
+            ) / prices[opp["buy"]]
+            slip_tol = float(os.getenv("SLIPPAGE_PCT", "0"))
+            if profit < min_gas_cost:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="low_pnl",
+                    projected_pnl=profit,
+                    threshold=min_gas_cost,
+                )
+                metrics.record_abort()
+                arb_abort_count.inc()
+                self.last_block = block
+                return None
+            if est_slippage > slip_tol:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="medium",
+                    reason="slippage",
+                    slippage=est_slippage,
+                    tolerance=slip_tol,
+                )
+                metrics.record_abort()
+                arb_abort_count.inc()
+                self.last_block = block
+                return None
             if not self.capital_lock.trade_allowed():
                 msg = "capital lock: trade not allowed"
                 LOG.log(

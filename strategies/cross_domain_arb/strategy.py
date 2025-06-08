@@ -44,9 +44,9 @@ from core.strategy_base import BaseStrategy
 try:
     from prometheus_client import Counter, Histogram, start_http_server
 except Exception:  # pragma: no cover - optional
-    Counter = Histogram = None  # type: ignore
+    Counter = Histogram = None
 
-    def start_http_server(*_a: object, **_k: object) -> None:  # type: ignore
+    def start_http_server(*_a: object, **_k: object) -> None:
         pass
 
 from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
@@ -80,6 +80,10 @@ if Counter:
     arb_error_count = Counter(
         "arb_error_count", "Errors during arb"
     )
+    arb_abort_count = Counter(
+        "arb_abort_count",
+        "Aborted arb trades",
+    )
     try:
         start_http_server(int(os.getenv("PROMETHEUS_PORT", "8000")))
     except Exception:
@@ -92,7 +96,15 @@ else:  # pragma: no cover - metrics optional
         def observe(self, *_a: object, **_k: object) -> None:
             pass
 
-    arb_opportunities_found = arb_profit_eth = arb_latency = arb_error_count = _Dummy()
+    arb_opportunities_found = (
+        arb_profit_eth
+    ) = (
+        arb_latency
+    ) = (
+        arb_error_count
+    ) = (
+        arb_abort_count
+    ) = _Dummy()
 
 
 class BridgeConfig(TypedDict, total=False):
@@ -150,6 +162,7 @@ class CrossDomainArb(BaseStrategy):
         capital_lock: CapitalLock | None = None,
         nonce_manager: NonceManager | None = None,
         prune_epochs: int | None = None,
+        capital_base_eth: float = 1.0,
     ) -> None:
         super().__init__(STRATEGY_ID, prune_epochs=prune_epochs, log_file=str(LOG_FILE))
         self.feed = UniswapV3Feed()
@@ -157,6 +170,8 @@ class CrossDomainArb(BaseStrategy):
         self.bridge_costs = bridge_costs
         self.threshold = threshold if threshold is not None else self.DEFAULT_THRESHOLD
         self.last_prices: Dict[str, float] = {}
+
+        self.capital_base_eth = capital_base_eth
 
         self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
 
@@ -204,9 +219,9 @@ class CrossDomainArb(BaseStrategy):
         spread = price_sell - price_buy
         bridge_fee = self.bridge_costs.get((buy, sell), {}).get("cost", 0.0)
         slippage_pct = float(os.getenv("SLIPPAGE_PCT", "0"))
-        slippage = price_buy * slippage_pct
+        slippage = price_buy * slippage_pct * self.capital_base_eth
         gas_cost = self._estimate_gas_cost()
-        return spread - gas_cost - bridge_fee - slippage
+        return (spread * self.capital_base_eth) - gas_cost - bridge_fee - slippage
 
     # ------------------------------------------------------------------
     def _auto_discover(self) -> None:
@@ -546,6 +561,38 @@ class CrossDomainArb(BaseStrategy):
             profit = self._compute_profit(opp["buy"], opp["sell"], prices)
             if profit <= 0 or not self.validate_costs(profit):
                 self.record_result(False, profit)
+                return None
+            gas_price = getattr(self.tx_builder.web3.eth, "gas_price", 0)
+            min_gas_cost = float(gas_price * 21000) / 1e18 * 1.5
+            est_slippage = abs(
+                prices[opp["buy"]] - self.last_prices.get(opp["buy"], prices[opp["buy"]])
+            ) / prices[opp["buy"]]
+            slip_tol = float(os.getenv("SLIPPAGE_PCT", "0"))
+            if profit < min_gas_cost:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="low_pnl",
+                    projected_pnl=profit,
+                    threshold=min_gas_cost,
+                )
+                metrics.record_abort()
+                arb_abort_count.inc()
+                return None
+            if est_slippage > slip_tol:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="medium",
+                    reason="slippage",
+                    slippage=est_slippage,
+                    tolerance=slip_tol,
+                )
+                metrics.record_abort()
+                arb_abort_count.inc()
                 return None
             self.hedge_risk(profit, "ETH")
             if not self.capital_lock.trade_allowed():
