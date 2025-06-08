@@ -82,6 +82,7 @@ class CrossRollupSuperbot:
         *,
         capital_lock: CapitalLock | None = None,
         nonce_manager: NonceManager | None = None,
+        capital_base_eth: float = 1.0,
     ) -> None:
         self.feed = UniswapV3Feed()
         self.pools = pools
@@ -92,6 +93,7 @@ class CrossRollupSuperbot:
         self.max_failures = 3
 
         self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
+        self.capital_base_eth = capital_base_eth
 
         w3 = self.feed.web3s.get("ethereum") if self.feed.web3s else None
         self.nonce_manager = nonce_manager or get_shared_nonce_manager(w3)
@@ -132,13 +134,13 @@ class CrossRollupSuperbot:
         )
 
     # ------------------------------------------------------------------
-    def _compute_profit(self, buy: str, sell: str, amount: float, prices: Dict[str, float]) -> float:
+    def _compute_profit(self, buy: str, sell: str, prices: Dict[str, float]) -> float:
         price_buy = prices[buy]
         price_sell = prices[sell]
         spread = (price_sell - price_buy) / price_buy
         bridge_key = (buy, sell)
         fee = self.bridge_costs.get(bridge_key, BridgeConfig(0.0)).cost
-        return (spread * amount) - fee
+        return (spread * self.capital_base_eth) - fee
 
     def _detect_opportunity(self, prices: Dict[str, float]) -> Optional[Opportunity]:
         domains = list(prices.keys())
@@ -149,7 +151,7 @@ class CrossRollupSuperbot:
         spread = (prices[sell] - prices[buy]) / prices[buy]
         if spread < self.threshold:
             return None
-        profit = self._compute_profit(buy, sell, 1.0, prices)
+        profit = self._compute_profit(buy, sell, prices)
         if profit <= 0:
             return None
         action = f"bundle_buy:{buy}_sell:{sell}"
@@ -251,6 +253,36 @@ class CrossRollupSuperbot:
         prices = {k: d.price for k, d in price_data.items()}
         opp = self._detect_opportunity(prices)
         if opp:
+            gas_price = getattr(self.tx_builder.web3.eth, "gas_price", 0)
+            min_cost = float(gas_price * 21000) / 1e18 * 1.5
+            slippage_tolerance = float(os.getenv("SLIPPAGE_PCT", "0"))
+            est_slippage = abs(float(opp["spread"]))
+            if float(opp["profit"]) < min_cost:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="pnl_below_gas",
+                    pnl=float(opp["profit"]),
+                    threshold=min_cost,
+                )
+                metrics.record_trade_abort("pnl")
+                metrics.record_fail()
+                return None
+            if slippage_tolerance and est_slippage > slippage_tolerance:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="slippage",
+                    slippage=est_slippage,
+                    tolerance=slippage_tolerance,
+                )
+                metrics.record_trade_abort("slippage")
+                metrics.record_fail()
+                return None
             if not self.capital_lock.trade_allowed():
                 msg = "capital lock: trade not allowed"
                 LOG.log(

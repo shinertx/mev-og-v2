@@ -113,6 +113,7 @@ class CrossDomainArb(BaseStrategy):
         capital_lock: CapitalLock | None = None,
         nonce_manager: NonceManager | None = None,
         prune_epochs: int | None = None,
+        capital_base_eth: float = 1.0,
     ) -> None:
         super().__init__(STRATEGY_ID, prune_epochs=prune_epochs, log_file=str(LOG_FILE))
         self.feed = UniswapV3Feed()
@@ -122,6 +123,7 @@ class CrossDomainArb(BaseStrategy):
         self.last_prices: Dict[str, float] = {}
 
         self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
+        self.capital_base_eth = capital_base_eth
 
         # transaction execution setup
         w3 = self.feed.web3s.get("ethereum") if self.feed.web3s else None
@@ -169,7 +171,7 @@ class CrossDomainArb(BaseStrategy):
         slippage_pct = float(os.getenv("SLIPPAGE_PCT", "0"))
         slippage = price_buy * slippage_pct
         gas_cost = self._estimate_gas_cost()
-        return spread - gas_cost - bridge_fee - slippage
+        return (spread * self.capital_base_eth) - gas_cost - bridge_fee - slippage
 
     # ------------------------------------------------------------------
     def _auto_discover(self) -> None:
@@ -501,6 +503,36 @@ class CrossDomainArb(BaseStrategy):
         if opp:
             profit = self._compute_profit(opp["buy"], opp["sell"], prices)
             if profit <= 0 or not self.validate_costs(profit):
+                self.record_result(False, profit)
+                return None
+            gas_price = getattr(self.tx_builder.web3.eth, "gas_price", 0)
+            min_cost = float(gas_price * 21000) / 1e18 * 1.5
+            slippage_tolerance = float(os.getenv("SLIPPAGE_PCT", "0"))
+            est_slippage = abs(float(opp["spread"]))
+            if profit < min_cost:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="pnl_below_gas",
+                    pnl=profit,
+                    threshold=min_cost,
+                )
+                metrics.record_trade_abort("pnl")
+                self.record_result(False, profit)
+                return None
+            if slippage_tolerance and est_slippage > slippage_tolerance:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="slippage",
+                    slippage=est_slippage,
+                    tolerance=slippage_tolerance,
+                )
+                metrics.record_trade_abort("slippage")
                 self.record_result(False, profit)
                 return None
             self.hedge_risk(profit, "ETH")

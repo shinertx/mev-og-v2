@@ -61,6 +61,7 @@ class RWASettlementMEV:
         threshold: float | None = None,
         capital_lock: CapitalLock | None = None,
         nonce_manager: NonceManager | None = None,
+        capital_base_eth: float = 1.0,
     ) -> None:
         self.feed = RWAFeed()
         self.venues = venues
@@ -74,6 +75,7 @@ class RWASettlementMEV:
         self.sample_tx = HexBytes(b"\x01")
 
         self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
+        self.capital_base_eth = capital_base_eth
 
     # ------------------------------------------------------------------
     def snapshot(self, path: str) -> None:
@@ -192,6 +194,37 @@ class RWASettlementMEV:
         prices = {k: d.price + d.fee for k, d in price_data.items()}
         opp = self._detect_opportunity(prices)
         if opp:
+            gas_price = getattr(self.tx_builder.web3.eth, "gas_price", 0)
+            min_cost = float(gas_price * 21000) / 1e18 * 1.5
+            slippage_tolerance = float(os.getenv("SLIPPAGE_PCT", "0"))
+            est_slippage = abs(float(opp["spread"]))
+            profit = (prices[opp["sell"]] - prices[opp["buy"]]) * self.capital_base_eth
+            if profit < min_cost:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="pnl_below_gas",
+                    pnl=profit,
+                    threshold=min_cost,
+                )
+                metrics.record_trade_abort("pnl")
+                metrics.record_fail()
+                return None
+            if slippage_tolerance and est_slippage > slippage_tolerance:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="slippage",
+                    slippage=est_slippage,
+                    tolerance=slippage_tolerance,
+                )
+                metrics.record_trade_abort("slippage")
+                metrics.record_fail()
+                return None
             if not self.capital_lock.trade_allowed():
                 msg = "capital lock: trade not allowed"
                 LOG.log(
@@ -215,9 +248,8 @@ class RWASettlementMEV:
             tx_id, latency = self._bundle_and_send(str(opp["action"]))
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
-            metrics.record_opportunity(float(opp["spread"]), 0.0, latency)
+            metrics.record_opportunity(float(opp["spread"]), profit, latency)
 
-            profit = prices[opp["sell"]] - prices[opp["buy"]]
             self.capital_lock.record_trade(profit)
             for label, data in price_data.items():
                 self._record(

@@ -78,6 +78,7 @@ class L3AppRollupMEV:
         edges_enabled: Optional[Dict[str, bool]] = None,
         capital_lock: CapitalLock | None = None,
         nonce_manager: NonceManager | None = None,
+        capital_base_eth: float = 1.0,
     ) -> None:
         self.feed = UniswapV3Feed()
         self.intent_feed = IntentFeed()
@@ -94,6 +95,7 @@ class L3AppRollupMEV:
         self.max_failures = 3
 
         self.capital_lock = capital_lock or CapitalLock(1000.0, 1e9, 0.0)
+        self.capital_base_eth = capital_base_eth
 
         w3 = self.feed.web3s.get("ethereum") if self.feed.web3s else None
         self.nonce_manager = nonce_manager or get_shared_nonce_manager(w3)
@@ -147,7 +149,7 @@ class L3AppRollupMEV:
         price_sell = prices[sell]
         spread = (price_sell - price_buy) / price_buy
         fee = self.bridge_costs.get((buy, sell), BridgeConfig(0.0)).cost
-        return (spread - fee)
+        return (spread * self.capital_base_eth) - fee
 
     def _detect_sandwich(self, prices: Dict[str, float]) -> Optional[Opportunity]:
         if not self.edges_enabled.get("l3_sandwich", True):
@@ -281,6 +283,36 @@ class L3AppRollupMEV:
             opp = self._detect_bridge_race(prices)
 
         if opp:
+            gas_price = getattr(self.tx_builder.web3.eth, "gas_price", 0)
+            min_cost = float(gas_price * 21000) / 1e18 * 1.5
+            slippage_tolerance = float(os.getenv("SLIPPAGE_PCT", "0"))
+            est_slippage = abs(float(opp["spread"]))
+            if float(opp["profit"]) < min_cost:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="pnl_below_gas",
+                    pnl=float(opp["profit"]),
+                    threshold=min_cost,
+                )
+                metrics.record_trade_abort("pnl")
+                metrics.record_fail()
+                return None
+            if slippage_tolerance and est_slippage > slippage_tolerance:
+                LOG.log(
+                    "trade_abort",
+                    strategy_id=STRATEGY_ID,
+                    mutation_id=os.getenv("MUTATION_ID", "dev"),
+                    risk_level="low",
+                    reason="slippage",
+                    slippage=est_slippage,
+                    tolerance=slippage_tolerance,
+                )
+                metrics.record_trade_abort("slippage")
+                metrics.record_fail()
+                return None
             if not self.capital_lock.trade_allowed():
                 msg = "capital lock: trade not allowed"
                 LOG.log(
