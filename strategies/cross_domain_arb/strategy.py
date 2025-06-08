@@ -38,6 +38,14 @@ from core import metrics
 from agents.capital_lock import CapitalLock
 from core.strategy_base import BaseStrategy
 
+try:
+    from prometheus_client import Counter, Histogram, start_http_server
+except Exception:  # pragma: no cover - optional
+    Counter = Histogram = None  # type: ignore
+
+    def start_http_server(*_a: object, **_k: object) -> None:  # type: ignore
+        pass
+
 from core.oracles.uniswap_feed import UniswapV3Feed, PriceData
 from core.oracles.intent_feed import IntentFeed, IntentData
 from core.mempool_monitor import MempoolMonitor
@@ -58,6 +66,31 @@ STRATEGY_ID = "cross_domain_arb"
 
 LOG = StructuredLogger("cross_domain_arb", log_file=str(LOG_FILE))
 
+if Counter:
+    arb_opportunities_found = Counter(
+        "arb_opportunities_found", "Total arb opps"
+    )
+    arb_profit_eth = Counter(
+        "arb_profit_eth", "Cumulative ETH profit"
+    )
+    arb_latency = Histogram("arb_latency", "Latency for arbs")
+    arb_error_count = Counter(
+        "arb_error_count", "Errors during arb"
+    )
+    try:
+        start_http_server(int(os.getenv("PROMETHEUS_PORT", "8000")))
+    except Exception:
+        pass
+else:  # pragma: no cover - metrics optional
+    class _Dummy:
+        def inc(self, *_a: object, **_k: object) -> None:
+            pass
+
+        def observe(self, *_a: object, **_k: object) -> None:
+            pass
+
+    arb_opportunities_found = arb_profit_eth = arb_latency = arb_error_count = _Dummy()
+
 
 class BridgeConfig(TypedDict, total=False):
     """Bridge cost assumptions between domains."""
@@ -66,11 +99,12 @@ class BridgeConfig(TypedDict, total=False):
     latency_sec: int
 
 
-def start_metrics_server(port: int = 8000) -> metrics.MetricsServer:
-    """Backward compatible helper to start metrics server."""
-    srv = metrics.MetricsServer(port=port)
-    srv.start()
-    return srv
+def start_metrics_server(port: int = 8000) -> None:
+    """Backward compatible helper to start metrics server using Prometheus."""
+    try:
+        start_http_server(port)
+    except Exception:
+        pass
 
 
 def _log(event: str, **entry: object) -> None:
@@ -245,6 +279,7 @@ class CrossDomainArb(BaseStrategy):
             except Exception as exc:
                 log_error(STRATEGY_ID, f"sandwich tx fail: {exc}", event="sandwich_fail")
                 metrics.record_fail()
+                arb_error_count.inc()
                 return False
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
@@ -259,6 +294,9 @@ class CrossDomainArb(BaseStrategy):
                 risk_level="low",
             )
             metrics.record_opportunity(0.0, 0.0, latency)
+            arb_opportunities_found.inc()
+            arb_profit_eth.inc(0.0)
+            arb_latency.observe(latency)
             return True
         return True
     # ------------------------------------------------------------------
@@ -481,9 +519,11 @@ class CrossDomainArb(BaseStrategy):
                 logging.warning("price fetch failed: %s", exc)
                 log_error(STRATEGY_ID, str(exc), event="price_fetch")
                 metrics.record_fail()
+                arb_error_count.inc()
                 return None
             if not self._validate_price_data(data):
                 metrics.record_fail()
+                arb_error_count.inc()
                 return None
             price_data[label] = data
             self.last_prices[label] = data.price
@@ -493,6 +533,7 @@ class CrossDomainArb(BaseStrategy):
             logging.warning("stale price detected")
             log_error(STRATEGY_ID, "stale price detected", event="stale_price")
             metrics.record_fail()
+            arb_error_count.inc()
             return None
 
         prices = {k: d.price for k, d in price_data.items()}
@@ -547,6 +588,9 @@ class CrossDomainArb(BaseStrategy):
             self.snapshot(post)
 
             metrics.record_opportunity(float(opp["spread"]), profit, latency)
+            arb_opportunities_found.inc()
+            arb_profit_eth.inc(profit)
+            arb_latency.observe(latency)
 
             self.capital_lock.record_trade(profit)
 
