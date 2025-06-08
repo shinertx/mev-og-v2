@@ -23,7 +23,9 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import sys
 import time
+import asyncio
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, TypedDict, List
 
@@ -650,7 +652,13 @@ async def run(
     test_mode: bool = False,
     **kwargs: Any,
 ) -> None:
-    """Execute :meth:`CrossDomainArb.run_once` with async launcher."""
+    """Run the strategy in a monitored loop.
+
+    The following environment variables tune kill conditions:
+
+    - ``ARB_ERROR_LIMIT`` – consecutive error allowance (default ``3``)
+    - ``ARB_LATENCY_THRESHOLD`` – allowed average latency in seconds (default ``30``)
+    """
 
     if block_number is not None:
         os.environ["BLOCK_NUMBER"] = str(block_number)
@@ -660,22 +668,46 @@ async def run(
         os.environ["TEST_MODE"] = "1"
 
     strategy = CrossDomainArb({}, {}, **kwargs)
-    start = time.monotonic()
-    strategy.run_once()
-    latency = time.monotonic() - start
-    LOG.log(
-        "run_latency",
-        strategy_id=STRATEGY_ID,
-        mutation_id=os.getenv("MUTATION_ID", "dev"),
-        risk_level="low",
-        latency=latency,
-        block=block_number,
-        chain_id=chain_id,
-        test_mode=test_mode,
-    )
+
+    error_limit = int(os.getenv("ARB_ERROR_LIMIT", "3"))
+    latency_threshold = float(os.getenv("ARB_LATENCY_THRESHOLD", "30"))
+    errors = 0
+    total_latency = 0.0
+    runs = 0
+
+    while True:
+        start = time.monotonic()
+        try:
+            strategy.run_once()
+            errors = 0
+        except Exception as exc:  # pragma: no cover - runtime error
+            log_error(STRATEGY_ID, str(exc), event="run_error")
+            arb_error_count.inc()
+            errors += 1
+        latency = time.monotonic() - start
+        arb_latency.observe(latency)
+        total_latency += latency
+        runs += 1
+        avg_latency = total_latency / runs
+
+        LOG.log(
+            "run_latency",
+            strategy_id=STRATEGY_ID,
+            mutation_id=os.getenv("MUTATION_ID", "dev"),
+            risk_level="low",
+            latency=latency,
+            block=block_number,
+            chain_id=chain_id,
+            test_mode=test_mode,
+        )
+
+        if avg_latency > latency_threshold or errors > error_limit:
+            record_kill_event(STRATEGY_ID)
+            sys.exit(137)
+        if test_mode:
+            break
+        await asyncio.sleep(float(os.getenv("RUN_INTERVAL", "1")))
 
 
 if __name__ == "__main__":
-    import asyncio
-
     asyncio.run(run())
