@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from core.logger import StructuredLogger, log_error
+from ai.voting import quorum_met
 from agents.capital_lock import CapitalLock
 from agents.ops_agent import OpsAgent
 from agents.drp_agent import DRPAgent
@@ -62,6 +63,15 @@ def promote_strategy(
                 trace_id=trace_id,
             )
             return False
+    patch_hash = os.getenv("PATCH_HASH", "unknown")
+    if not quorum_met(src.name, patch_hash):
+        LOGGER.log(
+            "promotion_blocked",
+            strategy_id=src.name,
+            risk_level="high",
+            trace_id=trace_id,
+        )
+        return False
     try:
         if dst.exists():
             shutil.rmtree(dst)
