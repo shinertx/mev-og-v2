@@ -143,14 +143,20 @@ Follow this sequence to operate MEV-OG locally.
    make down
    ```
 
-Start the metrics endpoint with:
+The metrics server now starts automatically when you launch the Docker stack:
 ```bash
-python3.11 -m core.metrics --port $METRICS_PORT
+make up  # or `docker compose up -d`
 ```
-and point Prometheus to `http://localhost:$METRICS_PORT/metrics` for monitoring.
-If `METRICS_TOKEN` is set, include `Authorization: Bearer $METRICS_TOKEN` in
-requests.
+Verify it is running by visiting `http://localhost:8000/metrics`. If
+`METRICS_TOKEN` is set, include
+`Authorization: Bearer $METRICS_TOKEN` when scraping.
 Import `grafana/strategy_scoreboard.json` into Grafana to visualize scores and pruning history.
+
+Key metrics exposed on `/metrics` include:
+- `opportunities_found` – count of arbitrage opportunities detected
+- `arb_profit` – total profit from recorded opportunities (ETH)
+- `arb_latency` – average seconds between detection and submission
+- `error_count` – total number of errors logged
 
 ### Environment & Configuration
 
@@ -296,7 +302,7 @@ DRP state files are controlled by the
 `CROSS_ARB_TX_POST` environment variables.
 Metrics are served on
 `http://localhost:8000/metrics` for Prometheus to scrape.
-Import the JSON dashboards in `infra/grafana/` into Grafana for real-time score trends.
+Import the JSON dashboards in `grafana/` into Grafana for real-time score trends.
 
 Example log:
 
