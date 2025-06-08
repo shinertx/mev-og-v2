@@ -74,6 +74,7 @@ def _patch_flashbots(monkeypatch):
 def test_opportunity_detection(monkeypatch):
     _patch_flashbots(monkeypatch)
     monkeypatch.setenv("FLASHBOTS_AUTH_KEY", "0x" + "11" * 32)
+    monkeypatch.setenv("SLIPPAGE_PCT", "0.05")
     strat = setup_strat(threshold=0.01)
     feed_data = {
         ("dex", "asset"): RWAData(100, 0.1, 1),

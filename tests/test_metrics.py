@@ -27,6 +27,7 @@ def reset_metrics() -> None:
         "arb_profit": 0.0,
         "arb_latency": [],
         "error_count": 0,
+        "abort_total": 0,
     }
     yield
 
@@ -45,6 +46,7 @@ def test_metrics_server(tmp_path):
         "arb_profit": 0.0,
         "arb_latency": [],
         "error_count": 0,
+        "abort_total": 0,
     })
 
     metrics.record_opportunity(0.1, 5.0, 0.5)
