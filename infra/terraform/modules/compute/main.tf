@@ -4,7 +4,8 @@ variable "instance_type" { default = "t3.micro" }
 variable "key_name" {}
 variable "environment" { default = "dev" }
 variable "prometheus_token" { sensitive = true }
-variable "secret_env" { sensitive = true }
+variable "vault_addr" {}
+variable "vault_token" { sensitive = true }
 
 resource "aws_security_group" "mevog" {
   name        = "mevog-${var.environment}"
@@ -52,7 +53,8 @@ resource "aws_instance" "mevog" {
 
   user_data = templatefile("${path.module}/user_data.sh", {
     PROMETHEUS_TOKEN = var.prometheus_token
-    SECRET_ENV       = var.secret_env
+    VAULT_ADDR       = var.vault_addr
+    VAULT_TOKEN      = var.vault_token
   })
 }
 

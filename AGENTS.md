@@ -32,6 +32,15 @@ This file is the single source of truth for mutation, validation, and integratio
 
 ---
 
+## SECRETS MANAGEMENT
+
+* Secrets are never stored in source or `.env` files.
+* Operators must run `python3.11 scripts/load_vault_secrets.py` to inject runtime secrets from HashiCorp Vault.
+* `scripts/validate_secrets.py` is executed in CI and locally to ensure required secrets are present.
+* Docker, compose, and Terraform modules rely on `VAULT_ADDR` and `VAULT_TOKEN` environment variables for secret retrieval.
+
+---
+
 ## CODING & MUTATION DIRECTIVES
 
 ### Mutation & Strategy Work

@@ -2,7 +2,7 @@
 network: sepolia  # goerli, sepolia, mainnet, arbitrum, optimism, base, etc.
 mode: test        # test or live
 
-# --- Wallets (public addresses only; secrets in .env) ---
+# --- Wallets (public addresses only; secrets from Vault/env) ---
 wallet_address: "0xA061e51F27F49EeD5F6F1Afed049206764Be7A9c"
 uniswap_wallet_address: "0x67Da2453139cA6D3D6989AB3BC3fd0583E9F7B3d"
 
@@ -76,7 +76,7 @@ trade_amount_usd: 100
 
 # --- Notification Settings ---
 notifier:
-  telegram_token: ""      # Set in .env
+  telegram_token: ""      # From Vault/env
   telegram_chat_id: ""
   ops_alert_webhook: ""
   email: ""

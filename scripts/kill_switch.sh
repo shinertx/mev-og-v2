@@ -26,7 +26,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-ENV_FILE="${ENV_FILE:-.env}"
 FLAG_FILE="${KILL_SWITCH_FLAG_FILE:-./flags/kill_switch.txt}"
 LOG_FILE="${KILL_SWITCH_LOG_FILE:-logs/kill_log.json}"
 USER_NAME="$(whoami 2>/dev/null || echo unknown)"
@@ -47,9 +46,7 @@ fi
 
 if [[ $MODE == "clean" ]]; then
     rm -f "$FLAG_FILE"
-    if [[ -f "$ENV_FILE" ]]; then
-        sed -i '/^KILL_SWITCH=/d' "$ENV_FILE"
-    fi
+    unset KILL_SWITCH
     echo "Kill switch cleaned"
     log_event "clean"
     exit 0
@@ -58,16 +55,6 @@ fi
 # Trigger mode
 mkdir -p "$(dirname "$FLAG_FILE")"
 echo "$TIMESTAMP $USER_NAME" > "$FLAG_FILE"
-
-if [[ -f "$ENV_FILE" ]]; then
-    if grep -q '^KILL_SWITCH=' "$ENV_FILE"; then
-        sed -i 's/^KILL_SWITCH=.*/KILL_SWITCH=1/' "$ENV_FILE"
-    else
-        echo 'KILL_SWITCH=1' >> "$ENV_FILE"
-    fi
-else
-    echo 'KILL_SWITCH=1' > "$ENV_FILE"
-fi
 
 export KILL_SWITCH=1
 
