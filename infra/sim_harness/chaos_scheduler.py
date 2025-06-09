@@ -18,6 +18,8 @@ except Exception:  # pragma: no cover - optional dependency
     kill_switch_triggered = None  # type: ignore[assignment]
     record_kill_event = None  # type: ignore[assignment]
 from adapters import DEXAdapter, BridgeAdapter, CEXAdapter, FlashloanAdapter
+from infra.sim_harness import start_metrics
+from core import metrics
 from ai.mutation_log import log_mutation
 
 LOGGER = StructuredLogger(
@@ -47,6 +49,10 @@ def _update_metrics(adapter: str) -> None:
     metrics[adapter]["failures"] += 1
     metrics_file.parent.mkdir(parents=True, exist_ok=True)
     metrics_file.write_text(json.dumps(make_json_safe(metrics), indent=2))
+    try:
+        metrics.record_error()
+    except Exception:
+        pass
 
 
 def run_once() -> None:
@@ -68,12 +74,17 @@ def run_once() -> None:
 
 
 def main() -> None:
+    start_metrics()
     interval = int(os.getenv("CHAOS_INTERVAL", "600"))
     once = os.getenv("CHAOS_ONCE") == "1"
     while True:
         if callable(kill_switch_triggered) and kill_switch_triggered():
             if callable(record_kill_event):
                 record_kill_event("chaos_scheduler")
+                try:
+                    metrics.record_kill_event_metric()
+                except Exception:
+                    pass
             break
         run_once()
         if once:

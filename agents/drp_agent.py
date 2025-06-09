@@ -25,6 +25,11 @@ class DRPAgent:
             LOGGER.log("export_ok", risk_level="low")
         else:
             LOGGER.log("export_fail", risk_level="high")
+            try:
+                from core import metrics as _metrics
+                _metrics.record_drp_anomaly()
+            except Exception:
+                pass
 
     # --------------------------------------------------------------
     def is_ready(self) -> bool:

@@ -31,6 +31,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.pool_scanner
+    environment:
+      - ENABLE_METRICS=1
     ports:
       - "9002:9002"
     restart: unless-stopped

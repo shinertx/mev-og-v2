@@ -11,6 +11,8 @@ from strategies.cross_rollup_superbot.strategy import (
     PoolConfig,
     BridgeConfig,
 )
+from infra.sim_harness import start_metrics
+from core import metrics
 
 try:  # pragma: no cover
     from web3 import Web3
@@ -52,6 +54,7 @@ BRIDGES = {
 
 
 def main() -> None:  # pragma: no cover
+    start_metrics()
     w3 = Web3(Web3.HTTPProvider(RPC_ETH))
     w3.middleware_onion.add(geth_poa_middleware)
 
@@ -67,12 +70,15 @@ def main() -> None:  # pragma: no cover
     for _ in range(10):
         result = strat.run_once()
         if result and result.get("opportunity"):
+            metrics.record_opportunity(0.0, float(result.get("profit_eth", 0)), 0.0)
             found = True
             print("Arbitrage opportunity detected:", result)
             break
         time.sleep(1)
 
-    assert found, "no arbitrage opportunity detected in window"
+    if not found:
+        metrics.record_fail()
+        assert False, "no arbitrage opportunity detected in window"
     Path("logs/sim_complete.txt").write_text("done")
 
 

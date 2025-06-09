@@ -6,6 +6,8 @@ from pathlib import Path
 
 
 from strategies.l3_sequencer_mev.strategy import L3SequencerMEV, PoolConfig
+from infra.sim_harness import start_metrics
+from core import metrics
 
 try:  # pragma: no cover
     from web3 import Web3
@@ -25,6 +27,7 @@ POOLS = {
 
 
 def main() -> None:  # pragma: no cover
+    start_metrics()
     w3 = Web3(Web3.HTTPProvider(RPC_ETH))
     if w3.eth.block_number < FORK_BLOCK:
         raise SystemExit("RPC must be forked at or after block %s" % FORK_BLOCK)
@@ -33,10 +36,13 @@ def main() -> None:  # pragma: no cover
     for _ in range(5):
         result = strat.run_once()
         if result and result.get("opportunity"):
+            metrics.record_opportunity(0.0, float(result.get("profit_eth", 0)), 0.0)
             found = True
             break
         time.sleep(1)
-    assert found, "no sequencer opportunity detected"
+    if not found:
+        metrics.record_fail()
+        assert False, "no sequencer opportunity detected"
     Path("logs/sim_complete.txt").write_text("done")
 
 

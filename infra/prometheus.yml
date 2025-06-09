@@ -5,3 +5,6 @@ scrape_configs:
   - job_name: 'mevog'
     static_configs:
       - targets: ['mevog:8000']
+  - job_name: 'pool_scanner'
+    static_configs:
+      - targets: ['pool_scanner:9002']

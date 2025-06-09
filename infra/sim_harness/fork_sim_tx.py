@@ -9,6 +9,8 @@ import os
 
 from core.tx_engine.builder import TransactionBuilder, HexBytes
 from core.tx_engine.nonce_manager import NonceManager
+from infra.sim_harness import start_metrics
+from core import metrics
 
 try:
     from web3 import Web3
@@ -22,6 +24,7 @@ RPC_URL = os.environ.get("MAINNET_RPC", "http://localhost:8545")
 
 
 def main() -> None:
+    start_metrics()
     w3 = Web3(Web3.HTTPProvider(RPC_URL))
     w3.middleware_onion.add(geth_poa_middleware)
     nonce_manager = NonceManager(w3)
@@ -33,7 +36,14 @@ def main() -> None:
         "000000601ba0f9c9c7dd0ef4b5fbf1be738698fb0cdd0d0b29010b191ed257a7b82d49"
         "18dfa04e99ce3b1cd9e4b8b3d299f330feb0b5bb3842fd07b5f48989a4b70318e0a58"
     ))
-    builder.send_transaction(raw_tx, w3.eth.accounts[0], strategy_id="sim", mutation_id="fork", risk_level="low")
+    builder.send_transaction(
+        raw_tx,
+        w3.eth.accounts[0],
+        strategy_id="sim",
+        mutation_id="fork",
+        risk_level="low",
+    )
+    metrics.record_opportunity(0.0, 0.0, 0.0)
 
 
 if __name__ == "__main__":  # pragma: no cover - CLI

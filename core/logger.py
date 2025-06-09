@@ -39,6 +39,16 @@ try:  # optional dependency
 except Exception:  # pragma: no cover - optional
     requests = cast(Any, None)
 
+try:  # structured logging optional
+    import structlog  # type: ignore
+except Exception:  # pragma: no cover - optional
+    structlog = None  # type: ignore
+
+if structlog is not None:  # pragma: no cover - optional
+    _JSON_RENDERER = structlog.processors.JSONRenderer()
+else:
+    _JSON_RENDERER = None
+
 
 def _error_log_file() -> Path:
     """Return the configured error log file path."""
@@ -78,8 +88,15 @@ def log_error(
     }
     path = _error_log_file()
     path.parent.mkdir(parents=True, exist_ok=True)
+    safe = make_json_safe(entry)
+    line = json.dumps(safe)
+    if _JSON_RENDERER is not None:
+        try:
+            line = _JSON_RENDERER(None, None, safe)
+        except Exception:
+            line = json.dumps(safe)
     with path.open("a") as fh:
-        fh.write(json.dumps(make_json_safe(entry)) + "\n")
+        fh.write(line + "\n")
 
     from core import metrics as _metrics
     _metrics.record_error()
@@ -150,8 +167,14 @@ class StructuredLogger:
         entry.update(extra)
         safe_entry = make_json_safe(entry)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        line = json.dumps(safe_entry)
+        if _JSON_RENDERER is not None:
+            try:
+                line = _JSON_RENDERER(None, None, safe_entry)
+            except Exception:
+                line = json.dumps(safe_entry)
         with self.path.open("a") as fh:
-            fh.write(json.dumps(safe_entry) + "\n")
+            fh.write(line + "\n")
         for hook in list(_HOOKS):
             try:
                 hook(safe_entry)
