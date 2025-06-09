@@ -484,21 +484,25 @@ async def run(
     total_latency = 0.0
     runs = 0
 
-    def _snapshot_state() -> None:
+    def _snapshot_state() -> str | None:
         cmd = ["bash", "scripts/export_state.sh"]
         env = os.environ.copy()
         env["EXPORT_DIR"] = "/telemetry/drp"
         try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True, env=env)
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True, env=env)
+            for line in result.stdout.splitlines():
+                if line.startswith("Export created at "):
+                    return line.split("Export created at ", 1)[1].strip()
         except FileNotFoundError:
             log_error(EDGE_SCHEMA["strategy_id"], "export_state.sh missing", event="snapshot_fail")
         except subprocess.CalledProcessError as exc:
             log_error(EDGE_SCHEMA["strategy_id"], f"snapshot fail: {exc.stderr}", event="snapshot_fail")
+        return None
 
     while True:
         if kill_switch_triggered():
-            record_kill_event(EDGE_SCHEMA["strategy_id"])
-            _snapshot_state()
+            archive = _snapshot_state()
+            record_kill_event(EDGE_SCHEMA["strategy_id"], archive)
             sys.exit(137)
 
         start = time.monotonic()
@@ -527,8 +531,8 @@ async def run(
         )
 
         if avg_latency > latency_threshold or errors > error_limit:
-            record_kill_event(EDGE_SCHEMA["strategy_id"])
-            _snapshot_state()
+            archive = _snapshot_state()
+            record_kill_event(EDGE_SCHEMA["strategy_id"], archive)
             sys.exit(137)
         if test_mode:
             break
