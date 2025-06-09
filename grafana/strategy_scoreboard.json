@@ -21,6 +21,48 @@
       "targets": [
         {"expr": "decay_alerts"}
       ]
+    },
+    {
+      "type": "graph",
+      "title": "Arb Opportunities",
+      "targets": [
+        {"expr": "arb_opportunities_found"}
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Arb Profit ETH",
+      "targets": [
+        {"expr": "arb_profit_eth"}
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Arb Latency",
+      "targets": [
+        {"expr": "arb_latency"}
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Error Count",
+      "targets": [
+        {"expr": "arb_error_count"}
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Kill Events",
+      "targets": [
+        {"expr": "kill_event_total"}
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "DRP Anomalies",
+      "targets": [
+        {"expr": "drp_anomaly_total"}
+      ]
     }
   ],
   "schemaVersion": 30,

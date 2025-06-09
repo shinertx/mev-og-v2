@@ -20,6 +20,8 @@ from adapters import (
     DEXAdapter,
     FlashloanAdapter,
 )
+from infra.sim_harness import start_metrics
+from core import metrics
 from ai.intent_ghost import ghost_intent
 from core.node_selector import NodeSelector
 from core.tx_engine.nonce_manager import NonceManager
@@ -75,6 +77,11 @@ def _update_metrics(module: str) -> None:
     metrics[module]["failures"] += 1
     DRILL_METRICS_FILE.parent.mkdir(parents=True, exist_ok=True)
     DRILL_METRICS_FILE.write_text(json.dumps(make_json_safe(metrics), indent=2))
+    try:
+        metrics_mod = metrics  # alias to satisfy lint
+        metrics_mod.record_error()
+    except Exception:
+        pass
 
 
 def _scan_file(path: Path) -> None:
@@ -242,6 +249,7 @@ def _drill_data_dos(env: dict[str, str]) -> None:
 
 
 def run_drill() -> None:
+    start_metrics()
     env = os.environ.copy()
     _drill_kill_switch(env)
     _drill_lost_agent(env)

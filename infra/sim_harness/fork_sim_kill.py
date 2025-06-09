@@ -8,13 +8,17 @@ from core.tx_engine.kill_switch import (
     record_kill_event,
     flag_file,
 )
+from infra.sim_harness import start_metrics
+from core import metrics
 
 
 def run_sim() -> None:
+    start_metrics()
     init_kill_switch()
     print("Starting fork sim...")
     if kill_switch_triggered():
         record_kill_event("fork_sim_start")
+        metrics.record_kill_event_metric()
         print("Kill switch active. Exiting.")
         return
     print("Sending transaction 1")
@@ -24,6 +28,7 @@ def run_sim() -> None:
     ff.write_text("1")
     if kill_switch_triggered():
         record_kill_event("fork_sim_tx")
+        metrics.record_kill_event_metric()
         print("Kill switch triggered during tx. Halting.")
         return
     print("Simulation completed")

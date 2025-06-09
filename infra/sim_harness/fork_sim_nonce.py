@@ -4,6 +4,8 @@ import os
 
 
 from core.tx_engine.nonce_manager import NonceManager
+from infra.sim_harness import start_metrics
+from core import metrics
 
 try:
     from web3 import Web3
@@ -16,6 +18,7 @@ RPC_URL = os.environ.get("MAINNET_RPC", "http://localhost:8545")
 
 
 def main() -> None:
+    start_metrics()
     w3 = Web3(Web3.HTTPProvider(RPC_URL))
     w3.middleware_onion.add(geth_poa_middleware)
     nonce_manager = NonceManager(w3)
@@ -32,6 +35,7 @@ def main() -> None:
     nonce_manager.reset_nonce(addr)
     synced = nonce_manager.get_nonce(addr)
     print("Synced nonce:", synced)
+    metrics.record_opportunity(0.0, 0.0, 0.0)
 
 
 if __name__ == "__main__":

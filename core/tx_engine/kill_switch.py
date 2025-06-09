@@ -76,6 +76,11 @@ def record_kill_event(origin_module: str) -> None:
         trace_id=os.getenv("TRACE_ID", ""),
         block=os.getenv("BLOCK", ""),
     )
+    try:
+        from core import metrics as _metrics
+        _metrics.record_kill_event_metric()
+    except Exception:
+        pass
 
 
 def clear_kill_switch() -> None:
