@@ -1,4 +1,4 @@
-"""Unified strategy orchestrator."""
+"""Unified strategy orchestrator with TTL enforcement."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import importlib
 import os
 import subprocess
 import time
+import asyncio
 from pathlib import Path
 from typing import Any, Dict, List, cast
 
@@ -19,13 +20,14 @@ from agents.capital_lock import CapitalLock
 from agents.drp_agent import DRPAgent
 from agents.gatekeeper import gates_green
 
+# ---- IMPORT TTL MANAGER MODULE ----
+from orchestrator_ttl import StrategyTTLManager
+
 LOGGER = StructuredLogger("orchestrator")
 
 
-# ---------------------------------------------------------------------------
 def _simple_yaml_load(text: str) -> Dict[str, Any]:
     """Very small YAML subset parser used if PyYAML is unavailable."""
-
     data: Dict[str, Any] = {}
     stack: List[tuple[int, Dict[str, Any]]] = [(0, data)]
     for raw in text.splitlines():
@@ -60,10 +62,8 @@ def _simple_yaml_load(text: str) -> Dict[str, Any]:
     return data
 
 
-# ---------------------------------------------------------------------------
 def load_config(path: str) -> Dict[str, Any]:
     """Load YAML config from ``path`` using PyYAML if available."""
-
     try:
         import yaml  # type: ignore[import-untyped]
     except Exception:  # pragma: no cover - optional
@@ -74,9 +74,8 @@ def load_config(path: str) -> Dict[str, Any]:
     return _simple_yaml_load(text)
 
 
-# ---------------------------------------------------------------------------
 class StrategyOrchestrator:
-    """Load strategies and enforce runtime gating."""
+    """Load strategies and enforce runtime gating, now with TTL."""
 
     def __init__(self, config_path: str, *, dry_run: bool | None = None) -> None:
         self.config = load_config(config_path)
@@ -100,7 +99,10 @@ class StrategyOrchestrator:
         self.strategies: Dict[str, Any] = {}
         self._load_strategies()
 
-    # ---------------------------------------------------------------
+        # --- TTL MANAGER ---
+        self.ttl_manager = StrategyTTLManager(self)
+        self.strategy_paths = [Path(f"strategies/{sid}/strategy.py") for sid in self.strategy_ids]
+
     def _load_strategies(self) -> None:
         for sid in self.strategy_ids:
             try:
@@ -117,7 +119,6 @@ class StrategyOrchestrator:
             except Exception as exc:
                 log_error("orchestrator", str(exc), strategy_id=sid, event="load_fail")
 
-    # ---------------------------------------------------------------
     def _snapshot_state(self) -> bool:
         cmd = ["bash", "scripts/export_state.sh"]
         if self.dry_run:
@@ -131,7 +132,6 @@ class StrategyOrchestrator:
             log_error("orchestrator", f"snapshot fail: {exc.stderr}", event="snapshot_fail")
         return False
 
-    # ---------------------------------------------------------------
     def run_once(self) -> bool:
         self.ops_agent.run_checks()
         if not gates_green(self.capital_lock, self.ops_agent, self.drp_agent):
@@ -142,6 +142,14 @@ class StrategyOrchestrator:
         if self.config.get("mode") == "live" and not founder_approved("orchestrator_live"):
             LOGGER.log("founder_block", risk_level="high")
             return False
+
+        # --- TTL ENFORCEMENT: remove expired strategies ---
+        active_paths = asyncio.run(self.ttl_manager.enforce_all_ttls(self.strategy_paths))
+        # Remove expired strategies from self.strategies
+        active_sids = [
+            p.parts[1] for p in active_paths if len(p.parts) >= 2 and p.parts[0] == "strategies"
+        ]
+        self.strategies = {sid: s for sid, s in self.strategies.items() if sid in active_sids}
 
         for sid, strat in self.strategies.items():
             try:
@@ -157,7 +165,6 @@ class StrategyOrchestrator:
         LOGGER.log("iteration_complete", risk_level="low")
         return True
 
-    # ---------------------------------------------------------------
     def run_live_loop(self, interval: int = 5) -> None:
         while True:
             if kill_switch_triggered():
@@ -172,9 +179,7 @@ class StrategyOrchestrator:
                 break
             time.sleep(interval)
 
-
-# ---------------------------------------------------------------------------
-def main() -> None:  # pragma: no cover - CLI thin wrapper
+def main() -> None:
     parser = argparse.ArgumentParser(description="Strategy orchestrator")
     parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
     parser.add_argument("--dry-run", action="store_true", help="Run a single dry iteration")
@@ -190,5 +195,5 @@ def main() -> None:  # pragma: no cover - CLI thin wrapper
     orchestrator.run_live_loop()
 
 
-if __name__ == "__main__":  # pragma: no cover - CLI entry
+if __name__ == "__main__":
     main()
