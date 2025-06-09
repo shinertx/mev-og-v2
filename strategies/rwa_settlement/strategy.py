@@ -29,6 +29,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, TypedDict, cast
 import yaml
+import hashlib
+from datetime import datetime, timezone
+import sys
+import asyncio
 
 from core.logger import StructuredLogger, log_error, make_json_safe
 from core import metrics
@@ -88,6 +92,45 @@ else:  # pragma: no cover - metrics optional
     ) = (
         arb_abort_count
     ) = _Dummy()
+
+
+def _write_mutation_diff(strategy_id: str, mutation_data: Dict[str, Any]) -> None:
+    """Write mutation diff to /last_3_codex_diffs/ directory."""
+    try:
+        diff_dir = Path("/last_3_codex_diffs")
+        diff_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create a hash for the prompt
+        prompt_hash = hashlib.sha256(
+            json.dumps(mutation_data, sort_keys=True).encode()
+        ).hexdigest()[:8]
+        
+        # Create filename with timestamp
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        filename = f"{strategy_id}_{timestamp}_{prompt_hash}.json"
+        
+        # Keep only last 3 diffs
+        existing_files = sorted(
+            [f for f in diff_dir.glob(f"{strategy_id}_*.json")],
+            key=lambda x: x.stat().st_mtime
+        )
+        
+        if len(existing_files) >= 3:
+            for old_file in existing_files[:-2]:
+                old_file.unlink()
+        
+        # Write the new diff
+        diff_path = diff_dir / filename
+        with open(diff_path, "w") as f:
+            json.dump({
+                "strategy_id": strategy_id,
+                "timestamp": timestamp,
+                "prompt_hash": prompt_hash,
+                "mutation": mutation_data
+            }, f, indent=2)
+            
+    except Exception as exc:
+        log_error(strategy_id, f"Failed to write mutation diff: {exc}", event="mutation_diff_error")
 
 
 @dataclass
@@ -173,7 +216,7 @@ class RWASettlementMEV:
         action = f"rwa_settle:{buy}->{sell}"
         return cast(Opportunity, {"opportunity": True, "spread": spread, "action": action, "buy": buy, "sell": sell})
 
-    def _bundle_and_send(self, action: str) -> tuple[str, float]:
+    async def _bundle_and_send(self, action: str) -> tuple[str, float]:
         try:
             from eth_account import Account
             from flashbots import flashbot
@@ -199,6 +242,8 @@ class RWASettlementMEV:
         target_block = w3.eth.block_number + 1
         start = time.time()
         try:
+            # Make it async-friendly
+            await asyncio.sleep(0)  # Yield control
             result = w3.flashbots.send_bundle(bundle, target_block)
             latency = time.time() - start
             return str(result.get("bundleHash")), latency
@@ -220,7 +265,7 @@ class RWASettlementMEV:
             )
 
     # ------------------------------------------------------------------
-    def run_once(self) -> Optional[Opportunity]:
+    async def run_once(self) -> Optional[Opportunity]:
         if kill_switch_triggered():
             record_kill_event(EDGE_SCHEMA["strategy_id"])
             LOG.log(
@@ -303,15 +348,14 @@ class RWASettlementMEV:
                 Path(p).parent.mkdir(parents=True, exist_ok=True)
             self.snapshot(pre)
             self.tx_builder.snapshot(tx_pre)
-            tx_id, latency = self._bundle_and_send(str(opp["action"]))
+            tx_id, latency = await self._bundle_and_send(str(opp["action"]))
             self.tx_builder.snapshot(tx_post)
             self.snapshot(post)
-            metrics.record_opportunity(float(opp["spread"]), 0.0, latency)
+            metrics.record_opportunity(float(opp["spread"]), profit, latency)
             arb_opportunities_found.inc()
-            arb_profit_eth.inc(0.0)
+            arb_profit_eth.inc(profit)
             arb_latency.observe(latency)
 
-            profit = prices[opp["sell"]] - prices[opp["buy"]]
             self.capital_lock.record_trade(profit)
             for label, data in price_data.items():
                 self._record(
@@ -330,9 +374,18 @@ class RWASettlementMEV:
 
     # ------------------------------------------------------------------
     def mutate(self, params: Dict[str, Any]) -> None:
+        mutation_data = {
+            "params": params,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
         if "threshold" in params:
             try:
+                old = self.threshold
                 self.threshold = float(params["threshold"])
+                mutation_data["old_threshold"] = old
+                mutation_data["new_threshold"] = self.threshold
+                
                 LOG.log(
                     "mutate",
                     strategy_id=EDGE_SCHEMA["strategy_id"],
@@ -341,6 +394,10 @@ class RWASettlementMEV:
                     param="threshold",
                     value=self.threshold,
                 )
+                
+                # Write to /last_3_codex_diffs/
+                _write_mutation_diff(EDGE_SCHEMA["strategy_id"], mutation_data)
+                
             except Exception as exc:
                 log_error(EDGE_SCHEMA["strategy_id"], f"mutate threshold: {exc}", event="mutate_error")
 
@@ -349,6 +406,7 @@ async def run(
     block_number: int | None = None,
     chain_id: int | None = None,
     test_mode: bool = False,
+    capital_base: float = 1.0,
     **kwargs: Any,
 ) -> None:
     """Run the strategy in a monitored loop."""
@@ -360,7 +418,7 @@ async def run(
     if test_mode:
         os.environ["TEST_MODE"] = "1"
 
-    strategy = RWASettlementMEV({}, **kwargs)
+    strategy = RWASettlementMEV({}, capital_base_eth=capital_base, **kwargs)
 
     error_limit = int(os.getenv("ARB_ERROR_LIMIT", "3"))
     latency_threshold = float(os.getenv("ARB_LATENCY_THRESHOLD", "30"))
@@ -391,7 +449,7 @@ async def run(
 
         start = time.monotonic()
         try:
-            strategy.run_once()
+            await strategy.run_once()
             errors = 0
         except Exception as exc:  # pragma: no cover - runtime error
             log_error(EDGE_SCHEMA["strategy_id"], str(exc), event="run_error")
@@ -424,7 +482,4 @@ async def run(
 
 
 if __name__ == "__main__":
-    import asyncio
-
     asyncio.run(run())
-
