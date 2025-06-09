@@ -31,6 +31,13 @@ Codex/LLM/AI agents are responsible for code mutation, testing, chaos/DRP, red t
 This file is the single source of truth for mutation, validation, and integration across all code, infra, and strategy layers.
 
 ---
+## ROLES
+
+**Founder (Human)** — Strategic oversight, capital approval and emergency override. Provides secrets via the vault workflow and signs off on live promotions.
+
+**AI CTO / System Architect / Red Team (AI)** — Owns all modules end-to-end: design, mutation, testing, chaos drills, rollback, and CI/CD. Halts on anomaly and reports back to the Founder.
+
+---
 
 ## SECRETS MANAGEMENT
 
@@ -63,6 +70,28 @@ This file is the single source of truth for mutation, validation, and integratio
 * CapitalLock enforces drawdown/loss thresholds; unlocks require **founder approval via `FOUNDER_TOKEN`** and a `TRACE_ID` logged for each event.
 * Strategies **must call `capital_lock.trade_allowed()` before every trade**.
   If False, abort and log `"capital lock: trade not allowed"` to strategy log and `logs/errors.log` with risk level `"high"`.
+### Codex Prompt Schema
+
+Codex prompts must follow this JSON format:
+```json
+{
+  "strategy": "BridgeArb_V2",
+  "phase": "Simulation",
+  "sim_env": ["mainnet", "optimism"],
+  "expected_outcomes": {
+    "SharpeRatio": ">=2.5",
+    "MaxDrawdown": "<=7%",
+    "MedianPnL": ">=gas*1.5"
+  },
+  "prompt_hash": "auto",
+  "edge_type": "Bridge Delay"
+}
+```
+
+### Mutation Logging Policy
+
+All Codex/LLM patches must log the prompt and resulting diff hash to `/last_3_codex_diffs/` using `ai.mutator._log_codex_diff`. Voting results are stored in `/telemetry/ai_votes/`.
+
 
 ### Mutation & Promotion Enforcement
 
@@ -83,7 +112,7 @@ The orchestrator consults four ensemble agents before any promotion:
 3. `ClaudeSim`
 4. `InternalDRL`
 
-Each agent issues an approval or rejection vote. At least **three of the four agents must approve** for the promotion to proceed. Vote results are stored in `telemetry/ai_votes/` as `vote_<TRACE_ID>_<agent>.json` with the agent name, decision, timestamp and diff hash. **The orchestrator must reject any promotion attempt lacking this quorum.**
+Each agent issues an approval or rejection vote. Every mutation or promotion requires at least **three of the four agents** to approve. Votes are logged to `telemetry/ai_votes/` as `ai_vote_<timestamp>.json` with the agent, decision, diff hash and `TRACE_ID`. The orchestrator rejects any patch or promotion lacking this quorum.
 
 ---
 
@@ -244,6 +273,13 @@ strat = Strategy(..., capital_lock=lock)
 - Multi-sig founder approval (`FOUNDER_TOKEN`) is required for pruning and promotion. Alerts and metrics are dispatched via `OpsAgent.notify` and Prometheus.
 - Every prune/promote/mutation event is recorded in `logs/mutation_log.json` using the current `TRACE_ID`.
 
+### Strategy TTL & Edge Decay Enforcement
+Each strategy must include an `EDGE_SCHEMA` YAML block with `strategy_id`, `edge_type`, `infra_moat_score`, `decay_risk`, `ttl_hours` and `triggers`. The scoreboard checks TTL expiry and auto-mutes expired strategies. TTL metadata is archived by `scripts/export_project_state.sh`.
+
+
+### Quantitative Gating Metrics
+
+Strategies must meet capital gating thresholds before promotion: Sharpe Ratio ≥ 2.5, Max Drawdown ≤ 7%, Median PnL ≥ gas × 1.5, p95 latency < 1.25s and uptime > 95% in sim.
 
 ## Agent CLI Reference
 
@@ -288,7 +324,9 @@ strat = Strategy(..., capital_lock=lock)
 * Every batch/module must log:
 
   * `mutation_id`, `risk_level`, DRP snapshot location.
+
   * State and logs must be exportable for audit/rollback (`scripts/export_state.sh`).
+  * Use `bash scripts/export_project_state.sh` for a full audit/export package.
   * The export script skips symlinks and paths outside the repo to ensure archives are safe to restore.
 * Major audit recommendations must be appended to this file for traceability.
 
@@ -351,6 +389,14 @@ Example log entry:
 * `adapters/cex_adapter.py` — Exchange adapter
 * `adapters/dex_adapter.py` — Aggregator adapter
 * `adapters/bridge_adapter.py` — Bridge API adapter
+
+## CONTRIBUTOR GUIDELINES
+
+- Validate Codex patches with `ai/mutation_log.py` and ensure diffs are stored in `/last_3_codex_diffs/`.
+- Run `scripts/validate_secrets.py` and `scripts/load_vault_secrets.py` before tests.
+- Confirm quorum logs exist in `/telemetry/ai_votes/` and include mutation diffs and audit summaries in PRs.
+- Follow the release checklist in PROJECT_BIBLE.md before merging.
+
 
 ---
 
