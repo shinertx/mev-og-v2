@@ -20,10 +20,10 @@ make build
 make up
 ```
 
-Copy the sample environment and configuration:
+Fetch secrets from Vault and copy the sample configuration:
 
 ```bash
-cp .env.example .env
+python3.11 scripts/load_vault_secrets.py
 cp config.example.yaml config.yaml
 ```
 

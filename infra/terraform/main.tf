@@ -23,7 +23,8 @@ module "compute" {
   key_name         = var.key_name
   environment      = var.environment
   prometheus_token = var.prometheus_token
-  secret_env       = var.secret_env
+  vault_addr       = var.vault_addr
+  vault_token      = var.vault_token
 }
 
 output "instance_ip" {

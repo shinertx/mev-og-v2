@@ -92,8 +92,8 @@ Follow this sequence to operate MEV-OG locally.
    make build
    make up
    ```
-2. **Configure `.env`** – copy `.env.example` then set
-   `FOUNDER_TOKEN`, `KILL_SWITCH`, `OPENAI_API_KEY` and `METRICS_PORT`.
+2. **Fetch secrets from Vault** – run `python3.11 scripts/load_vault_secrets.py` 
+   to populate environment variables before starting services.
 3. **Copy and customize `config.example.yaml`**
    ```bash
    cp config.example.yaml config.yaml
@@ -161,8 +161,9 @@ Key metrics exposed on `/metrics` include:
 
 ### Environment & Configuration
 
-MEV-OG reads settings from a `.env` file and `config.yaml`. Use
-`config.example.yaml` as a template. Key variables include:
+MEV-OG reads settings from environment variables loaded via Vault using
+`scripts/load_vault_secrets.py` and from `config.yaml`. Use `config.example.yaml`
+as a template. Key variables include:
 
 ```
 OPENAI_API_KEY=<your-openai-key>          # Enables online audits
@@ -651,7 +652,7 @@ Actions append to `logs/wallet_ops.log` for auditing.
 ## Live Trade Checklist
 
 1. `poetry install` and `docker compose up -d`
-2. Copy `.env.example` to `.env` and fill RPC keys
+2. `python3.11 scripts/load_vault_secrets.py` to fetch secrets
 3. Copy `config.example.yaml` to `config.yaml`
 4. Run `pytest -v` and `foundry test`
 5. `bash scripts/simulate_fork.sh --target=strategies/<module>`
