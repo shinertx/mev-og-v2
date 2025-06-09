@@ -189,8 +189,8 @@ class _Handler(BaseHTTPRequestHandler):
                 f"arb_profit_total {_METRICS['arb_profit']}\n"
                 f"avg_arb_latency_seconds {avg_arb_latency}\n"
                 f"error_count {_METRICS['error_count']}\n"
-                f"kill_events_total {_METRICS['kill_events']}\n"
-                f"drp_anomalies_total {_METRICS['drp_anomalies']}\n"
+                f"kill_events_total {_METRICS.get('kill_events', 0)}\n"
+                f"drp_anomalies_total {_METRICS.get('drp_anomalies', 0)}\n"
             )
             body = generate_latest() + custom.encode()
             scores = cast(Dict[str, float], _METRICS.get("strategy_scores", {}))

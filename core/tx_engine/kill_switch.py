@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 
 from core.logger import StructuredLogger, log_error
+import json
+from datetime import datetime
 
 ENV_VAR = "KILL_SWITCH"
 
@@ -47,8 +49,8 @@ def kill_switch_triggered() -> bool:
     return env_active or file_active
 
 
-def record_kill_event(origin_module: str) -> None:
-    """Append a structured kill event to the log file."""
+def record_kill_event(origin_module: str, snapshot_path: str | None = None) -> None:
+    """Append a structured kill event to the log file and DRP directory."""
     source = (
         "env"
         if os.getenv(ENV_VAR) == "1"
@@ -81,6 +83,18 @@ def record_kill_event(origin_module: str) -> None:
         _metrics.record_kill_event_metric()
     except Exception:
         pass
+
+    # Write DRP kill event file
+    ts = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    drp_dir = Path(os.getenv("KILL_DRP_DIR", "/telemetry/drp"))
+    drp_dir.mkdir(parents=True, exist_ok=True)
+    kill_file = drp_dir / f"kill_{ts.replace(':','-')}.json"
+    with kill_file.open("w", encoding="utf-8") as fh:
+        json.dump({
+            "timestamp": ts,
+            "origin_module": origin_module,
+            "snapshot": snapshot_path,
+        }, fh)
 
 
 def clear_kill_switch() -> None:

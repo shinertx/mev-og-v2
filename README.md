@@ -215,6 +215,7 @@ the values used in tests and the simulation harness:
 | `INTENT_FEED_URL` | `http://localhost:9000` | L3 intent feed |
 | `KILL_SWITCH_FLAG_FILE` | `./flags/kill_switch.txt` | Kill switch trigger file |
 | `KILL_SWITCH_LOG_FILE` | `logs/kill_log.json` | Kill switch audit log |
+| `KILL_DRP_DIR` | `/telemetry/drp` | Directory for kill event snapshots |
 | `KILL_SWITCH` | `0` | Set to 1 to halt all trading |
 | `L3_APP_EXECUTOR` | `0x000...` | Executor for l3_app_rollup_mev |
 | `L3_APP_ROLLUP_LOG` | `logs/l3_app_rollup_mev.json` | l3_app_rollup_mev log |
@@ -484,8 +485,8 @@ bash scripts/kill_switch.sh --dry-run
 bash scripts/kill_switch.sh --clean
 ```
 
-Environment variables `KILL_SWITCH_FLAG_FILE` and `KILL_SWITCH_LOG_FILE` control
-the flag and log paths.
+Environment variables `KILL_SWITCH_FLAG_FILE`, `KILL_SWITCH_LOG_FILE` and
+`KILL_DRP_DIR` control the flag, log and DRP snapshot paths.
 
 
 ## Chaos/DR Drill
