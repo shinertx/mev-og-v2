@@ -96,12 +96,17 @@ class StrategyOrchestrator:
         self.nonce_manager = get_shared_nonce_manager()
         self.strategy_ids: List[str] = self.config.get("alpha", {}).get("enabled", [])
         self.strategy_params: Dict[str, Any] = self.config.get("alpha", {}).get("params", {})
-        self.strategies: Dict[str, Any] = {}
-        self._load_strategies()
 
         # --- TTL MANAGER ---
         self.ttl_manager = StrategyTTLManager(self)
         self.strategy_paths = [Path(f"strategies/{sid}/strategy.py") for sid in self.strategy_ids]
+        self.strategy_paths = asyncio.run(self.ttl_manager.enforce_all_ttls(self.strategy_paths))
+        self.strategy_ids = [
+            p.parts[1] for p in self.strategy_paths if len(p.parts) >= 2 and p.parts[0] == "strategies"
+        ]
+
+        self.strategies: Dict[str, Any] = {}
+        self._load_strategies()
 
     def _load_strategies(self) -> None:
         for sid in self.strategy_ids:
@@ -145,6 +150,7 @@ class StrategyOrchestrator:
 
         # --- TTL ENFORCEMENT: remove expired strategies ---
         active_paths = asyncio.run(self.ttl_manager.enforce_all_ttls(self.strategy_paths))
+        self.strategy_paths = active_paths
         # Remove expired strategies from self.strategies
         active_sids = [
             p.parts[1] for p in active_paths if len(p.parts) >= 2 and p.parts[0] == "strategies"
