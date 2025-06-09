@@ -34,6 +34,7 @@ import sys
 import time
 import asyncio
 from pathlib import Path
+import subprocess
 from typing import Any, Dict, Optional, Tuple, TypedDict, List
 
 try:  # webhook optional
@@ -731,7 +732,23 @@ async def run(
     total_latency = 0.0
     runs = 0
 
+    def _snapshot_state() -> None:
+        cmd = ["bash", "scripts/export_state.sh"]
+        env = os.environ.copy()
+        env["EXPORT_DIR"] = "/telemetry/drp"
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True, env=env)
+        except FileNotFoundError:
+            log_error(EDGE_SCHEMA["strategy_id"], "export_state.sh missing", event="snapshot_fail")
+        except subprocess.CalledProcessError as exc:
+            log_error(EDGE_SCHEMA["strategy_id"], f"snapshot fail: {exc.stderr}", event="snapshot_fail")
+
     while True:
+        if kill_switch_triggered():
+            record_kill_event(EDGE_SCHEMA["strategy_id"])
+            _snapshot_state()
+            sys.exit(137)
+
         start = time.monotonic()
         try:
             strategy.run_once()
@@ -759,6 +776,7 @@ async def run(
 
         if avg_latency > latency_threshold or errors > error_limit:
             record_kill_event(EDGE_SCHEMA["strategy_id"])
+            _snapshot_state()
             sys.exit(137)
         if test_mode:
             break

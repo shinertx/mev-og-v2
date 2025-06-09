@@ -38,6 +38,7 @@ from core.tx_engine.nonce_manager import NonceManager, get_shared_nonce_manager
 from core.tx_engine.kill_switch import kill_switch_triggered, record_kill_event
 from agents.capital_lock import CapitalLock
 import time
+import subprocess
 try:
     from prometheus_client import Counter, Histogram, start_http_server
 except Exception:  # pragma: no cover - optional
@@ -350,7 +351,7 @@ async def run(
     test_mode: bool = False,
     **kwargs: Any,
 ) -> None:
-    """Execute :meth:`RWASettlementMEV.run_once` with latency tracking."""
+    """Run the strategy in a monitored loop."""
 
     if block_number is not None:
         os.environ["BLOCK_NUMBER"] = str(block_number)
@@ -360,19 +361,62 @@ async def run(
         os.environ["TEST_MODE"] = "1"
 
     strategy = RWASettlementMEV({}, **kwargs)
-    start = time.monotonic()
-    strategy.run_once()
-    latency = time.monotonic() - start
-    LOG.log(
-        "run_latency",
-        strategy_id=EDGE_SCHEMA["strategy_id"],
-        mutation_id=os.getenv("MUTATION_ID", "dev"),
-        risk_level="low",
-        latency=latency,
-        block=block_number,
-        chain_id=chain_id,
-        test_mode=test_mode,
-    )
+
+    error_limit = int(os.getenv("ARB_ERROR_LIMIT", "3"))
+    latency_threshold = float(os.getenv("ARB_LATENCY_THRESHOLD", "30"))
+    errors = 0
+    total_latency = 0.0
+    runs = 0
+
+    def _snapshot_state() -> None:
+        cmd = ["bash", "scripts/export_state.sh"]
+        env = os.environ.copy()
+        env["EXPORT_DIR"] = "/telemetry/drp"
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True, env=env)
+        except FileNotFoundError:
+            log_error(EDGE_SCHEMA["strategy_id"], "export_state.sh missing", event="snapshot_fail")
+        except subprocess.CalledProcessError as exc:
+            log_error(EDGE_SCHEMA["strategy_id"], f"snapshot fail: {exc.stderr}", event="snapshot_fail")
+
+    while True:
+        if kill_switch_triggered():
+            record_kill_event(EDGE_SCHEMA["strategy_id"])
+            _snapshot_state()
+            sys.exit(137)
+
+        start = time.monotonic()
+        try:
+            strategy.run_once()
+            errors = 0
+        except Exception as exc:  # pragma: no cover - runtime error
+            log_error(EDGE_SCHEMA["strategy_id"], str(exc), event="run_error")
+            arb_error_count.inc()
+            errors += 1
+        latency = time.monotonic() - start
+        arb_latency.observe(latency)
+        total_latency += latency
+        runs += 1
+        avg_latency = total_latency / runs
+
+        LOG.log(
+            "run_latency",
+            strategy_id=EDGE_SCHEMA["strategy_id"],
+            mutation_id=os.getenv("MUTATION_ID", "dev"),
+            risk_level="low",
+            latency=latency,
+            block=block_number,
+            chain_id=chain_id,
+            test_mode=test_mode,
+        )
+
+        if avg_latency > latency_threshold or errors > error_limit:
+            record_kill_event(EDGE_SCHEMA["strategy_id"])
+            _snapshot_state()
+            sys.exit(137)
+        if test_mode:
+            break
+        await asyncio.sleep(float(os.getenv("RUN_INTERVAL", "1")))
 
 
 if __name__ == "__main__":
