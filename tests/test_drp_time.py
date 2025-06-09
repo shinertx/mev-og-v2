@@ -6,6 +6,7 @@ import time
 import json
 from pathlib import Path
 import pytest
+from agents.drp_agent import DRPAgent
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "rollback.sh"
@@ -110,4 +111,34 @@ def test_invalid_chars_rejected(tmp_path):
     assert "unsafe_path" in err_lines[-1]
     entries = [json.loads(line) for line in (tmp_path / "rb.log").read_text().splitlines()]
     assert entries[-1]["event"] == "failed"
+
+
+def _make_archive(export_dir: Path) -> Path:
+    logs = export_dir.parent / "logs"
+    logs.mkdir(exist_ok=True)
+    (logs / "log.txt").write_text("x")
+    archive = export_dir / "drp_export_test.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(logs, arcname="logs")
+    return archive
+
+
+def test_recovery_window(tmp_path, monkeypatch):
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    archive = _make_archive(export_dir)
+    old = time.time() - 7200
+    os.utime(archive, (old, old))
+    agent = DRPAgent(ready=False)
+
+    called: list[list[str]] = []
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: called.append(list(a[0])))
+    agent.auto_recover(export_dir=str(export_dir), timeout=3600)
+    assert called
+
+    called.clear()
+    archive = _make_archive(export_dir)
+    agent.ready = False
+    agent.auto_recover(export_dir=str(export_dir), timeout=3600)
+    assert not called
 
