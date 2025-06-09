@@ -153,6 +153,7 @@ class StrategyOrchestrator:
 
         ok = self._snapshot_state()
         self.drp_agent.record_export(ok)
+        self.drp_agent.auto_recover()
         LOGGER.log("iteration_complete", risk_level="low")
         return True
 
