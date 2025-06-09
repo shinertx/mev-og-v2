@@ -42,14 +42,22 @@ jobs:
           sleep 2
           curl -f http://localhost:8001/metrics
           kill $PID
-      - name: Fork simulation
-        run: bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
+      - name: Fork simulation cross_rollup_superbot
+        run: bash scripts/simulate_fork.sh --strategy=cross_rollup_superbot
+      - name: Fork simulation l3_app_rollup_mev
+        run: bash scripts/simulate_fork.sh --strategy=l3_app_rollup_mev
+      - name: Fork simulation l3_sequencer_mev
+        run: bash scripts/simulate_fork.sh --strategy=l3_sequencer_mev
+      - name: Fork simulation nft_liquidation
+        run: bash scripts/simulate_fork.sh --strategy=nft_liquidation
+      - name: Fork simulation rwa_settlement
+        run: bash scripts/simulate_fork.sh --strategy=rwa_settlement
       - name: DRP dry run
         run: bash scripts/export_state.sh --dry-run
       - name: Project audit export
         run: bash scripts/export_project_state.sh --dry-run
       - name: Offline audit
-        run: python3.11 ai/audit_agent.py --mode=offline --logs logs/cross_domain_arb.json
+        run: python3.11 ai/audit_agent.py --mode=offline --logs logs/cross_rollup_superbot.json
       - name: Chaos drill
         run: python3.11 infra/sim_harness/chaos_drill.py
       - name: Tag canary
@@ -61,9 +69,13 @@ jobs:
           ruff check .
           mypy --strict .
           pytest -v
-          bash scripts/simulate_fork.sh --target=strategies/cross_domain_arb
+          bash scripts/simulate_fork.sh --strategy=cross_rollup_superbot
+          bash scripts/simulate_fork.sh --strategy=l3_app_rollup_mev
+          bash scripts/simulate_fork.sh --strategy=l3_sequencer_mev
+          bash scripts/simulate_fork.sh --strategy=nft_liquidation
+          bash scripts/simulate_fork.sh --strategy=rwa_settlement
           bash scripts/export_state.sh --dry-run
-          python3.11 ai/audit_agent.py --mode=offline --logs logs/cross_domain_arb.json
+          python3.11 ai/audit_agent.py --mode=offline --logs logs/cross_rollup_superbot.json
       - name: Check gates
         run: python3.11 agents/check_gates.py
       - name: Promote
