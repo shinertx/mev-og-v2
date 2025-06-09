@@ -36,6 +36,7 @@ import asyncio
 from pathlib import Path
 import subprocess
 from typing import Any, Dict, Optional, Tuple, TypedDict, List
+import hashlib
 
 try:  # webhook optional
     import requests
@@ -147,6 +148,45 @@ def _send_alert(payload: Dict[str, object]) -> None:
     except Exception as exc:  # pragma: no cover - network
         logging.warning("webhook failed: %s", exc)
         log_error(EDGE_SCHEMA["strategy_id"], f"webhook failed: {exc}", event="webhook_fail")
+
+
+def _write_mutation_diff(strategy_id: str, mutation_data: Dict[str, Any]) -> None:
+    """Write mutation diff to /last_3_codex_diffs/ directory."""
+    try:
+        diff_dir = Path("/last_3_codex_diffs")
+        diff_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create a hash for the prompt
+        prompt_hash = hashlib.sha256(
+            json.dumps(mutation_data, sort_keys=True).encode()
+        ).hexdigest()[:8]
+        
+        # Create filename with timestamp
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        filename = f"{strategy_id}_{timestamp}_{prompt_hash}.json"
+        
+        # Keep only last 3 diffs
+        existing_files = sorted(
+            [f for f in diff_dir.glob(f"{strategy_id}_*.json")],
+            key=lambda x: x.stat().st_mtime
+        )
+        
+        if len(existing_files) >= 3:
+            for old_file in existing_files[:-2]:
+                old_file.unlink()
+        
+        # Write the new diff
+        diff_path = diff_dir / filename
+        with open(diff_path, "w") as f:
+            json.dump({
+                "strategy_id": strategy_id,
+                "timestamp": timestamp,
+                "prompt_hash": prompt_hash,
+                "mutation": mutation_data
+            }, f, indent=2)
+            
+    except Exception as exc:
+        log_error(strategy_id, f"Failed to write mutation diff: {exc}", event="mutation_diff_error")
 
 
 @dataclass
@@ -680,10 +720,18 @@ class CrossDomainArb(BaseStrategy):
         All errors are logged to ``logs/errors.log`` for offline audit.
         """
 
+        mutation_data = {
+            "params": params,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
         if "threshold" in params:
             try:
                 old = self.threshold
                 self.threshold = float(params["threshold"])
+                mutation_data["old_threshold"] = old
+                mutation_data["new_threshold"] = self.threshold
+                
                 LOG.log(
                     "mutate",
                     strategy_id=EDGE_SCHEMA["strategy_id"],
@@ -699,6 +747,10 @@ class CrossDomainArb(BaseStrategy):
                     before=old,
                     after=self.threshold,
                 )
+                
+                # Write to /last_3_codex_diffs/
+                _write_mutation_diff(EDGE_SCHEMA["strategy_id"], mutation_data)
+                
             except Exception as exc:  # pragma: no cover - input validation
                 log_error(EDGE_SCHEMA["strategy_id"], f"mutate threshold: {exc}", event="mutate_error")
 
@@ -707,6 +759,7 @@ async def run(
     block_number: int | None = None,
     chain_id: int | None = None,
     test_mode: bool = False,
+    capital_base: float = 1.0,
     **kwargs: Any,
 ) -> None:
     """Run the strategy in a monitored loop.
@@ -724,7 +777,7 @@ async def run(
     if test_mode:
         os.environ["TEST_MODE"] = "1"
 
-    strategy = CrossDomainArb({}, {}, **kwargs)
+    strategy = CrossDomainArb({}, {}, capital_base_eth=capital_base, **kwargs)
 
     error_limit = int(os.getenv("ARB_ERROR_LIMIT", "3"))
     latency_threshold = float(os.getenv("ARB_LATENCY_THRESHOLD", "30"))
