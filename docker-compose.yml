@@ -20,6 +20,8 @@ services:
       - ./export:/app/export
     environment:
       - FOUNDER_TOKEN=${FOUNDER_TOKEN:-}
+      - VAULT_ADDR=${VAULT_ADDR:-}
+      - VAULT_TOKEN=${VAULT_TOKEN:-}
     depends_on:
       anvil:
         condition: service_healthy

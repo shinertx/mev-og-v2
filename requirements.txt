@@ -16,6 +16,7 @@ pyyaml==6.0.1
 
 # --- AI/LLM/Audit ---
 openai==1.12.0
+hvac==2.1.0
 
 # --- Monitoring/Telemetry ---
 prometheus-client==0.19.0

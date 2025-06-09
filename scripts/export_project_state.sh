@@ -84,7 +84,6 @@ copy_item() {
 copy_item last_3_codex_diffs
 copy_item vault_export.json
 copy_item config.yaml
-copy_item .env
 copy_item sim/results
 copy_item logs/scoreboard.json
 copy_item "$TTL_FILE"
