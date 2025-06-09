@@ -29,12 +29,16 @@ jobs:
           python3.11 -m pip install -r requirements.txt mypy ruff
       - name: Validate secrets
         run: python3.11 scripts/validate_secrets.py
+      - name: Validate sim configs
+        run: python3.11 scripts/validate_sim_configs.py
       - name: Lint
         run: ruff check .
       - name: Type check
         run: mypy --strict .
       - name: Run tests
         run: pytest -v
+      - name: Run scenario tests
+        run: pytest -v tests/test_sim_scenarios.py
       - name: Metrics endpoint
         run: |
           python3.11 -m core.metrics --port 8001 &

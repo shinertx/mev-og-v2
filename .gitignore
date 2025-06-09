@@ -51,6 +51,7 @@ logs/
 *.log
 *.json
 !logs/.gitkeep   # (keep folder)
+!sim/configs/*.json
 !infra/grafana/*.json
 !grafana/*.json
 
