@@ -1,0 +1,8 @@
+{
+  "env": "mainnet",
+  "block_number": 20130231,
+  "strategy_id": "BridgeArb_001",
+  "expected_pnl": ">=gas*1.5",
+  "max_drawdown": "<=7%",
+  "validators": ["sim_result_check.py"]
+}

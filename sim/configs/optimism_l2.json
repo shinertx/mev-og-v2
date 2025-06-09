@@ -1,0 +1,8 @@
+{
+  "env": "optimism",
+  "block_number": 1080932,
+  "strategy_id": "BridgeArb_L2",
+  "expected_pnl": ">=gas*1.5",
+  "max_drawdown": "<=7%",
+  "validators": ["sim_result_check.py"]
+}
