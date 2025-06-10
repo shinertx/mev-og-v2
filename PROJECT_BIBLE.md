@@ -187,21 +187,34 @@ AI monitors TTL violations, flags expiration, and auto-mutes.
 
 ---
 
-## **FOUNDER META-GOVERNANCE & FAILOVER**
+## **FOUNDER META-GOVERNANCE & FAILOVER**L
 
-**Founder governs via:**
+### 4.1. Core Principle: Simple, Safe, and Non-Restrictive
 
-* Capital scale approvals
-* Drawdown/kill switch policy edits
-* Final audit logs and telemetry
+As a solo-founder operation, the primary goal of governance is to ensure maximum safety with minimum complexity. The system must be resilient to common failure modes without creating unnecessary operational friction. This protocol is the minimum viable standard for safe operation.
 
-**DRP-Triggered Meta-Governor:**
+### 4.2. Level 1: The "One-Click Stop" (Manual Kill Switch)
 
-* Activated after 10m non-response + kill-switch trigger
-* Simulates Founder intent from last 10 approvals
-* Halts capital or downgrades risk class
-* Logs all fallback ops and reverts on manual override
+This is the master manual override for the entire system. It MUST be implemented as a single, easily accessible action (e.g., a button in a web UI or a single command).
 
+* **Function:** When triggered, the "One-Click Stop" will immediately:
+    1.  **Halt All Trading:** Block the system from sending any new orders.
+    2.  **Flatten All Positions:** Systematically close all open positions to prevent further risk exposure.
+
+* **Purpose:** This is the primary defense against unexpected strategy behavior, market events, or any situation requiring an immediate, manual halt.
+
+### 4.3. Level 2: The Automated Safety Net (Circuit Breakers)
+
+These are automated, non-negotiable safety rules that run 24/7 to protect the system when the founder is not actively monitoring it. They are configured as simple settings. If any of these rules are breached, the system will automatically trigger the "One-Click Stop" protocol.
+
+* **1. Daily Loss Limit:** A pre-defined maximum dollar amount the system is permitted to lose in a single 24-hour period.
+* **2. Stale Data Check:** A pre-defined time limit (e.g., 60 seconds). If the system does not receive fresh market data within this period, it will halt to prevent trading on faulty or outdated information.
+
+### 4.4. System State
+
+This protocol means the system can only be in one of two states:
+* **`ACTIVE`:** The system is live and trading within the rules of the Automated Safety Net.
+* **`HALTED`:** The system is inactive, with no open positions. It can only be moved back to `ACTIVE` through a deliberate, manual action by the founder.
 ---
 
 ## **AI CONSENSUS MECHANISM**
