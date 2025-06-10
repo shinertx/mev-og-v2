@@ -142,3 +142,39 @@ def test_recovery_window(tmp_path, monkeypatch):
     agent.auto_recover(export_dir=str(export_dir), timeout=3600)
     assert not called
 
+
+def test_record_export_and_is_ready(tmp_path, monkeypatch):
+    log_file = tmp_path / "drp.json"
+    monkeypatch.setenv("DRP_AGENT_LOG", str(log_file))
+    agent = DRPAgent(ready=False)
+
+    agent.record_export(True)
+    assert agent.is_ready()
+    lines = [json.loads(entry) for entry in log_file.read_text().splitlines()]
+    assert lines[-1]["event"] == "export_ok"
+
+    agent.record_export(False)
+    assert not agent.is_ready()
+    lines = [json.loads(entry) for entry in log_file.read_text().splitlines()]
+    assert lines[-1]["event"] == "export_fail"
+
+
+def test_auto_recover_updates_state(tmp_path, monkeypatch):
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    archive = _make_archive(export_dir)
+    old = time.time() - 7200
+    os.utime(archive, (old, old))
+    log_file = tmp_path / "drp.json"
+    monkeypatch.setenv("DRP_AGENT_LOG", str(log_file))
+
+    called: list[list[str]] = []
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: called.append(list(a[0])))
+
+    agent = DRPAgent(ready=False)
+    agent.auto_recover(export_dir=str(export_dir), timeout=3600)
+    assert called
+    assert agent.is_ready()
+    lines = [json.loads(entry) for entry in log_file.read_text().splitlines()]
+    assert lines[-1]["event"] == "auto_rollback"
+
