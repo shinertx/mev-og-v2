@@ -6,6 +6,7 @@ import time
 import json
 from pathlib import Path
 import pytest
+from core.logger import StructuredLogger
 from agents.drp_agent import DRPAgent
 
 
@@ -141,4 +142,47 @@ def test_recovery_window(tmp_path, monkeypatch):
     agent.ready = False
     agent.auto_recover(export_dir=str(export_dir), timeout=3600)
     assert not called
+
+
+def test_record_export_updates_logs_and_state(tmp_path, monkeypatch):
+    log_file = tmp_path / "drp.json"
+    monkeypatch.setenv("DRP_AGENT_LOG", str(log_file))
+    from agents import drp_agent
+    drp_agent.LOGGER = StructuredLogger("drp_agent", log_file=str(log_file))
+    metric_calls: list[bool] = []
+    monkeypatch.setattr("core.metrics.record_drp_anomaly", lambda: metric_calls.append(True))
+    agent = DRPAgent(ready=False)
+
+    agent.record_export(True)
+    assert agent.is_ready()
+    entries = [json.loads(line) for line in log_file.read_text().splitlines()]
+    assert entries[-1]["event"] == "export_ok"
+
+    agent.record_export(False)
+    assert not agent.is_ready()
+    entries = [json.loads(line) for line in log_file.read_text().splitlines()]
+    assert entries[-1]["event"] == "export_fail"
+    assert metric_calls
+
+
+def test_auto_recover_updates_state_and_logs(tmp_path, monkeypatch):
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    archive = _make_archive(export_dir)
+    old = time.time() - 7200
+    os.utime(archive, (old, old))
+    log_file = tmp_path / "drp.json"
+    monkeypatch.setenv("DRP_AGENT_LOG", str(log_file))
+    from agents import drp_agent
+    drp_agent.LOGGER = StructuredLogger("drp_agent", log_file=str(log_file))
+    agent = DRPAgent(ready=False)
+
+    called: list[list[str]] = []
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: called.append(list(a[0])))
+    agent.auto_recover(export_dir=str(export_dir), timeout=3600)
+
+    assert called
+    assert agent.is_ready()
+    entries = [json.loads(line) for line in log_file.read_text().splitlines()]
+    assert entries[-1]["event"] == "auto_rollback"
 
