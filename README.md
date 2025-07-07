@@ -677,3 +677,28 @@ Actions append to `logs/wallet_ops.log` for auditing.
 - Metrics endpoint live
 - Wallet balances checked via `wallet_ops.py`
 
+
+## Post-Deploy Actions
+- Verify Prometheus metrics at `http://localhost:$METRICS_PORT/metrics`.
+- Export a fresh DRP archive with `bash scripts/export_state.sh` and store it off-site.
+- Confirm dashboards in `grafana/` are imported and show live data.
+- Review `logs/` for errors and ensure `telemetry/ai_votes/` contains the latest vote logs.
+
+## Upgrade Path
+Use CI tags and DRP snapshots to coordinate upgrades.
+
+1. Commit and push changes as normal. CI tags the commit `canary-<sha>-<date>`.
+2. Run fork simulations and `pytest -v`; ensure all checks pass.
+3. Export a DRP snapshot and record the tag in `logs/mutation_log.json`.
+4. Obtain founder approval with a new `TRACE_ID`, then promote using `ai/promote.py`.
+5. If issues arise, restore from the previous DRP archive using `scripts/rollback.sh`.
+
+## Contributing
+We welcome PRs that follow our security and audit guidelines.
+
+- Run `pre-commit install` once and `pre-commit run --files <changed files>` before committing.
+- Execute `pytest -v` and `bash scripts/simulate_fork.sh --target=strategies/<module>`.
+- Include AI vote logs from `telemetry/ai_votes/` in the PR body.
+- Do not commit secrets. Use `python3.11 scripts/validate_secrets.py` to verify environment variables.
+
+See [docs/ONBOARDING.md](docs/ONBOARDING.md) and [AGENTS.md](AGENTS.md) for full policies.
